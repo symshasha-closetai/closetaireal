@@ -25,8 +25,8 @@ const ScoreRing = ({ score, maxScore = 10, size = 90, label, colorClass = "strok
             r={radius}
             fill="none"
             className="stroke-secondary"
-            strokeWidth={strokeWidth}
-          />
+            strokeWidth={strokeWidth} />
+          
           <motion.circle
             cx={size / 2}
             cy={size / 2}
@@ -38,16 +38,16 @@ const ScoreRing = ({ score, maxScore = 10, size = 90, label, colorClass = "strok
             strokeDasharray={circumference}
             initial={{ strokeDashoffset: circumference }}
             animate={{ strokeDashoffset: offset }}
-            transition={{ duration: 1.2, ease: "easeOut", delay: 0.3 }}
-          />
+            transition={{ duration: 1.2, ease: "easeOut", delay: 0.3 }} />
+          
         </svg>
-        <div className="absolute inset-0 flex items-center justify-center">
+        <div className="absolute inset-0 flex items-center justify-center border-destructive">
           <span className="text-lg font-semibold text-foreground">{score}</span>
         </div>
       </div>
       {label && <span className="text-[11px] text-muted-foreground font-medium">{label}</span>}
-    </div>
-  );
+    </div>);
+
 };
 
 export default ScoreRing;
