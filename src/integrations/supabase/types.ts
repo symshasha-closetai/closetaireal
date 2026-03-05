@@ -44,6 +44,91 @@ export type Database = {
         }
         Relationships: []
       }
+      outfits: {
+        Row: {
+          ai_explanation: string | null
+          bottom_id: string | null
+          created_at: string
+          id: string
+          occasion: string | null
+          score: number | null
+          shoes_id: string | null
+          top_id: string | null
+          user_id: string
+        }
+        Insert: {
+          ai_explanation?: string | null
+          bottom_id?: string | null
+          created_at?: string
+          id?: string
+          occasion?: string | null
+          score?: number | null
+          shoes_id?: string | null
+          top_id?: string | null
+          user_id: string
+        }
+        Update: {
+          ai_explanation?: string | null
+          bottom_id?: string | null
+          created_at?: string
+          id?: string
+          occasion?: string | null
+          score?: number | null
+          shoes_id?: string | null
+          top_id?: string | null
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "outfits_bottom_id_fkey"
+            columns: ["bottom_id"]
+            isOneToOne: false
+            referencedRelation: "wardrobe"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "outfits_shoes_id_fkey"
+            columns: ["shoes_id"]
+            isOneToOne: false
+            referencedRelation: "wardrobe"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "outfits_top_id_fkey"
+            columns: ["top_id"]
+            isOneToOne: false
+            referencedRelation: "wardrobe"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      profiles: {
+        Row: {
+          avatar_url: string | null
+          created_at: string
+          id: string
+          name: string | null
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          avatar_url?: string | null
+          created_at?: string
+          id?: string
+          name?: string | null
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          avatar_url?: string | null
+          created_at?: string
+          id?: string
+          name?: string | null
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       style_profiles: {
         Row: {
           body_proportions: Json | null
@@ -76,6 +161,45 @@ export type Database = {
           skin_tone?: string | null
           style_type?: string | null
           updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      wardrobe: {
+        Row: {
+          color: string | null
+          created_at: string
+          id: string
+          image_url: string
+          material: string | null
+          name: string | null
+          season: string | null
+          style: string | null
+          type: string
+          user_id: string
+        }
+        Insert: {
+          color?: string | null
+          created_at?: string
+          id?: string
+          image_url: string
+          material?: string | null
+          name?: string | null
+          season?: string | null
+          style?: string | null
+          type: string
+          user_id: string
+        }
+        Update: {
+          color?: string | null
+          created_at?: string
+          id?: string
+          image_url?: string
+          material?: string | null
+          name?: string | null
+          season?: string | null
+          style?: string | null
+          type?: string
           user_id?: string
         }
         Relationships: []
