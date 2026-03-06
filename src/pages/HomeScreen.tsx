@@ -2,6 +2,8 @@ import { motion } from "framer-motion";
 import { Sparkles, RefreshCw } from "lucide-react";
 import ScoreRing from "../components/ScoreRing";
 import OutfitCard from "../components/OutfitCard";
+import AppHeader from "../components/AppHeader";
+import { useAuth } from "../hooks/useAuth";
 import outfitPreview from "@/assets/outfit-preview.jpg";
 import sampleTop from "@/assets/sample-top.jpg";
 import sampleBottom from "@/assets/sample-bottom.jpg";
