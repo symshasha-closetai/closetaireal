@@ -3,6 +3,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import { Plus, Trash2, X } from "lucide-react";
 import sampleTop from "@/assets/sample-top.jpg";
 import sampleBottom from "@/assets/sample-bottom.jpg";
+import AppHeader from "../components/AppHeader";
 
 type ClothingItem = {
   id: string;
