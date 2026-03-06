@@ -8,6 +8,7 @@ import HomeScreen from "./pages/HomeScreen";
 import CameraScreen from "./pages/CameraScreen";
 import WardrobeScreen from "./pages/WardrobeScreen";
 import AuthScreen from "./pages/AuthScreen";
+import ProfileScreen from "./pages/ProfileScreen";
 import NotFound from "./pages/NotFound";
 import BottomNav from "./components/BottomNav";
 
