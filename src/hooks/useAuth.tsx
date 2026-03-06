@@ -11,6 +11,7 @@ type AuthContextType = {
   signOut: () => Promise<void>;
   profile: Profile | null;
   refreshProfile: () => Promise<void>;
+  hasCompletedOnboarding: boolean | null;
 };
 
 const AuthContext = createContext<AuthContextType>({
@@ -20,6 +21,7 @@ const AuthContext = createContext<AuthContextType>({
   signOut: async () => {},
   profile: null,
   refreshProfile: async () => {},
+  hasCompletedOnboarding: null,
 });
 
 export const AuthProvider = ({ children }: { children: ReactNode }) => {
@@ -27,6 +29,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
   const [profile, setProfile] = useState<Profile | null>(null);
+  const [hasCompletedOnboarding, setHasCompletedOnboarding] = useState<boolean | null>(null);
 
   const fetchProfile = useCallback(async (userId: string) => {
     const { data } = await supabase
@@ -37,9 +40,21 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     setProfile(data);
   }, []);
 
+  const checkOnboarding = useCallback(async (userId: string) => {
+    const { data } = await supabase
+      .from("style_profiles")
+      .select("id")
+      .eq("user_id", userId)
+      .maybeSingle();
+    setHasCompletedOnboarding(!!data);
+  }, []);
+
   const refreshProfile = useCallback(async () => {
-    if (user) await fetchProfile(user.id);
-  }, [user, fetchProfile]);
+    if (user) {
+      await fetchProfile(user.id);
+      await checkOnboarding(user.id);
+    }
+  }, [user, fetchProfile, checkOnboarding]);
 
   useEffect(() => {
     const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
@@ -47,9 +62,13 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       setUser(session?.user ?? null);
       setLoading(false);
       if (session?.user) {
-        setTimeout(() => fetchProfile(session.user.id), 0);
+        setTimeout(() => {
+          fetchProfile(session.user.id);
+          checkOnboarding(session.user.id);
+        }, 0);
       } else {
         setProfile(null);
+        setHasCompletedOnboarding(null);
       }
     });
 
@@ -60,14 +79,14 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     });
 
     return () => subscription.unsubscribe();
-  }, [fetchProfile]);
+  }, [fetchProfile, checkOnboarding]);
 
   const signOut = async () => {
     await supabase.auth.signOut();
   };
 
   return (
-    <AuthContext.Provider value={{ session, user, loading, signOut, profile, refreshProfile }}>
+    <AuthContext.Provider value={{ session, user, loading, signOut, profile, refreshProfile, hasCompletedOnboarding }}>
       {children}
     </AuthContext.Provider>
   );
