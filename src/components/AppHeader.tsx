@@ -1,7 +1,7 @@
-import { Sparkles } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "../hooks/useAuth";
 import { User } from "lucide-react";
+import logo from "@/assets/closetai-logo.png";
 
 const AppHeader = () => {
   const navigate = useNavigate();
@@ -10,12 +10,11 @@ const AppHeader = () => {
 
   return (
     <div className="flex items-center justify-between">
+      <div className="w-9" />
       <div className="flex items-center gap-2">
-        <div className="w-8 h-8 rounded-lg gradient-accent flex items-center justify-center">
-          <Sparkles size={16} className="text-accent-foreground" />
-        </div>
-        <h1 className="font-display text-lg font-semibold">
-          <span className="text-foreground">Closet</span><span className="text-foreground">AI</span>
+        <img src={logo} alt="ClosetAI" className="w-8 h-8 rounded-lg object-contain" />
+        <h1 className="font-display text-lg font-semibold text-foreground">
+          ClosetAI
         </h1>
       </div>
       <button

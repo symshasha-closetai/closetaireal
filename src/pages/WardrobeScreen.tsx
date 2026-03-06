@@ -1,53 +1,105 @@
-import { useState, useRef } from "react";
+import { useState, useRef, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { Plus, Trash2, X } from "lucide-react";
-import sampleTop from "@/assets/sample-top.jpg";
-import sampleBottom from "@/assets/sample-bottom.jpg";
+import { Plus, Trash2, X, Loader2 } from "lucide-react";
+import { supabase } from "@/integrations/supabase/client";
+import { useAuth } from "@/hooks/useAuth";
+import { toast } from "sonner";
 import AppHeader from "../components/AppHeader";
 
 type ClothingItem = {
   id: string;
-  image: string;
+  image_url: string;
   type: string;
-  color: string;
-  material: string;
-  name: string;
+  color: string | null;
+  material: string | null;
+  name: string | null;
 };
 
 const categories = ["All", "Tops", "Bottoms", "Shoes", "Dresses"];
 
-const mockItems: ClothingItem[] = [
-  { id: "1", image: sampleTop, type: "Tops", color: "Navy", material: "Cotton", name: "Navy T-Shirt" },
-  { id: "2", image: sampleBottom, type: "Bottoms", color: "Beige", material: "Cotton", name: "Beige Chinos" },
-  { id: "3", image: sampleTop, type: "Tops", color: "Black", material: "Polyester", name: "Black Polo" },
-  { id: "4", image: sampleBottom, type: "Bottoms", color: "Dark Blue", material: "Denim", name: "Slim Jeans" },
-];
-
 const WardrobeScreen = () => {
+  const { user } = useAuth();
   const [activeCategory, setActiveCategory] = useState("All");
-  const [items, setItems] = useState<ClothingItem[]>(mockItems);
+  const [items, setItems] = useState<ClothingItem[]>([]);
+  const [loading, setLoading] = useState(true);
   const [showAdd, setShowAdd] = useState(false);
+  const [uploading, setUploading] = useState(false);
+  const [newType, setNewType] = useState("Tops");
   const fileRef = useRef<HTMLInputElement>(null);
+
+  useEffect(() => {
+    if (user) fetchItems();
+  }, [user]);
+
+  const fetchItems = async () => {
+    if (!user) return;
+    const { data, error } = await supabase
+      .from("wardrobe")
+      .select("id, image_url, type, color, material, name")
+      .eq("user_id", user.id)
+      .order("created_at", { ascending: false });
+
+    if (error) {
+      toast.error("Failed to load wardrobe");
+    } else {
+      setItems(data || []);
+    }
+    setLoading(false);
+  };
 
   const filtered = activeCategory === "All" ? items : items.filter((i) => i.type === activeCategory);
 
-  const deleteItem = (id: string) => {
-    setItems((prev) => prev.filter((i) => i.id !== id));
+  const deleteItem = async (id: string) => {
+    const { error } = await supabase.from("wardrobe").delete().eq("id", id);
+    if (error) {
+      toast.error("Failed to delete item");
+    } else {
+      setItems((prev) => prev.filter((i) => i.id !== id));
+      toast.success("Item removed");
+    }
   };
 
-  const handleAddImage = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleAddImage = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
-    if (!file) return;
-    const url = URL.createObjectURL(file);
-    const newItem: ClothingItem = {
-      id: Date.now().toString(),
-      image: url,
-      type: "Tops",
-      color: "Detected",
-      material: "Detected",
-      name: "New Item",
-    };
-    setItems((prev) => [newItem, ...prev]);
+    if (!file || !user) return;
+
+    setUploading(true);
+    const ext = file.name.split(".").pop();
+    const path = `${user.id}/${Date.now()}.${ext}`;
+
+    const { error: uploadError } = await supabase.storage
+      .from("wardrobe")
+      .upload(path, file);
+
+    if (uploadError) {
+      toast.error("Failed to upload image");
+      setUploading(false);
+      return;
+    }
+
+    const { data: { publicUrl } } = supabase.storage
+      .from("wardrobe")
+      .getPublicUrl(path);
+
+    const { data, error } = await supabase
+      .from("wardrobe")
+      .insert({
+        user_id: user.id,
+        image_url: publicUrl,
+        type: newType,
+        name: "New Item",
+      })
+      .select("id, image_url, type, color, material, name")
+      .single();
+
+    if (error) {
+      toast.error("Failed to save item");
+    } else if (data) {
+      setItems((prev) => [data, ...prev]);
+      toast.success("Item added to wardrobe!");
+    }
+
+    setUploading(false);
     setShowAdd(false);
   };
 
@@ -88,35 +140,45 @@ const WardrobeScreen = () => {
         </motion.div>
 
         {/* Grid */}
-        <motion.div layout className="grid grid-cols-2 gap-3">
-          <AnimatePresence>
-            {filtered.map((item, i) => (
-              <motion.div
-                key={item.id}
-                layout
-                initial={{ opacity: 0, scale: 0.9 }}
-                animate={{ opacity: 1, scale: 1 }}
-                exit={{ opacity: 0, scale: 0.9 }}
-                transition={{ duration: 0.3, delay: i * 0.05 }}
-                className="glass-card overflow-hidden group relative"
-              >
-                <div className="aspect-square overflow-hidden rounded-t-2xl">
-                  <img src={item.image} alt={item.name} className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105" loading="lazy" />
-                </div>
-                <div className="p-3">
-                  <p className="text-sm font-medium text-foreground truncate">{item.name}</p>
-                  <p className="text-[11px] text-muted-foreground">{item.color} · {item.material}</p>
-                </div>
-                <button
-                  onClick={() => deleteItem(item.id)}
-                  className="absolute top-2 right-2 w-7 h-7 rounded-full bg-foreground/50 text-primary-foreground flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity backdrop-blur-sm"
+        {loading ? (
+          <div className="flex justify-center py-12">
+            <Loader2 className="w-6 h-6 animate-spin text-muted-foreground" />
+          </div>
+        ) : filtered.length === 0 ? (
+          <div className="text-center py-12">
+            <p className="text-muted-foreground text-sm">No items yet. Add your first piece!</p>
+          </div>
+        ) : (
+          <motion.div layout className="grid grid-cols-2 gap-3">
+            <AnimatePresence>
+              {filtered.map((item, i) => (
+                <motion.div
+                  key={item.id}
+                  layout
+                  initial={{ opacity: 0, scale: 0.9 }}
+                  animate={{ opacity: 1, scale: 1 }}
+                  exit={{ opacity: 0, scale: 0.9 }}
+                  transition={{ duration: 0.3, delay: i * 0.05 }}
+                  className="glass-card overflow-hidden group relative"
                 >
-                  <Trash2 size={13} />
-                </button>
-              </motion.div>
-            ))}
-          </AnimatePresence>
-        </motion.div>
+                  <div className="aspect-square overflow-hidden rounded-t-2xl">
+                    <img src={item.image_url} alt={item.name || "Clothing"} className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105" loading="lazy" />
+                  </div>
+                  <div className="p-3">
+                    <p className="text-sm font-medium text-foreground truncate">{item.name || "Unnamed"}</p>
+                    <p className="text-[11px] text-muted-foreground">{item.color || item.type} · {item.material || "—"}</p>
+                  </div>
+                  <button
+                    onClick={() => deleteItem(item.id)}
+                    className="absolute top-2 right-2 w-7 h-7 rounded-full bg-foreground/50 text-primary-foreground flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity backdrop-blur-sm"
+                  >
+                    <Trash2 size={13} />
+                  </button>
+                </motion.div>
+              ))}
+            </AnimatePresence>
+          </motion.div>
+        )}
 
         {/* Add Modal */}
         <AnimatePresence>
@@ -142,13 +204,29 @@ const WardrobeScreen = () => {
                     <X size={20} className="text-muted-foreground" />
                   </button>
                 </div>
-                <p className="text-sm text-muted-foreground">Upload a photo and AI will detect the type, color, and material.</p>
+                <p className="text-sm text-muted-foreground">Select a category and upload a photo.</p>
+                
+                <div className="flex gap-2 flex-wrap">
+                  {["Tops", "Bottoms", "Shoes", "Dresses"].map((t) => (
+                    <button
+                      key={t}
+                      onClick={() => setNewType(t)}
+                      className={`px-4 py-2 rounded-full text-xs font-medium transition-all ${
+                        newType === t ? "gradient-accent text-accent-foreground" : "bg-secondary text-secondary-foreground"
+                      }`}
+                    >
+                      {t}
+                    </button>
+                  ))}
+                </div>
+
                 <input type="file" accept="image/*" ref={fileRef} className="hidden" onChange={handleAddImage} />
                 <button
                   onClick={() => fileRef.current?.click()}
-                  className="w-full py-3.5 rounded-xl gradient-accent text-accent-foreground font-medium text-sm shadow-soft active:scale-[0.98] transition-transform"
+                  disabled={uploading}
+                  className="w-full py-3.5 rounded-xl gradient-accent text-accent-foreground font-medium text-sm shadow-soft active:scale-[0.98] transition-transform disabled:opacity-60"
                 >
-                  Upload Photo
+                  {uploading ? "Uploading..." : "Upload Photo"}
                 </button>
               </motion.div>
             </motion.div>

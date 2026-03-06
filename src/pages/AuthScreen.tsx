@@ -1,8 +1,9 @@
 import { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { supabase } from "@/integrations/supabase/client";
-import { Mail, Lock, User, Eye, EyeOff, Sparkles } from "lucide-react";
+import { Mail, Lock, User, Eye, EyeOff } from "lucide-react";
 import { toast } from "sonner";
+import logo from "@/assets/closetai-logo.png";
 
 const AuthScreen = () => {
   const [isLogin, setIsLogin] = useState(true);
@@ -18,9 +19,7 @@ const AuthScreen = () => {
 
     if (isLogin) {
       const { error } = await supabase.auth.signInWithPassword({ email, password });
-      if (error) {
-        toast.error(error.message);
-      }
+      if (error) toast.error(error.message);
     } else {
       const { error } = await supabase.auth.signUp({
         email,
@@ -30,17 +29,14 @@ const AuthScreen = () => {
           emailRedirectTo: window.location.origin,
         },
       });
-      if (error) {
-        toast.error(error.message);
-      } else {
-        toast.success("Check your email to verify your account!");
-      }
+      if (error) toast.error(error.message);
+      else toast.success("Check your email to verify your account!");
     }
     setLoading(false);
   };
 
   return (
-    <div className="min-h-screen flex flex-col items-center justify-center px-6 gradient-warm">
+    <div className="min-h-screen flex flex-col items-center justify-center px-6 bg-background">
       <motion.div
         initial={{ opacity: 0, y: 24 }}
         animate={{ opacity: 1, y: 0 }}
@@ -49,16 +45,16 @@ const AuthScreen = () => {
       >
         {/* Logo */}
         <div className="text-center space-y-2">
-          <motion.div
+          <motion.img
+            src={logo}
+            alt="ClosetAI"
+            className="w-16 h-16 rounded-2xl mx-auto shadow-elevated object-contain"
             initial={{ scale: 0.8 }}
             animate={{ scale: 1 }}
             transition={{ delay: 0.2, type: "spring", stiffness: 200 }}
-            className="w-16 h-16 rounded-2xl gradient-accent mx-auto flex items-center justify-center shadow-elevated"
-          >
-            <Sparkles size={28} className="text-accent-foreground" />
-          </motion.div>
+          />
           <h1 className="font-display text-3xl font-semibold text-foreground">
-            Closet<span className="text-gradient-accent">AI</span>
+            ClosetAI
           </h1>
           <p className="text-sm text-muted-foreground">Your AI-powered style companion</p>
         </div>
