@@ -3,6 +3,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import { Plus, Trash2, X } from "lucide-react";
 import sampleTop from "@/assets/sample-top.jpg";
 import sampleBottom from "@/assets/sample-bottom.jpg";
+import AppHeader from "../components/AppHeader";
 
 type ClothingItem = {
   id: string;
@@ -53,7 +54,10 @@ const WardrobeScreen = () => {
   return (
     <div className="min-h-screen pb-24 px-5 pt-14">
       <div className="max-w-lg mx-auto space-y-5">
-        <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} className="flex items-center justify-between">
+        <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }}>
+          <AppHeader />
+        </motion.div>
+        <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.05 }} className="flex items-center justify-between">
           <div>
             <h1 className="font-display text-2xl font-semibold text-foreground">My Wardrobe</h1>
             <p className="text-sm text-muted-foreground mt-0.5">{items.length} items</p>

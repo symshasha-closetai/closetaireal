@@ -2,6 +2,7 @@ import { useState, useRef } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { Camera, Upload, X, Sparkles } from "lucide-react";
 import ScoreRing from "../components/ScoreRing";
+import AppHeader from "../components/AppHeader";
 
 const CameraScreen = () => {
   const [image, setImage] = useState<string | null>(null);
@@ -47,6 +48,9 @@ const CameraScreen = () => {
     <div className="min-h-screen pb-24 px-5 pt-14">
       <div className="max-w-lg mx-auto space-y-6">
         <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }}>
+          <AppHeader />
+        </motion.div>
+        <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.05 }}>
           <h1 className="font-display text-2xl font-semibold text-foreground">Rate My Outfit</h1>
           <p className="text-sm text-muted-foreground mt-1">Upload or capture your outfit for AI analysis</p>
         </motion.div>
