@@ -25,14 +25,21 @@ const item = {
 const HomeScreen = () => {
   const hour = new Date().getHours();
   const greeting = hour < 12 ? "Good morning" : hour < 18 ? "Good afternoon" : "Good evening";
+  const { profile } = useAuth();
+  const displayName = profile?.name || "there";
 
   return (
     <div className="min-h-screen pb-24 px-5 pt-14">
       <motion.div variants={container} initial="hidden" animate="show" className="max-w-lg mx-auto space-y-6">
+        {/* Header */}
+        <motion.div variants={item}>
+          <AppHeader />
+        </motion.div>
+
         {/* Greeting */}
         <motion.div variants={item}>
           <p className="text-muted-foreground text-sm font-medium">{greeting},</p>
-          <h1 className="font-display text-2xl font-semibold text-foreground mt-0.5">Style Explorer</h1>
+          <h1 className="font-display text-2xl font-semibold text-foreground mt-0.5">{displayName}</h1>
         </motion.div>
 
         {/* AI Outfit Preview */}
