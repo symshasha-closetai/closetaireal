@@ -15,7 +15,14 @@ const bodyTypes = [
   { label: "Inverted Triangle", desc: "Broad shoulders, narrow hips" },
 ];
 
-const skinTones = ["Fair", "Light", "Medium", "Olive", "Dark", "Deep"];
+const skinTones = [
+  { label: "Fair", color: "#F5DEB3" },
+  { label: "Light", color: "#F0C8A0" },
+  { label: "Medium", color: "#D4A574" },
+  { label: "Olive", color: "#B08D57" },
+  { label: "Dark", color: "#8B6D4A" },
+  { label: "Deep", color: "#5C3D2E" },
+];
 
 const faceShapes = [
   { label: "Oval", desc: "Slightly longer than wide" },
