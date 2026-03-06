@@ -15,7 +15,14 @@ const bodyTypes = [
   { label: "Inverted Triangle", desc: "Broad shoulders, narrow hips" },
 ];
 
-const skinTones = ["Fair", "Light", "Medium", "Olive", "Dark", "Deep"];
+const skinTones = [
+  { label: "Fair", color: "#F5DEB3" },
+  { label: "Light", color: "#F0C8A0" },
+  { label: "Medium", color: "#D4A574" },
+  { label: "Olive", color: "#B08D57" },
+  { label: "Dark", color: "#8B6D4A" },
+  { label: "Deep", color: "#5C3D2E" },
+];
 
 const faceShapes = [
   { label: "Oval", desc: "Slightly longer than wide" },
@@ -230,9 +237,23 @@ const OnboardingScreen = () => {
               {/* Skin Tone */}
               <div className="glass-card p-4 space-y-3">
                 <h3 className="text-sm font-semibold text-foreground">Skin Tone</h3>
-                <div className="flex flex-wrap gap-2">
+                <div className="flex flex-wrap gap-3 justify-center">
                   {skinTones.map(t => (
-                    <button key={t} onClick={() => setSkinTone(t)} className={`px-4 py-2 rounded-full text-xs font-medium transition-all ${skinTone === t ? "gradient-accent text-accent-foreground shadow-soft" : "bg-secondary text-secondary-foreground"}`}>{t}</button>
+                    <button
+                      key={t.label}
+                      onClick={() => setSkinTone(t.label)}
+                      className="flex flex-col items-center gap-1.5"
+                    >
+                      <div
+                        className={`w-11 h-11 rounded-full border-[3px] transition-all ${
+                          skinTone === t.label
+                            ? "border-primary scale-110 shadow-soft"
+                            : "border-transparent hover:border-primary/40"
+                        }`}
+                        style={{ backgroundColor: t.color }}
+                      />
+                      <span className={`text-[10px] font-medium ${skinTone === t.label ? "text-foreground" : "text-muted-foreground"}`}>{t.label}</span>
+                    </button>
                   ))}
                 </div>
               </div>

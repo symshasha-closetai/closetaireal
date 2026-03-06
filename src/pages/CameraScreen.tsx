@@ -23,6 +23,7 @@ const CameraScreen = () => {
   const [image, setImage] = useState<string | null>(null);
   const [analyzing, setAnalyzing] = useState(false);
   const [result, setResult] = useState<RatingResult | null>(null);
+  const [wardrobeItems, setWardrobeItems] = useState<any[]>([]);
   const fileRef = useRef<HTMLInputElement>(null);
   const cameraFileRef = useRef<HTMLInputElement>(null);
 
@@ -52,14 +53,15 @@ const CameraScreen = () => {
       const imageBase64 = await toBase64(file);
 
       // Fetch wardrobe items for context
-      let wardrobeItems: any[] = [];
+      let fetchedWardrobe: any[] = [];
       if (user) {
-        const { data } = await supabase.from("wardrobe").select("id, name, type, color, material").eq("user_id", user.id);
-        wardrobeItems = data || [];
+        const { data } = await supabase.from("wardrobe").select("id, name, type, color, material, image_url").eq("user_id", user.id);
+        fetchedWardrobe = data || [];
+        setWardrobeItems(fetchedWardrobe);
       }
 
       const { data, error } = await supabase.functions.invoke("rate-outfit", {
-        body: { imageBase64, wardrobeItems },
+        body: { imageBase64, wardrobeItems: fetchedWardrobe },
       });
 
       if (error) throw error;
@@ -94,8 +96,8 @@ const CameraScreen = () => {
           <p className="text-sm text-muted-foreground mt-1">Upload or capture your outfit for AI analysis</p>
         </motion.div>
 
-        <input type="file" accept="image/*" ref={fileRef} className="hidden" onChange={handleUpload} />
-        <input type="file" accept="image/*" capture="environment" ref={cameraFileRef} className="hidden" onChange={handleUpload} />
+        <input type="file" accept="image/*" ref={fileRef} className="hidden" onChange={handleUpload} onClick={(e) => { (e.target as HTMLInputElement).value = ""; }} />
+        <input type="file" accept="image/*" capture="environment" ref={cameraFileRef} className="hidden" onChange={handleUpload} onClick={(e) => { (e.target as HTMLInputElement).value = ""; }} />
 
         <AnimatePresence mode="wait">
           {!image ? (
@@ -140,7 +142,7 @@ const CameraScreen = () => {
                   <button onClick={clearImage} className="absolute top-3 right-3 z-10 w-8 h-8 rounded-full bg-foreground/60 text-primary-foreground flex items-center justify-center backdrop-blur-sm">
                     <X size={16} />
                   </button>
-                  <OutfitRatingCard image={image} result={result} />
+                  <OutfitRatingCard image={image} result={result} wardrobeItems={wardrobeItems} />
                 </div>
               ) : null}
             </motion.div>
