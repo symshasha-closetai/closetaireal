@@ -306,8 +306,8 @@ const WardrobeScreen = () => {
         )}
 
         {/* Hidden file inputs */}
-        <input type="file" accept="image/*" ref={fileRef} className="hidden" onChange={handleFileSelected} />
-        <input type="file" accept="image/*" capture="environment" ref={cameraRef} className="hidden" onChange={handleFileSelected} />
+        <input type="file" accept="image/*" ref={fileRef} className="hidden" onChange={handleFileSelected} onClick={(e) => { (e.target as HTMLInputElement).value = ""; }} />
+        <input type="file" accept="image/*" capture="environment" ref={cameraRef} className="hidden" onChange={handleFileSelected} onClick={(e) => { (e.target as HTMLInputElement).value = ""; }} />
 
         {/* Add Modal */}
         <AnimatePresence>
