@@ -61,7 +61,7 @@ const CameraScreen = () => {
       }
 
       const { data, error } = await supabase.functions.invoke("rate-outfit", {
-        body: { imageBase64, wardrobeItems },
+        body: { imageBase64, wardrobeItems: fetchedWardrobe },
       });
 
       if (error) throw error;
