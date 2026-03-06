@@ -17,7 +17,7 @@ serve(async (req) => {
     if (!LOVABLE_API_KEY) throw new Error("LOVABLE_API_KEY not configured");
 
     const wardrobeDesc = wardrobeItems?.length
-      ? `User's wardrobe contains: ${wardrobeItems.map((i: any) => `${i.name || i.type} (${i.type}, ${i.color || "unknown"} color)`).join(", ")}`
+      ? `User's wardrobe contains: ${wardrobeItems.map((i: any) => `${i.name || i.type} (id: ${i.id}, ${i.type}, ${i.color || "unknown"} color)`).join(", ")}`
       : "No wardrobe data available";
 
     const systemPrompt = `You are an expert fashion stylist and outfit rater. Analyze the outfit in the photo and provide detailed scoring and improvement suggestions. Consider color harmony, style cohesion, fit, and occasion appropriateness. ${wardrobeDesc}`;
