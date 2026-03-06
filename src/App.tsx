@@ -40,6 +40,7 @@ const AppRoutes = () => {
         <Route path="/" element={<ProtectedRoute><HomeScreen /></ProtectedRoute>} />
         <Route path="/camera" element={<ProtectedRoute><CameraScreen /></ProtectedRoute>} />
         <Route path="/wardrobe" element={<ProtectedRoute><WardrobeScreen /></ProtectedRoute>} />
+        <Route path="/profile" element={<ProtectedRoute><ProfileScreen /></ProtectedRoute>} />
         <Route path="*" element={<NotFound />} />
       </Routes>
       {user && <BottomNav />}
