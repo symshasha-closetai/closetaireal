@@ -53,10 +53,11 @@ const CameraScreen = () => {
       const imageBase64 = await toBase64(file);
 
       // Fetch wardrobe items for context
-      let wardrobeItems: any[] = [];
+      let fetchedWardrobe: any[] = [];
       if (user) {
-        const { data } = await supabase.from("wardrobe").select("id, name, type, color, material").eq("user_id", user.id);
-        wardrobeItems = data || [];
+        const { data } = await supabase.from("wardrobe").select("id, name, type, color, material, image_url").eq("user_id", user.id);
+        fetchedWardrobe = data || [];
+        setWardrobeItems(fetchedWardrobe);
       }
 
       const { data, error } = await supabase.functions.invoke("rate-outfit", {
