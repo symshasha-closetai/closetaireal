@@ -376,31 +376,55 @@ const WardrobeScreen = () => {
                       </div>
                     ) : (
                       <>
-                        <p className="text-sm text-muted-foreground">Select items to add to your wardrobe:</p>
-                        <div className="space-y-2 max-h-48 overflow-y-auto">
-                          {detectedItems.map((item, idx) => (
-                            <button
-                              key={idx}
-                              onClick={() => toggleDetected(idx)}
-                              className={`w-full flex items-center gap-3 p-3 rounded-xl text-left transition-all ${
-                                selectedDetected.includes(idx)
-                                  ? "bg-primary/10 border border-primary/30"
-                                  : "bg-secondary border border-transparent"
-                              }`}
-                            >
-                              <div className={`w-5 h-5 rounded-full border-2 flex items-center justify-center ${
-                                selectedDetected.includes(idx) ? "border-primary bg-primary" : "border-muted-foreground"
-                              }`}>
-                                {selectedDetected.includes(idx) && (
-                                  <div className="w-2 h-2 rounded-full bg-primary-foreground" />
-                                )}
+                        <p className="text-sm text-muted-foreground">Edit & select items to add:</p>
+                        <div className="space-y-3 max-h-60 overflow-y-auto">
+                          {detectedItems.map((item, idx) => {
+                            const selected = selectedDetected.includes(idx);
+                            return (
+                              <div
+                                key={idx}
+                                className={`rounded-xl p-3 transition-all ${
+                                  selected ? "bg-primary/10 border border-primary/30" : "bg-secondary border border-transparent"
+                                }`}
+                              >
+                                <div className="flex items-center gap-2 mb-2">
+                                  <button onClick={() => toggleDetected(idx)} className={`w-5 h-5 rounded-full border-2 flex items-center justify-center flex-shrink-0 ${
+                                    selected ? "border-primary bg-primary" : "border-muted-foreground"
+                                  }`}>
+                                    {selected && <div className="w-2 h-2 rounded-full bg-primary-foreground" />}
+                                  </button>
+                                  <input
+                                    value={item.name}
+                                    onChange={(e) => updateDetectedItem(idx, "name", e.target.value)}
+                                    className="flex-1 text-sm font-medium text-foreground bg-transparent border-b border-border focus:border-primary outline-none px-1 py-0.5"
+                                  />
+                                </div>
+                                <div className="grid grid-cols-3 gap-2 pl-7">
+                                  <select
+                                    value={item.type}
+                                    onChange={(e) => updateDetectedItem(idx, "type", e.target.value)}
+                                    className="text-xs bg-card border border-border rounded-lg px-2 py-1.5 text-foreground"
+                                  >
+                                    {["Tops", "Bottoms", "Shoes", "Dresses", "Accessories"].map(t => (
+                                      <option key={t} value={t}>{t}</option>
+                                    ))}
+                                  </select>
+                                  <input
+                                    value={item.color || ""}
+                                    onChange={(e) => updateDetectedItem(idx, "color", e.target.value)}
+                                    placeholder="Color"
+                                    className="text-xs bg-card border border-border rounded-lg px-2 py-1.5 text-foreground placeholder:text-muted-foreground"
+                                  />
+                                  <input
+                                    value={item.material || ""}
+                                    onChange={(e) => updateDetectedItem(idx, "material", e.target.value)}
+                                    placeholder="Material"
+                                    className="text-xs bg-card border border-border rounded-lg px-2 py-1.5 text-foreground placeholder:text-muted-foreground"
+                                  />
+                                </div>
                               </div>
-                              <div className="flex-1 min-w-0">
-                                <p className="text-sm font-medium text-foreground truncate">{item.name}</p>
-                                <p className="text-xs text-muted-foreground">{item.type} · {item.color || "—"} · {item.material || "—"}</p>
-                              </div>
-                            </button>
-                          ))}
+                            );
+                          })}
                         </div>
                         <button
                           onClick={handleSaveDetected}
