@@ -15,6 +15,7 @@ const CameraScreen = () => {
     advice: string;
   }>(null);
   const fileRef = useRef<HTMLInputElement>(null);
+  const cameraFileRef = useRef<HTMLInputElement>(null);
 
   const handleUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -56,6 +57,7 @@ const CameraScreen = () => {
         </motion.div>
 
         <input type="file" accept="image/*" ref={fileRef} className="hidden" onChange={handleUpload} />
+        <input type="file" accept="image/*" capture="environment" ref={cameraFileRef} className="hidden" onChange={handleUpload} />
 
         <AnimatePresence mode="wait">
           {!image ? (
@@ -76,7 +78,7 @@ const CameraScreen = () => {
                 </div>
                 <div className="flex gap-3 w-full max-w-xs">
                   <button
-                    onClick={() => fileRef.current?.click()}
+                    onClick={() => cameraFileRef.current?.click()}
                     className="flex-1 flex items-center justify-center gap-2 py-3 rounded-xl gradient-accent text-accent-foreground font-medium text-sm shadow-soft active:scale-[0.98] transition-transform"
                   >
                     <Camera size={16} />
