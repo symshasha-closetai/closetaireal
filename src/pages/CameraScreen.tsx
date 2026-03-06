@@ -56,6 +56,7 @@ const CameraScreen = () => {
         </motion.div>
 
         <input type="file" accept="image/*" ref={fileRef} className="hidden" onChange={handleUpload} />
+        <input type="file" accept="image/*" capture="environment" ref={cameraFileRef} className="hidden" onChange={handleUpload} />
 
         <AnimatePresence mode="wait">
           {!image ? (
