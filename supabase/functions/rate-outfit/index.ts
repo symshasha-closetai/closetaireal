@@ -59,11 +59,12 @@ serve(async (req) => {
                       item_name: { type: "string" },
                       category: { type: "string" },
                       reason: { type: "string" },
+                      wardrobe_item_id: { type: "string", description: "The id of the matching wardrobe item if available" },
                     },
                     required: ["item_name", "category", "reason"],
                     additionalProperties: false,
                   },
-                  description: "Suggestions to swap from user's existing wardrobe",
+                  description: "Suggestions to swap from user's existing wardrobe. Include wardrobe_item_id when referencing a specific item.",
                 },
                 shopping_suggestions: {
                   type: "array",

@@ -228,6 +228,10 @@ const WardrobeScreen = () => {
     );
   };
 
+  const updateDetectedItem = (idx: number, field: keyof DetectedItem, value: string) => {
+    setDetectedItems(prev => prev.map((item, i) => i === idx ? { ...item, [field]: value } : item));
+  };
+
   return (
     <div className="min-h-screen pb-24 px-5 pt-14">
       <div className="max-w-lg mx-auto space-y-5">

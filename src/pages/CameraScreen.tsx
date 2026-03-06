@@ -142,7 +142,7 @@ const CameraScreen = () => {
                   <button onClick={clearImage} className="absolute top-3 right-3 z-10 w-8 h-8 rounded-full bg-foreground/60 text-primary-foreground flex items-center justify-center backdrop-blur-sm">
                     <X size={16} />
                   </button>
-                  <OutfitRatingCard image={image} result={result} />
+                  <OutfitRatingCard image={image} result={result} wardrobeItems={wardrobeItems} />
                 </div>
               ) : null}
             </motion.div>
