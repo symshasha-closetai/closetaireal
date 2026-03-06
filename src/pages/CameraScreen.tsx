@@ -2,6 +2,7 @@ import { useState, useRef } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { Camera, Upload, X, Sparkles } from "lucide-react";
 import ScoreRing from "../components/ScoreRing";
+import AppHeader from "../components/AppHeader";
 
 const CameraScreen = () => {
   const [image, setImage] = useState<string | null>(null);
