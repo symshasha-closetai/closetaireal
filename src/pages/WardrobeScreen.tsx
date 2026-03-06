@@ -1,6 +1,6 @@
 import { useState, useRef, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { Plus, Trash2, X, Loader2 } from "lucide-react";
+import { Plus, Trash2, X, Loader2, Camera, Upload, Sparkles } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { toast } from "sonner";
@@ -15,7 +15,14 @@ type ClothingItem = {
   name: string | null;
 };
 
-const categories = ["All", "Tops", "Bottoms", "Shoes", "Dresses"];
+type DetectedItem = {
+  name: string;
+  type: string;
+  color: string | null;
+  material: string | null;
+};
+
+const categories = ["All", "Tops", "Bottoms", "Shoes", "Dresses", "Accessories"];
 
 const WardrobeScreen = () => {
   const { user } = useAuth();
@@ -24,8 +31,15 @@ const WardrobeScreen = () => {
   const [loading, setLoading] = useState(true);
   const [showAdd, setShowAdd] = useState(false);
   const [uploading, setUploading] = useState(false);
+  const [analyzing, setAnalyzing] = useState(false);
+  const [detectedItems, setDetectedItems] = useState<DetectedItem[]>([]);
+  const [selectedDetected, setSelectedDetected] = useState<number[]>([]);
+  const [uploadedFile, setUploadedFile] = useState<File | null>(null);
+  const [previewUrl, setPreviewUrl] = useState<string | null>(null);
   const [newType, setNewType] = useState("Tops");
+  const [addMode, setAddMode] = useState<"choose" | "manual" | "ai">("choose");
   const fileRef = useRef<HTMLInputElement>(null);
+  const cameraRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     if (user) fetchItems();
@@ -59,48 +73,159 @@ const WardrobeScreen = () => {
     }
   };
 
-  const handleAddImage = async (e: React.ChangeEvent<HTMLInputElement>) => {
+  const fileToBase64 = (file: File): Promise<string> => {
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onload = () => {
+        const result = reader.result as string;
+        resolve(result.split(",")[1]);
+      };
+      reader.onerror = reject;
+      reader.readAsDataURL(file);
+    });
+  };
+
+  const handleFileSelected = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file || !user) return;
 
+    setUploadedFile(file);
+    setPreviewUrl(URL.createObjectURL(file));
+    setAddMode("ai");
+    setAnalyzing(true);
+    setDetectedItems([]);
+    setSelectedDetected([]);
+
+    try {
+      const base64 = await fileToBase64(file);
+      const { data, error } = await supabase.functions.invoke("analyze-clothing", {
+        body: { imageBase64: base64 },
+      });
+
+      if (error) throw error;
+
+      const detected = data?.items || [];
+      if (detected.length === 0) {
+        toast.info("No clothing items detected. You can add manually.");
+        setAddMode("manual");
+      } else {
+        setDetectedItems(detected);
+        setSelectedDetected(detected.map((_: DetectedItem, i: number) => i));
+        toast.success(`Found ${detected.length} item(s)!`);
+      }
+    } catch (err) {
+      console.error("AI analysis failed:", err);
+      toast.error("AI analysis failed. You can add manually.");
+      setAddMode("manual");
+    } finally {
+      setAnalyzing(false);
+    }
+  };
+
+  const handleSaveDetected = async () => {
+    if (!user || !uploadedFile || selectedDetected.length === 0) return;
     setUploading(true);
-    const ext = file.name.split(".").pop();
-    const path = `${user.id}/${Date.now()}.${ext}`;
 
-    const { error: uploadError } = await supabase.storage
-      .from("wardrobe")
-      .upload(path, file);
+    try {
+      const ext = uploadedFile.name.split(".").pop();
+      const path = `${user.id}/${Date.now()}.${ext}`;
 
-    if (uploadError) {
-      toast.error("Failed to upload image");
+      const { error: uploadError } = await supabase.storage
+        .from("wardrobe")
+        .upload(path, uploadedFile);
+
+      if (uploadError) throw uploadError;
+
+      const { data: { publicUrl } } = supabase.storage
+        .from("wardrobe")
+        .getPublicUrl(path);
+
+      const inserts = selectedDetected.map((idx) => {
+        const item = detectedItems[idx];
+        return {
+          user_id: user.id,
+          image_url: publicUrl,
+          type: item.type,
+          name: item.name,
+          color: item.color,
+          material: item.material,
+        };
+      });
+
+      const { data, error } = await supabase
+        .from("wardrobe")
+        .insert(inserts)
+        .select("id, image_url, type, color, material, name");
+
+      if (error) throw error;
+
+      setItems((prev) => [...(data || []), ...prev]);
+      toast.success(`${data?.length || 0} item(s) added to wardrobe!`);
+      resetModal();
+    } catch (err) {
+      console.error(err);
+      toast.error("Failed to save items");
+    } finally {
       setUploading(false);
-      return;
     }
+  };
 
-    const { data: { publicUrl } } = supabase.storage
-      .from("wardrobe")
-      .getPublicUrl(path);
+  const handleManualSave = async () => {
+    if (!user || !uploadedFile) return;
+    setUploading(true);
 
-    const { data, error } = await supabase
-      .from("wardrobe")
-      .insert({
-        user_id: user.id,
-        image_url: publicUrl,
-        type: newType,
-        name: "New Item",
-      })
-      .select("id, image_url, type, color, material, name")
-      .single();
+    try {
+      const ext = uploadedFile.name.split(".").pop();
+      const path = `${user.id}/${Date.now()}.${ext}`;
 
-    if (error) {
-      toast.error("Failed to save item");
-    } else if (data) {
-      setItems((prev) => [data, ...prev]);
+      const { error: uploadError } = await supabase.storage
+        .from("wardrobe")
+        .upload(path, uploadedFile);
+
+      if (uploadError) throw uploadError;
+
+      const { data: { publicUrl } } = supabase.storage
+        .from("wardrobe")
+        .getPublicUrl(path);
+
+      const { data, error } = await supabase
+        .from("wardrobe")
+        .insert({
+          user_id: user.id,
+          image_url: publicUrl,
+          type: newType,
+          name: "New Item",
+        })
+        .select("id, image_url, type, color, material, name")
+        .single();
+
+      if (error) throw error;
+
+      if (data) setItems((prev) => [data, ...prev]);
       toast.success("Item added to wardrobe!");
+      resetModal();
+    } catch (err) {
+      console.error(err);
+      toast.error("Failed to save item");
+    } finally {
+      setUploading(false);
     }
+  };
 
-    setUploading(false);
+  const resetModal = () => {
     setShowAdd(false);
+    setAddMode("choose");
+    setDetectedItems([]);
+    setSelectedDetected([]);
+    setUploadedFile(null);
+    setPreviewUrl(null);
+    setAnalyzing(false);
+  };
+
+  const toggleDetected = (idx: number) => {
+    setSelectedDetected((prev) =>
+      prev.includes(idx) ? prev.filter((i) => i !== idx) : [...prev, idx]
+    );
   };
 
   return (
@@ -180,6 +305,10 @@ const WardrobeScreen = () => {
           </motion.div>
         )}
 
+        {/* Hidden file inputs */}
+        <input type="file" accept="image/*" ref={fileRef} className="hidden" onChange={handleFileSelected} />
+        <input type="file" accept="image/*" capture="environment" ref={cameraRef} className="hidden" onChange={handleFileSelected} />
+
         {/* Add Modal */}
         <AnimatePresence>
           {showAdd && (
@@ -187,47 +316,134 @@ const WardrobeScreen = () => {
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               exit={{ opacity: 0 }}
-              className="fixed inset-0 bg-foreground/30 backdrop-blur-sm z-50 flex items-end justify-center"
-              onClick={() => setShowAdd(false)}
+              className="fixed inset-0 bg-foreground/30 backdrop-blur-sm z-50 flex items-center justify-center p-5"
+              onClick={resetModal}
             >
               <motion.div
-                initial={{ y: "100%" }}
-                animate={{ y: 0 }}
-                exit={{ y: "100%" }}
+                initial={{ opacity: 0, scale: 0.95 }}
+                animate={{ opacity: 1, scale: 1 }}
+                exit={{ opacity: 0, scale: 0.95 }}
                 transition={{ type: "spring", damping: 25, stiffness: 300 }}
                 onClick={(e) => e.stopPropagation()}
-                className="w-full max-w-lg bg-card rounded-t-3xl p-6 space-y-4 safe-bottom"
+                className="w-full max-w-md bg-card rounded-3xl p-6 space-y-4 max-h-[85vh] overflow-y-auto"
               >
                 <div className="flex items-center justify-between">
-                  <h3 className="font-semibold text-foreground">Add Clothing</h3>
-                  <button onClick={() => setShowAdd(false)}>
+                  <h3 className="font-semibold text-foreground text-lg">Add Clothing</h3>
+                  <button onClick={resetModal}>
                     <X size={20} className="text-muted-foreground" />
                   </button>
                 </div>
-                <p className="text-sm text-muted-foreground">Select a category and upload a photo.</p>
-                
-                <div className="flex gap-2 flex-wrap">
-                  {["Tops", "Bottoms", "Shoes", "Dresses"].map((t) => (
-                    <button
-                      key={t}
-                      onClick={() => setNewType(t)}
-                      className={`px-4 py-2 rounded-full text-xs font-medium transition-all ${
-                        newType === t ? "gradient-accent text-accent-foreground" : "bg-secondary text-secondary-foreground"
-                      }`}
-                    >
-                      {t}
-                    </button>
-                  ))}
-                </div>
 
-                <input type="file" accept="image/*" ref={fileRef} className="hidden" onChange={handleAddImage} />
-                <button
-                  onClick={() => fileRef.current?.click()}
-                  disabled={uploading}
-                  className="w-full py-3.5 rounded-xl gradient-accent text-accent-foreground font-medium text-sm shadow-soft active:scale-[0.98] transition-transform disabled:opacity-60"
-                >
-                  {uploading ? "Uploading..." : "Upload Photo"}
-                </button>
+                {addMode === "choose" && (
+                  <>
+                    <p className="text-sm text-muted-foreground">
+                      Take a photo of yourself or your clothes — AI will detect and categorize each item automatically.
+                    </p>
+                    <div className="flex gap-3">
+                      <button
+                        onClick={() => cameraRef.current?.click()}
+                        className="flex-1 flex flex-col items-center gap-2 py-5 rounded-2xl gradient-accent text-accent-foreground font-medium text-sm shadow-soft active:scale-[0.98] transition-transform"
+                      >
+                        <Camera size={24} />
+                        Take Photo
+                      </button>
+                      <button
+                        onClick={() => fileRef.current?.click()}
+                        className="flex-1 flex flex-col items-center gap-2 py-5 rounded-2xl bg-secondary text-secondary-foreground font-medium text-sm active:scale-[0.98] transition-transform"
+                      >
+                        <Upload size={24} />
+                        Gallery
+                      </button>
+                    </div>
+                  </>
+                )}
+
+                {addMode === "ai" && (
+                  <>
+                    {previewUrl && (
+                      <div className="rounded-2xl overflow-hidden">
+                        <img src={previewUrl} alt="Preview" className="w-full max-h-48 object-cover" />
+                      </div>
+                    )}
+
+                    {analyzing ? (
+                      <div className="flex flex-col items-center gap-3 py-6">
+                        <motion.div animate={{ rotate: 360 }} transition={{ repeat: Infinity, duration: 1.5, ease: "linear" }}>
+                          <Sparkles size={28} className="text-primary" />
+                        </motion.div>
+                        <p className="text-sm font-medium text-foreground">AI is analyzing your clothes...</p>
+                        <p className="text-xs text-muted-foreground">Detecting items & categories</p>
+                      </div>
+                    ) : (
+                      <>
+                        <p className="text-sm text-muted-foreground">Select items to add to your wardrobe:</p>
+                        <div className="space-y-2 max-h-48 overflow-y-auto">
+                          {detectedItems.map((item, idx) => (
+                            <button
+                              key={idx}
+                              onClick={() => toggleDetected(idx)}
+                              className={`w-full flex items-center gap-3 p-3 rounded-xl text-left transition-all ${
+                                selectedDetected.includes(idx)
+                                  ? "bg-primary/10 border border-primary/30"
+                                  : "bg-secondary border border-transparent"
+                              }`}
+                            >
+                              <div className={`w-5 h-5 rounded-full border-2 flex items-center justify-center ${
+                                selectedDetected.includes(idx) ? "border-primary bg-primary" : "border-muted-foreground"
+                              }`}>
+                                {selectedDetected.includes(idx) && (
+                                  <div className="w-2 h-2 rounded-full bg-primary-foreground" />
+                                )}
+                              </div>
+                              <div className="flex-1 min-w-0">
+                                <p className="text-sm font-medium text-foreground truncate">{item.name}</p>
+                                <p className="text-xs text-muted-foreground">{item.type} · {item.color || "—"} · {item.material || "—"}</p>
+                              </div>
+                            </button>
+                          ))}
+                        </div>
+                        <button
+                          onClick={handleSaveDetected}
+                          disabled={uploading || selectedDetected.length === 0}
+                          className="w-full py-3.5 rounded-xl gradient-accent text-accent-foreground font-medium text-sm shadow-soft active:scale-[0.98] transition-transform disabled:opacity-60"
+                        >
+                          {uploading ? "Saving..." : `Add ${selectedDetected.length} Item(s)`}
+                        </button>
+                      </>
+                    )}
+                  </>
+                )}
+
+                {addMode === "manual" && (
+                  <>
+                    {previewUrl && (
+                      <div className="rounded-2xl overflow-hidden">
+                        <img src={previewUrl} alt="Preview" className="w-full max-h-48 object-cover" />
+                      </div>
+                    )}
+                    <p className="text-sm text-muted-foreground">Select a category:</p>
+                    <div className="flex gap-2 flex-wrap">
+                      {["Tops", "Bottoms", "Shoes", "Dresses", "Accessories"].map((t) => (
+                        <button
+                          key={t}
+                          onClick={() => setNewType(t)}
+                          className={`px-4 py-2 rounded-full text-xs font-medium transition-all ${
+                            newType === t ? "gradient-accent text-accent-foreground" : "bg-secondary text-secondary-foreground"
+                          }`}
+                        >
+                          {t}
+                        </button>
+                      ))}
+                    </div>
+                    <button
+                      onClick={handleManualSave}
+                      disabled={uploading}
+                      className="w-full py-3.5 rounded-xl gradient-accent text-accent-foreground font-medium text-sm shadow-soft active:scale-[0.98] transition-transform disabled:opacity-60"
+                    >
+                      {uploading ? "Saving..." : "Add Item"}
+                    </button>
+                  </>
+                )}
               </motion.div>
             </motion.div>
           )}
