@@ -96,8 +96,8 @@ const CameraScreen = () => {
           <p className="text-sm text-muted-foreground mt-1">Upload or capture your outfit for AI analysis</p>
         </motion.div>
 
-        <input type="file" accept="image/*" ref={fileRef} className="hidden" onChange={handleUpload} />
-        <input type="file" accept="image/*" capture="environment" ref={cameraFileRef} className="hidden" onChange={handleUpload} />
+        <input type="file" accept="image/*" ref={fileRef} className="hidden" onChange={handleUpload} onClick={(e) => { (e.target as HTMLInputElement).value = ""; }} />
+        <input type="file" accept="image/*" capture="environment" ref={cameraFileRef} className="hidden" onChange={handleUpload} onClick={(e) => { (e.target as HTMLInputElement).value = ""; }} />
 
         <AnimatePresence mode="wait">
           {!image ? (
