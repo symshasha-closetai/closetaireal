@@ -78,7 +78,7 @@ const CameraScreen = () => {
                 </div>
                 <div className="flex gap-3 w-full max-w-xs">
                   <button
-                    onClick={() => fileRef.current?.click()}
+                    onClick={() => cameraFileRef.current?.click()}
                     className="flex-1 flex items-center justify-center gap-2 py-3 rounded-xl gradient-accent text-accent-foreground font-medium text-sm shadow-soft active:scale-[0.98] transition-transform"
                   >
                     <Camera size={16} />
