@@ -177,6 +177,11 @@ const ProfileScreen = () => {
           </button>
         </motion.div>
 
+        {/* Style Profile Editor */}
+        <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.18 }}>
+          <StyleProfileEditor />
+        </motion.div>
+
         {/* Logout */}
         <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.2 }}>
           <button
