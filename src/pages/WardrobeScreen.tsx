@@ -152,6 +152,7 @@ const WardrobeScreen = () => {
               itemColor: item.color,
               itemMaterial: item.material,
               userId: user.id,
+              bodyType: styleProfile?.body_type || null,
             },
           });
 

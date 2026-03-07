@@ -20,7 +20,7 @@ serve(async (req) => {
       ? `User's wardrobe contains: ${wardrobeItems.map((i: any) => `${i.name || i.type} (id: ${i.id}, ${i.type}, ${i.color || "unknown"} color)`).join(", ")}`
       : "No wardrobe data available";
 
-    const systemPrompt = `You are an expert fashion stylist and outfit rater. Analyze the outfit in the photo and provide detailed scoring and improvement suggestions. Consider color harmony, style cohesion, fit, and occasion appropriateness. ${wardrobeDesc}`;
+    const systemPrompt = `You are an expert fashion stylist and outfit rater who speaks Gen Z language fluently. Analyze the outfit in the photo and provide detailed scoring, improvement suggestions, and a fire Gen Z praising caption. Consider color harmony, style cohesion, fit, and occasion appropriateness. ${wardrobeDesc}`;
 
     const response = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
       method: "POST",
@@ -32,7 +32,7 @@ serve(async (req) => {
           {
             role: "user",
             content: [
-              { type: "text", text: "Rate this outfit and suggest improvements. If the user has wardrobe items, suggest swaps from their wardrobe too." },
+              { type: "text", text: "Rate this outfit and suggest improvements. If the user has wardrobe items, suggest swaps from their wardrobe too. Give a trending Gen Z praise caption and explain reasoning for each score." },
               { type: "image_url", image_url: { url: `data:image/jpeg;base64,${imageBase64}` } },
             ],
           },
@@ -41,16 +41,21 @@ serve(async (req) => {
           type: "function",
           function: {
             name: "rate_outfit",
-            description: "Return outfit rating with scores, advice, and improvement suggestions",
+            description: "Return outfit rating with scores, reasons, advice, Gen Z praise, and improvement suggestions with image prompts",
             parameters: {
               type: "object",
               properties: {
                 overall_score: { type: "number", description: "Overall outfit score 1-10" },
+                overall_reason: { type: "string", description: "Why this overall score was given, 1-2 sentences" },
                 color_score: { type: "number", description: "Color harmony score 1-10" },
+                color_reason: { type: "string", description: "Why this color score was given, 1-2 sentences" },
                 style_score: { type: "number", description: "Style cohesion score 1-10" },
+                style_reason: { type: "string", description: "Why this style score was given, 1-2 sentences" },
                 fit_score: { type: "number", description: "Fit score 1-10" },
+                fit_reason: { type: "string", description: "Why this fit score was given, 1-2 sentences" },
                 occasion: { type: "string", description: "Detected occasion (e.g. Casual, Formal, Date Night)" },
                 advice: { type: "string", description: "Main styling advice in 1-2 sentences" },
+                praise_line: { type: "string", description: "A trending Gen Z praising caption like 'main character energy fr fr 🔥' or 'this fit is giving everything it needs to give 💅' or 'slay certified no cap 👑'. Make it sound authentic, trendy, and hype." },
                 wardrobe_suggestions: {
                   type: "array",
                   items: {
@@ -74,14 +79,15 @@ serve(async (req) => {
                       item_name: { type: "string" },
                       category: { type: "string" },
                       reason: { type: "string" },
+                      image_prompt: { type: "string", description: "A short description for generating a product image of this item, e.g. 'white leather sneakers with minimal design' or 'gold chain necklace with small pendant'" },
                     },
-                    required: ["item_name", "category", "reason"],
+                    required: ["item_name", "category", "reason", "image_prompt"],
                     additionalProperties: false,
                   },
                   description: "New items to buy that would improve the look",
                 },
               },
-              required: ["overall_score", "color_score", "style_score", "fit_score", "occasion", "advice", "wardrobe_suggestions", "shopping_suggestions"],
+              required: ["overall_score", "overall_reason", "color_score", "color_reason", "style_score", "style_reason", "fit_score", "fit_reason", "occasion", "advice", "praise_line", "wardrobe_suggestions", "shopping_suggestions"],
               additionalProperties: false,
             },
           },
