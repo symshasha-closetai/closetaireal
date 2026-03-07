@@ -188,8 +188,8 @@ const OnboardingScreen = () => {
       }, { onConflict: "user_id" });
 
       toast.success("AI analysis complete! ✨");
-      // Skip to style step since photos were provided
-      setStep(2);
+      // Go to body profile step so user can review/edit AI results
+      setStep(1);
     } catch (err) {
       console.error("Analysis error:", err);
       toast.error("Analysis failed. You can set preferences manually.");
