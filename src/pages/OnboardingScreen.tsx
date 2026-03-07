@@ -576,13 +576,16 @@ const OnboardingScreen = () => {
                     <button
                       key={s.label}
                       onClick={() => toggleStyle(s.label)}
-                      className={`flex flex-col items-center gap-2 p-4 rounded-2xl border-2 transition-all ${
+                      className={`flex items-center gap-2 p-3 rounded-2xl border-2 transition-all ${
                         selected ? "border-primary bg-primary/10 shadow-soft" : "border-border bg-secondary/50"
                       }`}
                     >
-                      <span className="text-sm font-semibold text-foreground">{s.label}</span>
-                      <span className="text-[10px] text-muted-foreground">{s.desc}</span>
-                      {selected && <Check size={14} className="text-primary" />}
+                      <OnboardingOptionImage category="style" label={s.label} />
+                      <div className="flex-1 text-left">
+                        <span className="text-sm font-semibold text-foreground block">{s.label}</span>
+                        <span className="text-[10px] text-muted-foreground">{s.desc}</span>
+                      </div>
+                      {selected && <Check size={14} className="text-primary flex-shrink-0" />}
                     </button>
                   );
                 })}
