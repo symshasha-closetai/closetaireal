@@ -361,7 +361,7 @@ const WardrobeScreen = () => {
                 exit={{ opacity: 0, scale: 0.95 }}
                 transition={{ type: "spring", damping: 25, stiffness: 300 }}
                 onClick={(e) => e.stopPropagation()}
-                className="w-full max-w-md bg-card rounded-3xl p-6 space-y-4 max-h-[85vh] overflow-y-auto"
+                className="w-full max-w-md bg-card rounded-3xl p-6 space-y-4 max-h-[85vh] overflow-y-auto pb-24"
               >
                 <div className="flex items-center justify-between">
                   <h3 className="font-semibold text-foreground text-lg">Add Clothing</h3>
