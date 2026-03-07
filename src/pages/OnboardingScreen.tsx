@@ -580,7 +580,6 @@ const OnboardingScreen = () => {
             <button
               onClick={() => {
                 if (step === 0) handleSkip();
-                else if (step === 2 && photosProvided) setStep(0);
                 else setStep(step - 1);
               }}
               disabled={saving}
@@ -591,7 +590,6 @@ const OnboardingScreen = () => {
             <button
               onClick={() => {
                 if (step === 0) {
-                  // If no photos, go to manual body profile
                   setStep(1);
                 } else if (step === 1) {
                   setStep(2);
