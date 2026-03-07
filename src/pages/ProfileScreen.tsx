@@ -1,6 +1,7 @@
 import { useState, useRef } from "react";
 import { motion } from "framer-motion";
 import { ArrowLeft, Camera, LogOut, User, Save, Trash2, AlertTriangle } from "lucide-react";
+import StyleProfileEditor from "../components/StyleProfileEditor";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "../hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
@@ -174,6 +175,11 @@ const ProfileScreen = () => {
             <Save size={16} />
             {saving ? "Saving..." : "Save Changes"}
           </button>
+        </motion.div>
+
+        {/* Style Profile Editor */}
+        <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.18 }}>
+          <StyleProfileEditor />
         </motion.div>
 
         {/* Logout */}

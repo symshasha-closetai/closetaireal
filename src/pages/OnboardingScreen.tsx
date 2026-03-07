@@ -188,8 +188,8 @@ const OnboardingScreen = () => {
       }, { onConflict: "user_id" });
 
       toast.success("AI analysis complete! ✨");
-      // Skip to style step since photos were provided
-      setStep(2);
+      // Go to body profile step so user can review/edit AI results
+      setStep(1);
     } catch (err) {
       console.error("Analysis error:", err);
       toast.error("Analysis failed. You can set preferences manually.");
@@ -263,15 +263,7 @@ const OnboardingScreen = () => {
     }
   };
 
-  // Determine actual steps based on photos
-  const getStepLabel = () => {
-    if (step === 0) return "Photos";
-    if (step === 1) return "Body Profile";
-    if (step === 2) return "Style";
-    return "Finishing";
-  };
-
-  const totalSteps = photosProvided ? 3 : 4;
+  const totalSteps = 4; // Always 4 steps: Photos, Body, Style, Done
 
   const slideVariants = {
     enter: (dir: number) => ({ x: dir > 0 ? 200 : -200, opacity: 0 }),
@@ -284,10 +276,10 @@ const OnboardingScreen = () => {
       <div className="max-w-lg mx-auto w-full flex-1 flex flex-col">
         {/* Progress */}
         <div className="flex items-center gap-2 mb-8">
-          {(photosProvided ? ["Photos", "Style", "Done"] : ["Photos", "Body", "Style", "Done"]).map((s, i) => (
+          {["Photos", "Body", "Style", "Done"].map((s, i) => (
             <div key={s} className="flex-1 flex flex-col items-center gap-1">
-              <div className={`h-1 w-full rounded-full transition-all duration-500 ${i <= (photosProvided ? (step === 0 ? 0 : step - 1) : step) ? "gradient-accent" : "bg-secondary"}`} />
-              <span className={`text-[10px] font-medium transition-colors ${i <= (photosProvided ? (step === 0 ? 0 : step - 1) : step) ? "text-foreground" : "text-muted-foreground"}`}>{s}</span>
+              <div className={`h-1 w-full rounded-full transition-all duration-500 ${i <= step ? "gradient-accent" : "bg-secondary"}`} />
+              <span className={`text-[10px] font-medium transition-colors ${i <= step ? "text-foreground" : "text-muted-foreground"}`}>{s}</span>
             </div>
           ))}
         </div>
@@ -398,13 +390,24 @@ const OnboardingScreen = () => {
             </motion.div>
           )}
 
-          {/* Step 1: Manual Body Profile (only if photos skipped) */}
-          {step === 1 && !photosProvided && (
+          {/* Step 1: Body Profile (always shown — editable AI results or manual) */}
+          {step === 1 && (
             <motion.div key="body" custom={1} variants={slideVariants} initial="enter" animate="center" exit="exit" transition={{ duration: 0.3 }} className="flex-1 space-y-5 overflow-y-auto">
               <div className="text-center">
                 <h1 className="font-display text-2xl font-semibold text-foreground">Your Body Profile</h1>
-                <p className="text-sm text-muted-foreground mt-1">Select what matches you best</p>
+                <p className="text-sm text-muted-foreground mt-1">
+                  {photosProvided ? "AI detected these — feel free to adjust" : "Select what matches you best"}
+                </p>
               </div>
+
+              {photosProvided && analysisResult && (
+                <div className="glass-card-elevated p-3 flex items-center gap-2">
+                  <Sparkles size={16} className="text-primary flex-shrink-0" />
+                  <p className="text-xs text-muted-foreground">
+                    Values pre-filled from AI analysis. Edit anything that doesn't look right.
+                  </p>
+                </div>
+              )}
 
               {/* Body Type */}
               <div className="glass-card p-4 space-y-3">
@@ -577,7 +580,6 @@ const OnboardingScreen = () => {
             <button
               onClick={() => {
                 if (step === 0) handleSkip();
-                else if (step === 2 && photosProvided) setStep(0);
                 else setStep(step - 1);
               }}
               disabled={saving}
@@ -588,7 +590,6 @@ const OnboardingScreen = () => {
             <button
               onClick={() => {
                 if (step === 0) {
-                  // If no photos, go to manual body profile
                   setStep(1);
                 } else if (step === 1) {
                   setStep(2);

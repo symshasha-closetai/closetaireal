@@ -14,7 +14,7 @@ const AppHeader = () => {
         <Bell size={16} className="text-muted-foreground" />
       </button>
       <div className="flex items-center gap-2">
-        <img src={logo} alt="ClosetAI" className="w-8 h-8 rounded-lg object-contain" />
+        <img src={logo} alt="ClosetAI" className="w-8 h-8 rounded-lg object-contain dark:brightness-0 dark:invert" />
         <h1 className="font-display text-lg font-semibold text-foreground">ClosetAI</h1>
       </div>
       <button
