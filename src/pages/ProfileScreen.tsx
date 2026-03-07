@@ -1,6 +1,7 @@
 import { useState, useRef } from "react";
 import { motion } from "framer-motion";
 import { ArrowLeft, Camera, LogOut, User, Save, Trash2, AlertTriangle } from "lucide-react";
+import StyleProfileEditor from "../components/StyleProfileEditor";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "../hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
