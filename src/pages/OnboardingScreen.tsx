@@ -306,9 +306,19 @@ const OnboardingScreen = () => {
                       className="h-full gradient-accent rounded-full"
                       initial={{ width: "0%" }}
                       animate={{ width: "100%" }}
-                      transition={{ duration: 8, ease: "linear" }}
+                      transition={{ duration: 15, ease: "linear" }}
                     />
                   </div>
+                  <button
+                    onClick={() => {
+                      setAnalyzing(false);
+                      setStep(1);
+                      toast.info("Skipped AI analysis. Set preferences manually.");
+                    }}
+                    className="mt-4 px-6 py-2.5 rounded-xl bg-secondary text-secondary-foreground text-sm font-medium active:scale-95 transition-transform"
+                  >
+                    Skip for now →
+                  </button>
                 </div>
               ) : (
                 <>
