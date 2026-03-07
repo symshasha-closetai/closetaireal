@@ -19,12 +19,30 @@ serve(async (req) => {
     ).join("\n");
 
     const profileDesc = styleProfile
-      ? `Body type: ${styleProfile.body_type || "unknown"}, Skin tone: ${styleProfile.skin_tone || "unknown"}, Style preference: ${styleProfile.style_type || "any"}`
+      ? `Body type: ${styleProfile.body_type || "unknown"}, Skin tone: ${styleProfile.skin_tone || "unknown"}, Style preference: ${styleProfile.style_type || "any"}, Face shape: ${styleProfile.face_shape || "unknown"}`
       : "No style profile available";
 
-    const systemPrompt = `You are an expert fashion stylist AI. Given the user's wardrobe items, occasion, time of day, and body profile, suggest 2-3 complete outfit combinations using ONLY items from their wardrobe. Each outfit must use real item IDs from the provided wardrobe.`;
+    const bodyAnalysis = styleProfile?.ai_body_analysis
+      ? `\nAI Body Analysis: ${JSON.stringify(styleProfile.ai_body_analysis)}`
+      : "";
 
-    const userPrompt = `Wardrobe items:\n${wardrobeDesc}\n\nOccasion: ${occasion}\nTime of day: ${timeOfDay}\nProfile: ${profileDesc}\n\nSuggest 2-3 outfits.`;
+    const faceAnalysis = styleProfile?.ai_face_analysis
+      ? `\nAI Face Analysis: ${JSON.stringify(styleProfile.ai_face_analysis)}`
+      : "";
+
+    const systemPrompt = `You are an expert fashion stylist AI. Given the user's wardrobe items, occasion, time of day, body profile, and face analysis, suggest 2-3 complete outfit combinations using ONLY items from their wardrobe.
+
+Consider these factors when making suggestions:
+1. Color combination and harmony - ensure colors complement each other and the user's skin tone
+2. Body type flattery - choose pieces that flatter the user's body type
+3. Occasion appropriateness - match the formality and vibe of the occasion
+4. Season and time of day - appropriate for the selected time
+5. Material compatibility - fabrics that work well together
+6. Style coherence - a unified look that tells a story
+
+Each outfit must use real item IDs from the provided wardrobe.`;
+
+    const userPrompt = `Wardrobe items:\n${wardrobeDesc}\n\nOccasion: ${occasion}\nTime of day: ${timeOfDay}\nProfile: ${profileDesc}${bodyAnalysis}${faceAnalysis}\n\nSuggest 2-3 outfits that best complement this person's features.`;
 
     const response = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
       method: "POST",
@@ -54,7 +72,7 @@ serve(async (req) => {
                       shoes_id: { type: "string", description: "Wardrobe item ID for shoes, or null" },
                       accessories: { type: "array", items: { type: "string" }, description: "Wardrobe item IDs for accessories" },
                       score: { type: "number", description: "Outfit score 1-10" },
-                      explanation: { type: "string", description: "Why this outfit works" },
+                      explanation: { type: "string", description: "Why this outfit works for this person's body type, skin tone, and the occasion" },
                     },
                     required: ["name", "score", "explanation"],
                     additionalProperties: false,

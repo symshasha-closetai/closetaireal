@@ -131,33 +131,48 @@ export type Database = {
       }
       style_profiles: {
         Row: {
+          ai_body_analysis: Json | null
+          ai_face_analysis: Json | null
+          body_photo_url: string | null
           body_proportions: Json | null
           body_type: string | null
           created_at: string
+          face_photo_url: string | null
           face_shape: string | null
           id: string
+          model_image_url: string | null
           skin_tone: string | null
           style_type: string | null
           updated_at: string
           user_id: string
         }
         Insert: {
+          ai_body_analysis?: Json | null
+          ai_face_analysis?: Json | null
+          body_photo_url?: string | null
           body_proportions?: Json | null
           body_type?: string | null
           created_at?: string
+          face_photo_url?: string | null
           face_shape?: string | null
           id?: string
+          model_image_url?: string | null
           skin_tone?: string | null
           style_type?: string | null
           updated_at?: string
           user_id: string
         }
         Update: {
+          ai_body_analysis?: Json | null
+          ai_face_analysis?: Json | null
+          body_photo_url?: string | null
           body_proportions?: Json | null
           body_type?: string | null
           created_at?: string
+          face_photo_url?: string | null
           face_shape?: string | null
           id?: string
+          model_image_url?: string | null
           skin_tone?: string | null
           style_type?: string | null
           updated_at?: string

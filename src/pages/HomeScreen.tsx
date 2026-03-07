@@ -1,6 +1,6 @@
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { Sparkles, Camera, ChevronRight, X, Shirt } from "lucide-react";
+import { Sparkles, Camera, ChevronRight, X, Heart, GraduationCap, PartyPopper, Shirt, Palette, Music, Church, Briefcase, Sun, Moon, Sunset } from "lucide-react";
 import AppHeader from "../components/AppHeader";
 import { useAuth } from "../hooks/useAuth";
 import { useNavigate } from "react-router-dom";
@@ -17,8 +17,22 @@ const item = {
   show: { opacity: 1, y: 0, transition: { duration: 0.4, ease: "easeOut" as const } },
 };
 
-const occasions = ["Party", "Casual", "Formal", "Date Night"];
-const timeOfDay = ["Day", "Evening", "Night"];
+const occasions = [
+  { label: "Casual", icon: Shirt, color: "bg-blue-100 text-blue-600" },
+  { label: "Party", icon: PartyPopper, color: "bg-pink-100 text-pink-600" },
+  { label: "Formal", icon: Briefcase, color: "bg-gray-100 text-gray-600" },
+  { label: "Date Night", icon: Heart, color: "bg-red-100 text-red-600" },
+  { label: "College", icon: GraduationCap, color: "bg-green-100 text-green-600" },
+  { label: "Cultural", icon: Church, color: "bg-amber-100 text-amber-600" },
+  { label: "Festival", icon: Music, color: "bg-purple-100 text-purple-600" },
+  { label: "Creative", icon: Palette, color: "bg-teal-100 text-teal-600" },
+];
+
+const timeOfDay = [
+  { label: "Day", icon: Sun },
+  { label: "Evening", icon: Sunset },
+  { label: "Night", icon: Moon },
+];
 
 type WardrobeItem = {
   id: string;
@@ -37,19 +51,20 @@ type OutfitSuggestion = {
   accessories?: string[];
   score: number;
   explanation: string;
+  tryon_image?: string;
 };
 
 const HomeScreen = () => {
   const hour = new Date().getHours();
   const greeting = hour < 12 ? "Good morning" : hour < 18 ? "Good afternoon" : "Good evening";
-  const { profile, user } = useAuth();
+  const { profile, styleProfile, user } = useAuth();
   const displayName = profile?.name || "there";
   const navigate = useNavigate();
   const [wardrobeItems, setWardrobeItems] = useState<WardrobeItem[]>([]);
   const [allWardrobeItems, setAllWardrobeItems] = useState<WardrobeItem[]>([]);
   const [wardrobeCount, setWardrobeCount] = useState(0);
-  const [selectedOccasion, setSelectedOccasion] = useState("Party");
-  const [selectedTime, setSelectedTime] = useState("Evening");
+  const [selectedOccasion, setSelectedOccasion] = useState("Casual");
+  const [selectedTime, setSelectedTime] = useState("Day");
   const [styling, setStyling] = useState(false);
   const [outfitSuggestions, setOutfitSuggestions] = useState<OutfitSuggestion[]>([]);
   const [showResults, setShowResults] = useState(false);
@@ -73,7 +88,7 @@ const HomeScreen = () => {
     }
   }, [user]);
 
-  const categoryCounts = wardrobeItems.reduce((acc, it) => {
+  const categoryCounts = allWardrobeItems.reduce((acc, it) => {
     acc[it.type] = (acc[it.type] || 0) + 1;
     return acc;
   }, {} as Record<string, number>);
@@ -85,11 +100,10 @@ const HomeScreen = () => {
     }
     setStyling(true);
     try {
-      // Fetch style profile
-      let styleProfile = null;
+      let sp = null;
       if (user) {
         const { data } = await supabase.from("style_profiles").select("*").eq("user_id", user.id).maybeSingle();
-        styleProfile = data;
+        sp = data;
       }
 
       const { data, error } = await supabase.functions.invoke("style-me", {
@@ -97,18 +111,21 @@ const HomeScreen = () => {
           wardrobeItems: allWardrobeItems,
           occasion: selectedOccasion,
           timeOfDay: selectedTime,
-          styleProfile,
+          styleProfile: sp,
         },
       });
 
       if (error) throw error;
-      if (data?.error) {
-        toast.error(data.error);
-        return;
-      }
+      if (data?.error) { toast.error(data.error); return; }
+
       if (data?.outfits?.length) {
         setOutfitSuggestions(data.outfits);
         setShowResults(true);
+
+        // Generate virtual try-on for the first outfit
+        if (styleProfile?.model_image_url && user) {
+          generateTryOn(data.outfits[0], 0);
+        }
       } else {
         toast.error("No outfits generated. Try adding more items.");
       }
@@ -120,7 +137,37 @@ const HomeScreen = () => {
     }
   };
 
+  const generateTryOn = async (outfit: OutfitSuggestion, idx: number) => {
+    if (!styleProfile?.model_image_url || !user) return;
+    try {
+      const items = [outfit.top_id, outfit.bottom_id, outfit.shoes_id, ...(outfit.accessories || [])]
+        .map(id => allWardrobeItems.find(w => w.id === id))
+        .filter(Boolean);
+
+      const desc = items.map(i => `${i!.name || i!.type} (${i!.color || ""} ${i!.material || ""})`).join(", ");
+
+      const { data } = await supabase.functions.invoke("virtual-tryon", {
+        body: {
+          modelImageUrl: styleProfile.model_image_url,
+          outfitDescription: desc,
+          occasion: selectedOccasion,
+          userId: user.id,
+        },
+      });
+
+      if (data?.imageUrl || data?.imageBase64) {
+        setOutfitSuggestions(prev =>
+          prev.map((o, i) => i === idx ? { ...o, tryon_image: data.imageUrl || data.imageBase64 } : o)
+        );
+      }
+    } catch (err) {
+      console.error("Try-on error:", err);
+    }
+  };
+
   const getItemById = (id?: string) => allWardrobeItems.find(i => i.id === id);
+  const currentOccasion = occasions.find(o => o.label === selectedOccasion) || occasions[0];
+  const CurrentOccIcon = currentOccasion.icon;
 
   return (
     <div className="min-h-screen pb-24 px-5 pt-14">
@@ -129,82 +176,122 @@ const HomeScreen = () => {
       <motion.div variants={container} initial="hidden" animate="show" className="max-w-lg mx-auto space-y-5">
         <motion.div variants={item}><AppHeader /></motion.div>
 
-        <motion.div variants={item} className="text-center">
+        {/* Greeting */}
+        <motion.div variants={item}>
           <h1 className="font-display text-2xl font-semibold text-foreground">
             {greeting}, {displayName}!
           </h1>
+          <p className="text-sm text-muted-foreground mt-0.5">Let's find your perfect outfit today</p>
         </motion.div>
 
-        {/* My Wardrobe */}
+        {/* My Wardrobe Card */}
         <motion.div variants={item} className="glass-card-elevated p-4">
           <div className="flex items-center justify-between mb-3">
             <h2 className="text-base font-semibold text-foreground">My Wardrobe</h2>
-            <span className="text-sm text-muted-foreground font-medium">{wardrobeCount}</span>
+            <span className="px-2.5 py-0.5 rounded-full bg-primary/10 text-xs font-bold text-foreground">{wardrobeCount}</span>
           </div>
           {wardrobeItems.length > 0 ? (
-            <div className="flex gap-2 overflow-x-auto pb-2 no-scrollbar">
-              {wardrobeItems.slice(0, 5).map((wi) => (
-                <div key={wi.id} className="relative flex-shrink-0 w-16 h-16 rounded-xl overflow-hidden bg-secondary">
-                  <img src={wi.image_url} alt={wi.name || wi.type} className="w-full h-full object-cover" loading="lazy" />
-                  <div className="absolute bottom-0 left-0 right-0 bg-foreground/40 backdrop-blur-sm px-1 py-0.5">
-                    <p className="text-[8px] text-primary-foreground truncate text-center font-medium">{wi.type}</p>
+            <>
+              <div className="grid grid-cols-4 gap-2 mb-3">
+                {wardrobeItems.slice(0, 4).map((wi) => (
+                  <div key={wi.id} className="relative aspect-square rounded-xl overflow-hidden bg-secondary">
+                    <img src={wi.image_url} alt={wi.name || wi.type} className="w-full h-full object-cover" loading="lazy" />
+                    <div className="absolute bottom-0 left-0 right-0 bg-foreground/40 backdrop-blur-sm px-1 py-0.5">
+                      <p className="text-[8px] text-primary-foreground truncate text-center font-medium">{wi.type}</p>
+                    </div>
                   </div>
+                ))}
+              </div>
+              <div className="flex items-center justify-between">
+                <div className="flex gap-3">
+                  {["Tops", "Bottoms", "Dresses", "Shoes"].map((cat) => (
+                    <div key={cat} className="flex items-center gap-1">
+                      <span className="text-[10px] text-muted-foreground">{cat}</span>
+                      <span className="text-[10px] font-bold text-foreground">{categoryCounts[cat] || 0}</span>
+                    </div>
+                  ))}
                 </div>
-              ))}
-              <button onClick={() => navigate("/wardrobe")} className="flex-shrink-0 w-16 h-16 rounded-xl bg-secondary flex items-center justify-center">
-                <ChevronRight size={20} className="text-muted-foreground" />
-              </button>
-            </div>
+                <button onClick={() => navigate("/wardrobe")} className="flex items-center gap-0.5 text-xs font-medium text-primary">
+                  View all <ChevronRight size={14} />
+                </button>
+              </div>
+            </>
           ) : (
-            <button onClick={() => navigate("/wardrobe")} className="w-full py-4 rounded-xl bg-secondary text-sm text-muted-foreground">
+            <button onClick={() => navigate("/wardrobe")} className="w-full py-6 rounded-xl bg-secondary text-sm text-muted-foreground">
               Add your first clothing item →
             </button>
           )}
-          <div className="flex gap-3 mt-3">
-            {["Tops", "Bottoms", "Dresses", "Shoes"].map((cat) => (
-              <div key={cat} className="flex items-center gap-1">
-                <span className="text-[11px] text-muted-foreground">{cat}</span>
-                <span className="text-[11px] font-semibold text-foreground">{categoryCounts[cat] || 0}</span>
-              </div>
-            ))}
-          </div>
         </motion.div>
 
-        {/* Occasion */}
-        <motion.div variants={item} className="glass-card p-4">
-          <h2 className="text-base font-semibold text-foreground mb-3">Pick an Occasion</h2>
-          <div className="flex gap-2 flex-wrap">
-            {occasions.map((occ) => (
-              <button key={occ} onClick={() => setSelectedOccasion(occ)} className={`px-4 py-2 rounded-full text-xs font-medium transition-all duration-300 ${selectedOccasion === occ ? "gradient-accent text-accent-foreground shadow-soft" : "bg-secondary text-secondary-foreground"}`}>{occ}</button>
-            ))}
+        {/* Pick an Occasion */}
+        <motion.div variants={item} className="glass-card overflow-hidden">
+          <div className="p-4 pb-3">
+            <h2 className="text-base font-semibold text-foreground mb-3">Pick an Occasion</h2>
+            <div className="flex gap-2 overflow-x-auto pb-2 no-scrollbar">
+              {occasions.map((occ) => {
+                const OccIcon = occ.icon;
+                const isSelected = selectedOccasion === occ.label;
+                return (
+                  <button
+                    key={occ.label}
+                    onClick={() => setSelectedOccasion(occ.label)}
+                    className={`flex flex-col items-center gap-1.5 px-3 py-2 rounded-xl flex-shrink-0 transition-all ${
+                      isSelected ? "gradient-accent shadow-soft" : "bg-secondary"
+                    }`}
+                  >
+                    <OccIcon size={18} className={isSelected ? "text-accent-foreground" : "text-muted-foreground"} />
+                    <span className={`text-[10px] font-medium ${isSelected ? "text-accent-foreground" : "text-muted-foreground"}`}>{occ.label}</span>
+                  </button>
+                );
+              })}
+            </div>
           </div>
-          <div className="flex gap-2 mt-3">
-            {timeOfDay.map((t) => (
-              <button key={t} onClick={() => setSelectedTime(t)} className={`px-3 py-1.5 rounded-full text-[11px] font-medium transition-all duration-300 ${selectedTime === t ? "bg-foreground text-background" : "bg-secondary text-secondary-foreground"}`}>{t}</button>
-            ))}
-          </div>
-        </motion.div>
 
-        {/* Person / Style Me Preview */}
-        <motion.div variants={item} className="glass-card-elevated overflow-hidden">
-          {profile?.avatar_url ? (
-            <div className="relative h-64 overflow-hidden">
-              <img src={profile.avatar_url} alt="Your photo" className="w-full h-full object-cover object-top" />
-              <div className="absolute inset-0 bg-gradient-to-t from-card via-transparent to-transparent" />
-              <div className="absolute bottom-3 left-4 right-4">
-                <p className="text-sm font-medium text-foreground">Your style, elevated by AI</p>
-                <p className="text-xs text-muted-foreground mt-0.5">{selectedOccasion} · {selectedTime}</p>
+          {/* Model Image + Occasion */}
+          <div className="relative h-52 bg-secondary overflow-hidden">
+            {styleProfile?.model_image_url ? (
+              <img src={styleProfile.model_image_url} alt="Your AI Model" className="w-full h-full object-cover object-top" />
+            ) : profile?.avatar_url ? (
+              <img src={profile.avatar_url} alt="You" className="w-full h-full object-cover object-top" />
+            ) : (
+              <div className="w-full h-full flex items-center justify-center">
+                <div className="text-center">
+                  <CurrentOccIcon size={48} className="text-muted-foreground mx-auto mb-2" />
+                  <p className="text-sm text-muted-foreground">{selectedOccasion}</p>
+                </div>
+              </div>
+            )}
+            <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-card via-card/60 to-transparent pt-10 pb-3 px-4">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-sm font-semibold text-foreground">{selectedOccasion} Look</p>
+                  <p className="text-[11px] text-muted-foreground">{selectedTime} · Your style, elevated</p>
+                </div>
+                <div className={`w-10 h-10 rounded-full flex items-center justify-center ${currentOccasion.color}`}>
+                  <CurrentOccIcon size={18} />
+                </div>
               </div>
             </div>
-          ) : (
-            <div className="h-48 bg-secondary flex items-center justify-center">
-              <div className="text-center">
-                <p className="text-sm text-muted-foreground">Upload a profile photo</p>
-                <p className="text-xs text-muted-foreground mt-1">to see AI makeover suggestions</p>
-                <button onClick={() => navigate("/profile")} className="mt-3 px-4 py-2 rounded-full bg-foreground/10 text-xs font-medium text-foreground">Go to Profile</button>
-              </div>
-            </div>
-          )}
+          </div>
+
+          {/* Time of Day */}
+          <div className="px-4 py-3 flex gap-2">
+            {timeOfDay.map((t) => {
+              const TIcon = t.icon;
+              return (
+                <button
+                  key={t.label}
+                  onClick={() => setSelectedTime(t.label)}
+                  className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-[11px] font-medium transition-all ${
+                    selectedTime === t.label ? "bg-foreground text-background" : "bg-secondary text-secondary-foreground"
+                  }`}
+                >
+                  <TIcon size={12} />
+                  {t.label}
+                </button>
+              );
+            })}
+          </div>
         </motion.div>
 
         {/* Rate Your Outfit */}
@@ -234,10 +321,7 @@ const HomeScreen = () => {
                 Styling...
               </>
             ) : (
-              <>
-                <Sparkles size={20} />
-                Style Me
-              </>
+              <><Sparkles size={20} /> Style Me</>
             )}
           </button>
         </motion.div>
@@ -263,27 +347,46 @@ const HomeScreen = () => {
                 const accessoryItems = (outfit.accessories || []).map(id => getItemById(id)).filter(Boolean);
 
                 return (
-                  <motion.div key={idx} initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: idx * 0.1 }} className="glass-card p-4 space-y-3">
-                    <div className="flex items-center justify-between">
-                      <h3 className="text-sm font-semibold text-foreground">{outfit.name}</h3>
-                      <div className="flex items-center gap-1">
-                        <Sparkles size={14} className="text-muted-foreground" />
-                        <span className="text-sm font-semibold text-foreground">{outfit.score}/10</span>
+                  <motion.div key={idx} initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: idx * 0.1 }} className="glass-card overflow-hidden">
+                    {/* Try-on Image */}
+                    {outfit.tryon_image && (
+                      <div className="h-64 overflow-hidden">
+                        <img src={outfit.tryon_image} alt="Virtual try-on" className="w-full h-full object-cover object-top" />
                       </div>
-                    </div>
+                    )}
 
-                    <div className="flex gap-2 overflow-x-auto no-scrollbar">
-                      {[top, bottom, shoes, ...accessoryItems].filter(Boolean).map((wi) => (
-                        <div key={wi!.id} className="relative flex-shrink-0 w-20 h-20 rounded-xl overflow-hidden bg-secondary">
-                          <img src={wi!.image_url} alt={wi!.name || wi!.type} className="w-full h-full object-cover" />
-                          <div className="absolute bottom-0 left-0 right-0 bg-foreground/40 backdrop-blur-sm px-1 py-0.5">
-                            <p className="text-[8px] text-primary-foreground truncate text-center font-medium">{wi!.type}</p>
-                          </div>
+                    <div className="p-4 space-y-3">
+                      <div className="flex items-center justify-between">
+                        <h3 className="text-sm font-semibold text-foreground">{outfit.name}</h3>
+                        <div className="flex items-center gap-1">
+                          <Sparkles size={14} className="text-muted-foreground" />
+                          <span className="text-sm font-semibold text-foreground">{outfit.score}/10</span>
                         </div>
-                      ))}
-                    </div>
+                      </div>
 
-                    <p className="text-xs text-muted-foreground leading-relaxed">{outfit.explanation}</p>
+                      <div className="flex gap-2 overflow-x-auto no-scrollbar">
+                        {[top, bottom, shoes, ...accessoryItems].filter(Boolean).map((wi) => (
+                          <div key={wi!.id} className="relative flex-shrink-0 w-16 h-16 rounded-xl overflow-hidden bg-secondary">
+                            <img src={wi!.image_url} alt={wi!.name || wi!.type} className="w-full h-full object-cover" />
+                            <div className="absolute bottom-0 left-0 right-0 bg-foreground/40 backdrop-blur-sm px-1 py-0.5">
+                              <p className="text-[8px] text-primary-foreground truncate text-center font-medium">{wi!.type}</p>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+
+                      <p className="text-xs text-muted-foreground leading-relaxed">{outfit.explanation}</p>
+
+                      {/* Generate try-on for this outfit */}
+                      {!outfit.tryon_image && styleProfile?.model_image_url && (
+                        <button
+                          onClick={() => generateTryOn(outfit, idx)}
+                          className="text-xs font-medium text-primary flex items-center gap-1"
+                        >
+                          <Sparkles size={12} /> Generate try-on preview
+                        </button>
+                      )}
+                    </div>
                   </motion.div>
                 );
               })}
