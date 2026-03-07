@@ -1,9 +1,10 @@
-import { useState, useRef } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import { motion } from "framer-motion";
-import { Camera, Upload, Sparkles, Save, RefreshCw, User, Loader2 } from "lucide-react";
+import { Camera, Sparkles, RefreshCw, User, Loader2 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { toast } from "sonner";
+import { Skeleton } from "@/components/ui/skeleton";
 
 const bodyTypes = [
   { label: "Hourglass", emoji: "⏳" },
@@ -30,6 +31,58 @@ const faceShapes = ["Oval", "Round", "Square", "Heart", "Oblong", "Diamond"];
 const styleOptions = [
   "Casual", "Formal", "Streetwear", "Minimalist", "Bohemian", "Classic", "Sporty",
 ];
+
+// Hook for lazy-loading option images
+const useOptionImage = (category: string, label: string) => {
+  const [imageUrl, setImageUrl] = useState<string | null>(null);
+  const [loading, setLoading] = useState(false);
+
+  useEffect(() => {
+    let cancelled = false;
+    const loadImage = async () => {
+      // Check cache first via public URL pattern
+      const cachePath = `option-images/${category}/${label.toLowerCase().replace(/\s+/g, "-")}.png`;
+      const { data: urlData } = supabase.storage.from("wardrobe").getPublicUrl(cachePath);
+      
+      // Try fetching cached image
+      try {
+        const res = await fetch(urlData.publicUrl, { method: "HEAD" });
+        if (res.ok) {
+          if (!cancelled) setImageUrl(urlData.publicUrl);
+          return;
+        }
+      } catch {}
+
+      // Generate via edge function
+      setLoading(true);
+      try {
+        const { data, error } = await supabase.functions.invoke("generate-option-images", {
+          body: { category, label },
+        });
+        if (!error && data?.imageUrl && !cancelled) {
+          setImageUrl(data.imageUrl);
+        }
+      } catch {}
+      if (!cancelled) setLoading(false);
+    };
+
+    loadImage();
+    return () => { cancelled = true; };
+  }, [category, label]);
+
+  return { imageUrl, loading };
+};
+
+const OptionImageThumbnail = ({ category, label }: { category: string; label: string }) => {
+  const { imageUrl, loading } = useOptionImage(category, label);
+
+  if (loading) return <Skeleton className="w-10 h-10 rounded-lg" />;
+  if (!imageUrl) return null;
+
+  return (
+    <img src={imageUrl} alt={label} className="w-10 h-10 rounded-lg object-cover" loading="lazy" />
+  );
+};
 
 const StyleProfileEditor = () => {
   const { user, styleProfile, refreshProfile } = useAuth();
@@ -69,7 +122,6 @@ const StyleProfileEditor = () => {
       setRegenerating(true);
       const modelDesc = `A person with ${skinTone || "medium"} skin tone, ${bodyType || "average"} body type, ${faceShape || "oval"} face shape. Standing pose, full body.`;
 
-      // Get photo URLs for reference
       const { data: spData } = await supabase.from("style_profiles").select("face_photo_url, body_photo_url").eq("user_id", user.id).single();
 
       const { data, error } = await supabase.functions.invoke("generate-model-avatar", {
@@ -206,17 +258,20 @@ const StyleProfileEditor = () => {
         )}
       </motion.div>
 
-      {/* Body Type */}
+      {/* Body Type - with AI images */}
       <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.1 }} className="glass-card p-4 space-y-3">
         <h3 className="text-sm font-semibold text-foreground">Body Type</h3>
-        <div className="grid grid-cols-4 gap-2">
+        <div className="grid grid-cols-2 gap-2">
           {bodyTypes.map(t => (
             <button key={t.label} onClick={() => setBodyType(t.label)}
-              className={`flex flex-col items-center gap-1 p-2 rounded-xl border-2 transition-all ${
+              className={`flex items-center gap-2 p-2.5 rounded-xl border-2 transition-all text-left ${
                 bodyType === t.label ? "border-primary bg-primary/10" : "border-border bg-secondary/50"
               }`}>
-              <span className="text-lg">{t.emoji}</span>
-              <span className="text-[9px] font-medium text-foreground">{t.label}</span>
+              <OptionImageThumbnail category="body_type" label={t.label} />
+              <div>
+                <span className="text-xs font-semibold text-foreground block">{t.label}</span>
+                <span className="text-lg">{t.emoji}</span>
+              </div>
             </button>
           ))}
         </div>
@@ -237,28 +292,34 @@ const StyleProfileEditor = () => {
         </div>
       </motion.div>
 
-      {/* Face Shape */}
+      {/* Face Shape - with AI images */}
       <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.2 }} className="glass-card p-4 space-y-3">
         <h3 className="text-sm font-semibold text-foreground">Face Shape</h3>
         <div className="grid grid-cols-3 gap-2">
           {faceShapes.map(s => (
             <button key={s} onClick={() => setFaceShape(s)}
-              className={`py-2 rounded-xl border-2 text-xs font-medium transition-all ${
+              className={`flex flex-col items-center gap-1.5 py-2 rounded-xl border-2 text-xs font-medium transition-all ${
                 faceShape === s ? "border-primary bg-primary/10 text-foreground" : "border-border bg-secondary/50 text-muted-foreground"
-              }`}>{s}</button>
+              }`}>
+              <OptionImageThumbnail category="face_shape" label={s} />
+              {s}
+            </button>
           ))}
         </div>
       </motion.div>
 
-      {/* Style Preferences */}
+      {/* Style Preferences - with AI images */}
       <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.25 }} className="glass-card p-4 space-y-3">
         <h3 className="text-sm font-semibold text-foreground">Style Preferences</h3>
-        <div className="flex flex-wrap gap-2">
+        <div className="grid grid-cols-2 gap-2">
           {styleOptions.map(s => (
             <button key={s} onClick={() => toggleStyle(s)}
-              className={`px-3 py-1.5 rounded-full text-xs font-medium transition-all ${
-                selectedStyles.includes(s) ? "gradient-accent text-accent-foreground" : "bg-secondary text-secondary-foreground"
-              }`}>{s}</button>
+              className={`flex items-center gap-2 p-2.5 rounded-xl border-2 text-xs font-medium transition-all ${
+                selectedStyles.includes(s) ? "border-primary bg-primary/10 text-foreground" : "border-border bg-secondary/50 text-muted-foreground"
+              }`}>
+              <OptionImageThumbnail category="style" label={s} />
+              {s}
+            </button>
           ))}
         </div>
       </motion.div>

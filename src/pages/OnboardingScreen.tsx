@@ -1,10 +1,11 @@
-import { useState, useRef } from "react";
+import { useState, useRef, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { ChevronRight, ChevronLeft, Sparkles, Check, Camera, Upload, User, Loader2 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { useNavigate } from "react-router-dom";
 import { toast } from "sonner";
+import { Skeleton } from "@/components/ui/skeleton";
 
 const bodyTypes = [
   { label: "Hourglass", desc: "Balanced bust & hips, defined waist", emoji: "⏳" },
@@ -64,6 +65,42 @@ type AnalysisResult = {
     styling_notes?: string;
   };
   model_description?: string;
+};
+
+const useOptionImage = (category: string, label: string) => {
+  const [imageUrl, setImageUrl] = useState<string | null>(null);
+  const [loading, setLoading] = useState(false);
+
+  useEffect(() => {
+    let cancelled = false;
+    const loadImage = async () => {
+      const cachePath = `option-images/${category}/${label.toLowerCase().replace(/\s+/g, "-")}.png`;
+      const { data: urlData } = supabase.storage.from("wardrobe").getPublicUrl(cachePath);
+      try {
+        const res = await fetch(urlData.publicUrl, { method: "HEAD" });
+        if (res.ok) { if (!cancelled) setImageUrl(urlData.publicUrl); return; }
+      } catch {}
+      setLoading(true);
+      try {
+        const { data, error } = await supabase.functions.invoke("generate-option-images", {
+          body: { category, label },
+        });
+        if (!error && data?.imageUrl && !cancelled) setImageUrl(data.imageUrl);
+      } catch {}
+      if (!cancelled) setLoading(false);
+    };
+    loadImage();
+    return () => { cancelled = true; };
+  }, [category, label]);
+
+  return { imageUrl, loading };
+};
+
+const OnboardingOptionImage = ({ category, label }: { category: string; label: string }) => {
+  const { imageUrl, loading } = useOptionImage(category, label);
+  if (loading) return <Skeleton className="w-10 h-10 rounded-lg" />;
+  if (!imageUrl) return null;
+  return <img src={imageUrl} alt={label} className="w-10 h-10 rounded-lg object-cover" loading="lazy" />;
 };
 
 const OnboardingScreen = () => {
@@ -435,13 +472,13 @@ const OnboardingScreen = () => {
                     <button
                       key={t.label}
                       onClick={() => setBodyType(t.label)}
-                      className={`flex items-center gap-3 p-3 rounded-xl border-2 transition-all text-left ${
+                      className={`flex items-center gap-2 p-3 rounded-xl border-2 transition-all text-left ${
                         bodyType === t.label
                           ? "border-primary bg-primary/10 shadow-soft"
                           : "border-border bg-secondary/50"
                       }`}
                     >
-                      <span className="text-2xl">{t.emoji}</span>
+                      <OnboardingOptionImage category="body_type" label={t.label} />
                       <div>
                         <span className="text-xs font-semibold text-foreground block">{t.label}</span>
                         <span className="text-[10px] text-muted-foreground leading-tight">{t.desc}</span>
@@ -539,13 +576,16 @@ const OnboardingScreen = () => {
                     <button
                       key={s.label}
                       onClick={() => toggleStyle(s.label)}
-                      className={`flex flex-col items-center gap-2 p-4 rounded-2xl border-2 transition-all ${
+                      className={`flex items-center gap-2 p-3 rounded-2xl border-2 transition-all ${
                         selected ? "border-primary bg-primary/10 shadow-soft" : "border-border bg-secondary/50"
                       }`}
                     >
-                      <span className="text-sm font-semibold text-foreground">{s.label}</span>
-                      <span className="text-[10px] text-muted-foreground">{s.desc}</span>
-                      {selected && <Check size={14} className="text-primary" />}
+                      <OnboardingOptionImage category="style" label={s.label} />
+                      <div className="flex-1 text-left">
+                        <span className="text-sm font-semibold text-foreground block">{s.label}</span>
+                        <span className="text-[10px] text-muted-foreground">{s.desc}</span>
+                      </div>
+                      {selected && <Check size={14} className="text-primary flex-shrink-0" />}
                     </button>
                   );
                 })}
