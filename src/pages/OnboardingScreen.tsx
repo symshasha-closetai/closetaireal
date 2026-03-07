@@ -222,8 +222,16 @@ const OnboardingScreen = () => {
       const modelDesc = analysisResult?.model_description || 
         `A person with ${skinTone || "medium"} skin tone, ${bodyType || "average"} body type, ${faceShape || "oval"} face shape. Standing pose, full body.`;
 
+      // Get photo URLs from style profile for reference
+      const { data: spData } = await supabase.from("style_profiles").select("face_photo_url, body_photo_url").eq("user_id", user.id).single();
+
       const { data, error } = await supabase.functions.invoke("generate-model-avatar", {
-        body: { modelDescription: modelDesc, userId: user.id },
+        body: { 
+          modelDescription: modelDesc, 
+          userId: user.id,
+          facePhotoUrl: spData?.face_photo_url || null,
+          bodyPhotoUrl: spData?.body_photo_url || null,
+        },
       });
 
       if (error) {

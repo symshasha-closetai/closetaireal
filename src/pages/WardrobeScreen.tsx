@@ -466,7 +466,12 @@ const WardrobeScreen = () => {
                           disabled={uploading || selectedDetected.length === 0}
                           className="w-full py-3.5 rounded-xl gradient-accent text-accent-foreground font-medium text-sm shadow-soft active:scale-[0.98] transition-transform disabled:opacity-60"
                         >
-                          {uploading ? "Saving..." : `Add ${selectedDetected.length} Item(s)`}
+                          {generatingImages ? (
+                            <span className="flex items-center justify-center gap-2">
+                              <Loader2 size={16} className="animate-spin" />
+                              Generating clean images... {genProgress}%
+                            </span>
+                          ) : uploading ? "Saving..." : `Add ${selectedDetected.length} Item(s)`}
                         </button>
                       </>
                     )}
