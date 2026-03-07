@@ -67,6 +67,42 @@ type AnalysisResult = {
   model_description?: string;
 };
 
+const useOptionImage = (category: string, label: string) => {
+  const [imageUrl, setImageUrl] = useState<string | null>(null);
+  const [loading, setLoading] = useState(false);
+
+  useEffect(() => {
+    let cancelled = false;
+    const loadImage = async () => {
+      const cachePath = `option-images/${category}/${label.toLowerCase().replace(/\s+/g, "-")}.png`;
+      const { data: urlData } = supabase.storage.from("wardrobe").getPublicUrl(cachePath);
+      try {
+        const res = await fetch(urlData.publicUrl, { method: "HEAD" });
+        if (res.ok) { if (!cancelled) setImageUrl(urlData.publicUrl); return; }
+      } catch {}
+      setLoading(true);
+      try {
+        const { data, error } = await supabase.functions.invoke("generate-option-images", {
+          body: { category, label },
+        });
+        if (!error && data?.imageUrl && !cancelled) setImageUrl(data.imageUrl);
+      } catch {}
+      if (!cancelled) setLoading(false);
+    };
+    loadImage();
+    return () => { cancelled = true; };
+  }, [category, label]);
+
+  return { imageUrl, loading };
+};
+
+const OnboardingOptionImage = ({ category, label }: { category: string; label: string }) => {
+  const { imageUrl, loading } = useOptionImage(category, label);
+  if (loading) return <Skeleton className="w-10 h-10 rounded-lg" />;
+  if (!imageUrl) return null;
+  return <img src={imageUrl} alt={label} className="w-10 h-10 rounded-lg object-cover" loading="lazy" />;
+};
+
 const OnboardingScreen = () => {
   const { user, refreshProfile } = useAuth();
   const navigate = useNavigate();
