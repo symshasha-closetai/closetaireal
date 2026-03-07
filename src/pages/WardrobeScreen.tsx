@@ -451,12 +451,16 @@ const WardrobeScreen = () => {
                                     placeholder="Color"
                                     className="text-xs bg-card border border-border rounded-lg px-2 py-1.5 text-foreground placeholder:text-muted-foreground"
                                   />
-                                  <input
+                                  <select
                                     value={item.material || ""}
                                     onChange={(e) => updateDetectedItem(idx, "material", e.target.value)}
-                                    placeholder="Material"
-                                    className="text-xs bg-card border border-border rounded-lg px-2 py-1.5 text-foreground placeholder:text-muted-foreground"
-                                  />
+                                    className="text-xs bg-card border border-border rounded-lg px-2 py-1.5 text-foreground"
+                                  >
+                                    <option value="">Material</option>
+                                    {["Cotton", "Linen", "Polyester", "Silk", "Wool", "Denim", "Leather", "Nylon", "Chiffon", "Velvet", "Satin", "Other"].map(m => (
+                                      <option key={m} value={m}>{m}</option>
+                                    ))}
+                                  </select>
                                 </div>
                               </div>
                             );
