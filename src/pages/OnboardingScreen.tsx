@@ -1,10 +1,11 @@
-import { useState, useRef } from "react";
+import { useState, useRef, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { ChevronRight, ChevronLeft, Sparkles, Check, Camera, Upload, User, Loader2 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { useNavigate } from "react-router-dom";
 import { toast } from "sonner";
+import { Skeleton } from "@/components/ui/skeleton";
 
 const bodyTypes = [
   { label: "Hourglass", desc: "Balanced bust & hips, defined waist", emoji: "⏳" },
