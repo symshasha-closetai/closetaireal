@@ -10,7 +10,7 @@ serve(async (req) => {
   if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
 
   try {
-    const { wardrobeItems, occasion, timeOfDay, styleProfile } = await req.json();
+    const { wardrobeItems, occasion, timeOfDay, weather, styleProfile } = await req.json();
     const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
     if (!LOVABLE_API_KEY) throw new Error("LOVABLE_API_KEY not configured");
 
@@ -30,19 +30,22 @@ serve(async (req) => {
       ? `\nAI Face Analysis: ${JSON.stringify(styleProfile.ai_face_analysis)}`
       : "";
 
-    const systemPrompt = `You are an expert fashion stylist AI. Given the user's wardrobe items, occasion, time of day, body profile, and face analysis, suggest 2-3 complete outfit combinations using ONLY items from their wardrobe.
+    const weatherInfo = weather ? `\nWeather conditions: ${weather}` : "";
+
+    const systemPrompt = `You are an expert fashion stylist AI. Given the user's wardrobe items, occasion, time of day, weather, body profile, and face analysis, suggest 2-3 complete outfit combinations using ONLY items from their wardrobe.
 
 Consider these factors when making suggestions:
 1. Color combination and harmony - ensure colors complement each other and the user's skin tone
 2. Body type flattery - choose pieces that flatter the user's body type
 3. Occasion appropriateness - match the formality and vibe of the occasion
 4. Season and time of day - appropriate for the selected time
-5. Material compatibility - fabrics that work well together
+5. Material compatibility - fabrics that work well together. Consider weather conditions, material breathability and comfort, and how fabrics interact with temperature and humidity. For hot weather prefer cotton, linen, lightweight fabrics. For cold weather prefer wool, layering. For rainy weather avoid suede, prefer water-resistant materials.
 6. Style coherence - a unified look that tells a story
+7. Weather awareness - ensure the outfit is comfortable and practical for the current weather conditions
 
 Each outfit must use real item IDs from the provided wardrobe.`;
 
-    const userPrompt = `Wardrobe items:\n${wardrobeDesc}\n\nOccasion: ${occasion}\nTime of day: ${timeOfDay}\nProfile: ${profileDesc}${bodyAnalysis}${faceAnalysis}\n\nSuggest 2-3 outfits that best complement this person's features.`;
+    const userPrompt = `Wardrobe items:\n${wardrobeDesc}\n\nOccasion: ${occasion}\nTime of day: ${timeOfDay}${weatherInfo}\nProfile: ${profileDesc}${bodyAnalysis}${faceAnalysis}\n\nSuggest 2-3 outfits that best complement this person's features and are appropriate for the weather.`;
 
     const response = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
       method: "POST",
@@ -72,7 +75,7 @@ Each outfit must use real item IDs from the provided wardrobe.`;
                       shoes_id: { type: "string", description: "Wardrobe item ID for shoes, or null" },
                       accessories: { type: "array", items: { type: "string" }, description: "Wardrobe item IDs for accessories" },
                       score: { type: "number", description: "Outfit score 1-10" },
-                      explanation: { type: "string", description: "Why this outfit works for this person's body type, skin tone, and the occasion" },
+                      explanation: { type: "string", description: "Why this outfit works for this person's body type, skin tone, the occasion, and the weather/material considerations" },
                     },
                     required: ["name", "score", "explanation"],
                     additionalProperties: false,
