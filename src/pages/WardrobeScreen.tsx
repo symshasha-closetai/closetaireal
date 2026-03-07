@@ -461,17 +461,23 @@ const WardrobeScreen = () => {
                             );
                           })}
                         </div>
+                        {generatingImages && (
+                          <div className="w-full py-3 rounded-xl bg-secondary text-center">
+                            <span className="flex items-center justify-center gap-2 text-sm font-medium text-foreground">
+                              <Loader2 size={16} className="animate-spin" />
+                              Generating clean images... {genProgress}%
+                            </span>
+                            <div className="mt-2 mx-4 h-1.5 rounded-full bg-border overflow-hidden">
+                              <div className="h-full rounded-full gradient-accent transition-all duration-300" style={{ width: `${genProgress}%` }} />
+                            </div>
+                          </div>
+                        )}
                         <button
                           onClick={handleSaveDetected}
                           disabled={uploading || selectedDetected.length === 0}
                           className="w-full py-3.5 rounded-xl gradient-accent text-accent-foreground font-medium text-sm shadow-soft active:scale-[0.98] transition-transform disabled:opacity-60"
                         >
-                          {generatingImages ? (
-                            <span className="flex items-center justify-center gap-2">
-                              <Loader2 size={16} className="animate-spin" />
-                              Generating clean images... {genProgress}%
-                            </span>
-                          ) : uploading ? "Saving..." : `Add ${selectedDetected.length} Item(s)`}
+                          {uploading && !generatingImages ? "Saving..." : `Add ${selectedDetected.length} Item(s)`}
                         </button>
                       </>
                     )}
