@@ -25,7 +25,7 @@ type DetectedItem = {
 const categories = ["All", "Tops", "Bottoms", "Shoes", "Dresses", "Accessories"];
 
 const WardrobeScreen = () => {
-  const { user } = useAuth();
+  const { user, styleProfile } = useAuth();
   const [activeCategory, setActiveCategory] = useState("All");
   const [items, setItems] = useState<ClothingItem[]>([]);
   const [loading, setLoading] = useState(true);
