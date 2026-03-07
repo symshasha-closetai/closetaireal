@@ -263,15 +263,7 @@ const OnboardingScreen = () => {
     }
   };
 
-  // Determine actual steps based on photos
-  const getStepLabel = () => {
-    if (step === 0) return "Photos";
-    if (step === 1) return "Body Profile";
-    if (step === 2) return "Style";
-    return "Finishing";
-  };
-
-  const totalSteps = photosProvided ? 3 : 4;
+  const totalSteps = 4; // Always 4 steps: Photos, Body, Style, Done
 
   const slideVariants = {
     enter: (dir: number) => ({ x: dir > 0 ? 200 : -200, opacity: 0 }),
@@ -284,10 +276,10 @@ const OnboardingScreen = () => {
       <div className="max-w-lg mx-auto w-full flex-1 flex flex-col">
         {/* Progress */}
         <div className="flex items-center gap-2 mb-8">
-          {(photosProvided ? ["Photos", "Style", "Done"] : ["Photos", "Body", "Style", "Done"]).map((s, i) => (
+          {["Photos", "Body", "Style", "Done"].map((s, i) => (
             <div key={s} className="flex-1 flex flex-col items-center gap-1">
-              <div className={`h-1 w-full rounded-full transition-all duration-500 ${i <= (photosProvided ? (step === 0 ? 0 : step - 1) : step) ? "gradient-accent" : "bg-secondary"}`} />
-              <span className={`text-[10px] font-medium transition-colors ${i <= (photosProvided ? (step === 0 ? 0 : step - 1) : step) ? "text-foreground" : "text-muted-foreground"}`}>{s}</span>
+              <div className={`h-1 w-full rounded-full transition-all duration-500 ${i <= step ? "gradient-accent" : "bg-secondary"}`} />
+              <span className={`text-[10px] font-medium transition-colors ${i <= step ? "text-foreground" : "text-muted-foreground"}`}>{s}</span>
             </div>
           ))}
         </div>
