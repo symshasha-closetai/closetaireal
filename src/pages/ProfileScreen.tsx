@@ -1,6 +1,6 @@
 import { useState, useRef } from "react";
 import { motion } from "framer-motion";
-import { ArrowLeft, Camera, LogOut, User, Save } from "lucide-react";
+import { ArrowLeft, Camera, LogOut, User, Save, Trash2, AlertTriangle } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "../hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
@@ -15,6 +15,9 @@ const ProfileScreen = () => {
   const [avatarPreview, setAvatarPreview] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
   const [uploading, setUploading] = useState(false);
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+  const [deleting, setDeleting] = useState(false);
+  const [deleteConfirmText, setDeleteConfirmText] = useState("");
 
   const avatarUrl = avatarPreview || profile?.avatar_url || null;
 
@@ -76,6 +79,32 @@ const ProfileScreen = () => {
   const handleLogout = async () => {
     await signOut();
     navigate("/auth");
+  };
+
+  const handleDeleteAccount = async () => {
+    if (!user || deleteConfirmText !== "DELETE") return;
+    setDeleting(true);
+
+    try {
+      // Delete user data from all tables
+      await Promise.all([
+        supabase.from("wardrobe").delete().eq("user_id", user.id),
+        supabase.from("outfits").delete().eq("user_id", user.id),
+        supabase.from("daily_ratings").delete().eq("user_id", user.id),
+        supabase.from("style_profiles").delete().eq("user_id", user.id),
+        supabase.from("profiles").delete().eq("user_id", user.id),
+      ]);
+
+      // Sign out
+      await signOut();
+      toast.success("Account data deleted. You've been signed out.");
+      navigate("/auth", { replace: true });
+    } catch (err) {
+      console.error("Delete account error:", err);
+      toast.error("Failed to delete account data. Please try again.");
+    } finally {
+      setDeleting(false);
+    }
   };
 
   return (
@@ -156,6 +185,54 @@ const ProfileScreen = () => {
             <LogOut size={16} />
             Sign Out
           </button>
+        </motion.div>
+
+        {/* Delete Account */}
+        <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.25 }}>
+          {!showDeleteConfirm ? (
+            <button
+              onClick={() => setShowDeleteConfirm(true)}
+              className="w-full flex items-center justify-center gap-2 py-3 rounded-xl border border-destructive/30 text-destructive/70 font-medium text-sm active:scale-[0.98] transition-transform"
+            >
+              <Trash2 size={16} />
+              Delete Account
+            </button>
+          ) : (
+            <div className="glass-card border-destructive/30 p-5 space-y-4">
+              <div className="flex items-center gap-2 text-destructive">
+                <AlertTriangle size={20} />
+                <h3 className="font-semibold text-sm">Delete Account</h3>
+              </div>
+              <p className="text-xs text-muted-foreground leading-relaxed">
+                This will permanently delete all your wardrobe items, outfits, ratings, and profile data. This action cannot be undone.
+              </p>
+              <div className="space-y-2">
+                <label className="text-xs font-medium text-foreground">Type DELETE to confirm</label>
+                <input
+                  type="text"
+                  value={deleteConfirmText}
+                  onChange={(e) => setDeleteConfirmText(e.target.value)}
+                  className="w-full px-4 py-3 rounded-xl bg-secondary border border-border text-foreground text-sm placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-destructive/30 transition-all"
+                  placeholder="DELETE"
+                />
+              </div>
+              <div className="flex gap-3">
+                <button
+                  onClick={() => { setShowDeleteConfirm(false); setDeleteConfirmText(""); }}
+                  className="flex-1 py-2.5 rounded-xl bg-secondary text-secondary-foreground text-sm font-medium"
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={handleDeleteAccount}
+                  disabled={deleteConfirmText !== "DELETE" || deleting}
+                  className="flex-1 py-2.5 rounded-xl bg-destructive text-destructive-foreground text-sm font-medium disabled:opacity-40 active:scale-[0.98] transition-transform"
+                >
+                  {deleting ? "Deleting..." : "Delete Forever"}
+                </button>
+              </div>
+            </div>
+          )}
         </motion.div>
       </div>
     </div>
