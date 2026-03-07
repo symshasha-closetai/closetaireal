@@ -398,13 +398,24 @@ const OnboardingScreen = () => {
             </motion.div>
           )}
 
-          {/* Step 1: Manual Body Profile (only if photos skipped) */}
-          {step === 1 && !photosProvided && (
+          {/* Step 1: Body Profile (always shown — editable AI results or manual) */}
+          {step === 1 && (
             <motion.div key="body" custom={1} variants={slideVariants} initial="enter" animate="center" exit="exit" transition={{ duration: 0.3 }} className="flex-1 space-y-5 overflow-y-auto">
               <div className="text-center">
                 <h1 className="font-display text-2xl font-semibold text-foreground">Your Body Profile</h1>
-                <p className="text-sm text-muted-foreground mt-1">Select what matches you best</p>
+                <p className="text-sm text-muted-foreground mt-1">
+                  {photosProvided ? "AI detected these — feel free to adjust" : "Select what matches you best"}
+                </p>
               </div>
+
+              {photosProvided && analysisResult && (
+                <div className="glass-card-elevated p-3 flex items-center gap-2">
+                  <Sparkles size={16} className="text-primary flex-shrink-0" />
+                  <p className="text-xs text-muted-foreground">
+                    Values pre-filled from AI analysis. Edit anything that doesn't look right.
+                  </p>
+                </div>
+              )}
 
               {/* Body Type */}
               <div className="glass-card p-4 space-y-3">

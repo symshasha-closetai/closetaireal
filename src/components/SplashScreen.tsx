@@ -13,7 +13,7 @@ const SplashScreen = () => {
         <motion.img
           src={logo}
           alt="ClosetAI"
-          className="w-24 h-24 rounded-2xl object-contain shadow-elevated"
+          className="w-24 h-24 rounded-2xl object-contain shadow-elevated dark:brightness-0 dark:invert"
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.2, duration: 0.5 }}
