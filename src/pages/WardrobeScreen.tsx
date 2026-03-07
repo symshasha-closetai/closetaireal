@@ -122,51 +122,82 @@ const WardrobeScreen = () => {
     }
   };
 
+  const [generatingImages, setGeneratingImages] = useState(false);
+  const [genProgress, setGenProgress] = useState(0);
+
   const handleSaveDetected = async () => {
     if (!user || !uploadedFile || selectedDetected.length === 0) return;
     setUploading(true);
+    setGeneratingImages(true);
+    setGenProgress(0);
 
     try {
-      const ext = uploadedFile.name.split(".").pop();
-      const path = `${user.id}/${Date.now()}.${ext}`;
+      const base64 = await fileToBase64(uploadedFile);
+      const totalItems = selectedDetected.length;
+      const savedItems: ClothingItem[] = [];
 
-      const { error: uploadError } = await supabase.storage
-        .from("wardrobe")
-        .upload(path, uploadedFile);
-
-      if (uploadError) throw uploadError;
-
-      const { data: { publicUrl } } = supabase.storage
-        .from("wardrobe")
-        .getPublicUrl(path);
-
-      const inserts = selectedDetected.map((idx) => {
+      for (let i = 0; i < totalItems; i++) {
+        const idx = selectedDetected[i];
         const item = detectedItems[idx];
-        return {
-          user_id: user.id,
-          image_url: publicUrl,
-          type: item.type,
-          name: item.name,
-          color: item.color,
-          material: item.material,
-        };
-      });
+        setGenProgress(Math.round(((i) / totalItems) * 100));
 
-      const { data, error } = await supabase
-        .from("wardrobe")
-        .insert(inserts)
-        .select("id, image_url, type, color, material, name");
+        // Generate clean product image via AI
+        let imageUrl: string | null = null;
+        try {
+          const { data: genData, error: genError } = await supabase.functions.invoke("generate-clothing-image", {
+            body: {
+              imageBase64: base64,
+              itemName: item.name,
+              itemType: item.type,
+              itemColor: item.color,
+              itemMaterial: item.material,
+              userId: user.id,
+            },
+          });
 
-      if (error) throw error;
+          if (!genError && genData?.imageUrl) {
+            imageUrl = genData.imageUrl;
+          }
+        } catch (genErr) {
+          console.error("Image generation failed for item:", item.name, genErr);
+        }
 
-      setItems((prev) => [...(data || []), ...prev]);
-      toast.success(`${data?.length || 0} item(s) added to wardrobe!`);
+        // Fallback: upload original photo if generation failed
+        if (!imageUrl) {
+          const ext = uploadedFile.name.split(".").pop();
+          const path = `${user.id}/${Date.now()}-${i}.${ext}`;
+          await supabase.storage.from("wardrobe").upload(path, uploadedFile);
+          const { data: { publicUrl } } = supabase.storage.from("wardrobe").getPublicUrl(path);
+          imageUrl = publicUrl;
+        }
+
+        const { data: insertData, error: insertError } = await supabase
+          .from("wardrobe")
+          .insert({
+            user_id: user.id,
+            image_url: imageUrl,
+            type: item.type,
+            name: item.name,
+            color: item.color,
+            material: item.material,
+          })
+          .select("id, image_url, type, color, material, name")
+          .single();
+
+        if (!insertError && insertData) savedItems.push(insertData);
+      }
+
+      setGenProgress(100);
+      setItems((prev) => [...savedItems, ...prev]);
+      toast.success(`${savedItems.length} item(s) added to wardrobe!`);
       resetModal();
     } catch (err) {
       console.error(err);
       toast.error("Failed to save items");
     } finally {
       setUploading(false);
+      setGeneratingImages(false);
+      setGenProgress(0);
     }
   };
 
