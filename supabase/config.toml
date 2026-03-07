@@ -1,1 +1,4 @@
 project_id = "xtxwrvjdoexuymdkmzit"
+
+[functions.generate-clothing-image]
+verify_jwt = false
