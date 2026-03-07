@@ -472,13 +472,13 @@ const OnboardingScreen = () => {
                     <button
                       key={t.label}
                       onClick={() => setBodyType(t.label)}
-                      className={`flex items-center gap-3 p-3 rounded-xl border-2 transition-all text-left ${
+                      className={`flex items-center gap-2 p-3 rounded-xl border-2 transition-all text-left ${
                         bodyType === t.label
                           ? "border-primary bg-primary/10 shadow-soft"
                           : "border-border bg-secondary/50"
                       }`}
                     >
-                      <span className="text-2xl">{t.emoji}</span>
+                      <OnboardingOptionImage category="body_type" label={t.label} />
                       <div>
                         <span className="text-xs font-semibold text-foreground block">{t.label}</span>
                         <span className="text-[10px] text-muted-foreground leading-tight">{t.desc}</span>
