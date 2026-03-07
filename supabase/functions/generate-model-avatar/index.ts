@@ -11,7 +11,7 @@ serve(async (req) => {
   if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
 
   try {
-    const { modelDescription, userId, occasion } = await req.json();
+    const { modelDescription, userId, occasion, facePhotoUrl, bodyPhotoUrl } = await req.json();
     const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
     if (!LOVABLE_API_KEY) throw new Error("LOVABLE_API_KEY not configured");
 
@@ -19,18 +19,41 @@ serve(async (req) => {
       ? `The model should be posing in a way appropriate for a ${occasion} setting.`
       : "The model should be standing in a natural, confident pose.";
 
-    const prompt = `Generate a full-body fashion model illustration/avatar with these exact physical characteristics: ${modelDescription}. 
+    const textPrompt = `Generate a photorealistic full-body photograph of a real person with these exact physical characteristics: ${modelDescription}. 
 
-The model should be shown in a clean, minimal outfit (plain white t-shirt and jeans) on a clean white/light gray background. ${poseContext}
+CRITICAL REQUIREMENTS:
+- This must look like a REAL PHOTOGRAPH taken by a professional photographer, NOT an illustration, cartoon, painting, or digital art
+- The person should look natural, with real skin texture, real hair, natural lighting
+- Match the reference photos as closely as possible - same face structure, skin color, body proportions, hair
+- The person should be wearing a simple, clean outfit (plain white t-shirt and well-fitted jeans)
+- Clean studio background with soft, professional lighting
+- ${poseContext}
+- Full body visible from head to toe
+- Fashion editorial photography style, shot on a professional camera`;
 
-Style: Fashion illustration, realistic proportions, clean lines, editorial fashion photography feel. The model should look approachable and stylish. Full body from head to toe visible.`;
+    // Build message content with reference images
+    const content: any[] = [{ type: "text", text: textPrompt }];
+
+    if (facePhotoUrl) {
+      content.push({
+        type: "image_url",
+        image_url: { url: facePhotoUrl }
+      });
+    }
+
+    if (bodyPhotoUrl) {
+      content.push({
+        type: "image_url",
+        image_url: { url: bodyPhotoUrl }
+      });
+    }
 
     const response = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
       method: "POST",
       headers: { Authorization: `Bearer ${LOVABLE_API_KEY}`, "Content-Type": "application/json" },
       body: JSON.stringify({
-        model: "google/gemini-2.5-flash-image",
-        messages: [{ role: "user", content: prompt }],
+        model: "google/gemini-3-pro-image-preview",
+        messages: [{ role: "user", content }],
         modalities: ["image", "text"],
       }),
     });
@@ -54,7 +77,6 @@ Style: Fashion illustration, realistic proportions, clean lines, editorial fashi
       const supabaseKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
       const supabase = createClient(supabaseUrl, supabaseKey);
 
-      // Convert base64 to bytes
       const base64Data = imageData.replace(/^data:image\/\w+;base64,/, "");
       const bytes = Uint8Array.from(atob(base64Data), c => c.charCodeAt(0));
       
@@ -65,13 +87,11 @@ Style: Fashion illustration, realistic proportions, clean lines, editorial fashi
 
       if (uploadError) {
         console.error("Upload error:", uploadError);
-        // Return base64 as fallback
         return new Response(JSON.stringify({ imageBase64: imageData }), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
       }
 
       const { data: urlData } = supabase.storage.from("wardrobe").getPublicUrl(path);
       
-      // Update style profile
       await supabase.from("style_profiles").update({ model_image_url: urlData.publicUrl }).eq("user_id", userId);
 
       return new Response(JSON.stringify({ imageUrl: urlData.publicUrl }), { headers: { ...corsHeaders, "Content-Type": "application/json" } });

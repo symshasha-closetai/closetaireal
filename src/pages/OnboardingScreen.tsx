@@ -222,8 +222,16 @@ const OnboardingScreen = () => {
       const modelDesc = analysisResult?.model_description || 
         `A person with ${skinTone || "medium"} skin tone, ${bodyType || "average"} body type, ${faceShape || "oval"} face shape. Standing pose, full body.`;
 
+      // Get photo URLs from style profile for reference
+      const { data: spData } = await supabase.from("style_profiles").select("face_photo_url, body_photo_url").eq("user_id", user.id).single();
+
       const { data, error } = await supabase.functions.invoke("generate-model-avatar", {
-        body: { modelDescription: modelDesc, userId: user.id },
+        body: { 
+          modelDescription: modelDesc, 
+          userId: user.id,
+          facePhotoUrl: spData?.face_photo_url || null,
+          bodyPhotoUrl: spData?.body_photo_url || null,
+        },
       });
 
       if (error) {
@@ -306,9 +314,19 @@ const OnboardingScreen = () => {
                       className="h-full gradient-accent rounded-full"
                       initial={{ width: "0%" }}
                       animate={{ width: "100%" }}
-                      transition={{ duration: 8, ease: "linear" }}
+                      transition={{ duration: 15, ease: "linear" }}
                     />
                   </div>
+                  <button
+                    onClick={() => {
+                      setAnalyzing(false);
+                      setStep(1);
+                      toast.info("Skipped AI analysis. Set preferences manually.");
+                    }}
+                    className="mt-4 px-6 py-2.5 rounded-xl bg-secondary text-secondary-foreground text-sm font-medium active:scale-95 transition-transform"
+                  >
+                    Skip for now →
+                  </button>
                 </div>
               ) : (
                 <>
