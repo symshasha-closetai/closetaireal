@@ -1,18 +1,20 @@
-import { useState } from "react";
+import { useState, useRef } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { ChevronRight, ChevronLeft, Upload, Sparkles, Check, Camera, Shirt, Briefcase, Footprints, Circle, Flower2, Watch, Dumbbell } from "lucide-react";
+import { ChevronRight, ChevronLeft, Sparkles, Check, Camera, Upload, User, Loader2 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { useNavigate } from "react-router-dom";
 import { toast } from "sonner";
 
-// --- Data ---
 const bodyTypes = [
-  { label: "Hourglass", desc: "Balanced bust & hips, defined waist" },
-  { label: "Pear", desc: "Hips wider than shoulders" },
-  { label: "Rectangle", desc: "Even proportions, straight silhouette" },
-  { label: "Apple", desc: "Broader midsection, slimmer legs" },
-  { label: "Inverted Triangle", desc: "Broad shoulders, narrow hips" },
+  { label: "Hourglass", desc: "Balanced bust & hips, defined waist", emoji: "⏳" },
+  { label: "Pear", desc: "Hips wider than shoulders", emoji: "🍐" },
+  { label: "Rectangle", desc: "Even proportions, straight silhouette", emoji: "▬" },
+  { label: "Apple", desc: "Broader midsection, slimmer legs", emoji: "🍎" },
+  { label: "Inverted Triangle", desc: "Broad shoulders, narrow hips", emoji: "🔻" },
+  { label: "Athletic", desc: "Muscular, well-defined build", emoji: "💪" },
+  { label: "Slim", desc: "Lean frame, narrow build", emoji: "🧍" },
+  { label: "Plus Size", desc: "Fuller, curvier figure", emoji: "🌸" },
 ];
 
 const skinTones = [
@@ -27,86 +29,173 @@ const skinTones = [
 const faceShapes = [
   { label: "Oval", desc: "Slightly longer than wide" },
   { label: "Round", desc: "Equal width & length" },
-  { label: "Square", desc: "Strong jawline, equal proportions" },
+  { label: "Square", desc: "Strong jawline" },
   { label: "Heart", desc: "Wide forehead, narrow chin" },
-  { label: "Oblong", desc: "Longer face, even width" },
+  { label: "Oblong", desc: "Longer face" },
+  { label: "Diamond", desc: "Narrow forehead & chin" },
 ];
 
 const styleOptions = [
-  { label: "Casual", desc: "Relaxed & comfortable", icon: Shirt },
-  { label: "Formal", desc: "Sharp & polished", icon: Briefcase },
-  { label: "Streetwear", desc: "Urban & trendy", icon: Footprints },
-  { label: "Minimalist", desc: "Clean & simple", icon: Circle },
-  { label: "Bohemian", desc: "Free-spirited & artsy", icon: Flower2 },
-  { label: "Classic", desc: "Timeless & elegant", icon: Watch },
-  { label: "Sporty", desc: "Active & athletic", icon: Dumbbell },
+  { label: "Casual", desc: "Relaxed & comfortable" },
+  { label: "Formal", desc: "Sharp & polished" },
+  { label: "Streetwear", desc: "Urban & trendy" },
+  { label: "Minimalist", desc: "Clean & simple" },
+  { label: "Bohemian", desc: "Free-spirited & artsy" },
+  { label: "Classic", desc: "Timeless & elegant" },
+  { label: "Sporty", desc: "Active & athletic" },
 ];
 
-const steps = ["Photo", "Body", "Style", "Done"];
-
-// --- SVG Illustrations ---
-const BodyTypeSVG = ({ type }: { type: string }) => {
-  const paths: Record<string, string> = {
-    Hourglass: "M20,8 Q25,8 28,12 Q30,18 26,24 Q22,28 22,32 Q22,36 26,40 Q30,46 28,52 Q25,56 20,56 Q15,56 12,52 Q10,46 14,40 Q18,36 18,32 Q18,28 14,24 Q10,18 12,12 Q15,8 20,8Z",
-    Pear: "M20,8 Q24,8 26,12 Q27,16 25,20 Q23,24 23,28 Q23,32 27,36 Q32,42 30,50 Q27,56 20,56 Q13,56 10,50 Q8,42 17,36 Q17,32 17,28 Q17,24 15,20 Q13,16 14,12 Q16,8 20,8Z",
-    Rectangle: "M20,8 Q25,8 27,12 Q28,18 27,24 Q26,30 26,36 Q27,42 28,48 Q27,56 20,56 Q13,56 12,48 Q13,42 14,36 Q14,30 13,24 Q12,18 13,12 Q15,8 20,8Z",
-    Apple: "M20,8 Q25,8 28,12 Q31,18 30,26 Q30,34 28,38 Q26,42 25,48 Q23,56 20,56 Q17,56 15,48 Q14,42 12,38 Q10,34 10,26 Q9,18 12,12 Q15,8 20,8Z",
-    "Inverted Triangle": "M20,8 Q26,8 30,12 Q33,18 31,24 Q29,28 27,32 Q25,36 24,40 Q23,46 22,52 Q21,56 20,56 Q19,56 18,52 Q17,46 16,40 Q15,36 13,32 Q11,28 9,24 Q7,18 10,12 Q14,8 20,8Z",
+type AnalysisResult = {
+  face_analysis?: {
+    face_shape?: string;
+    skin_tone?: string;
+    skin_undertone?: string;
+    hair_color?: string;
+    eye_color?: string;
+    facial_features?: string;
   };
-  return (
-    <svg viewBox="0 0 40 64" className="w-10 h-16 mx-auto">
-      <path d={paths[type] || paths.Rectangle} fill="hsl(var(--primary) / 0.15)" stroke="hsl(var(--primary))" strokeWidth="1.5" />
-    </svg>
-  );
+  body_analysis?: {
+    body_type?: string;
+    build?: string;
+    height_estimate?: string;
+    proportions?: string;
+    shoulder_type?: string;
+    best_features?: string;
+    styling_notes?: string;
+  };
+  model_description?: string;
 };
 
-const FaceShapeSVG = ({ shape }: { shape: string }) => {
-  const paths: Record<string, string> = {
-    Oval: "M20,4 Q32,8 32,22 Q32,36 20,40 Q8,36 8,22 Q8,8 20,4Z",
-    Round: "M20,6 Q34,6 34,22 Q34,38 20,38 Q6,38 6,22 Q6,6 20,6Z",
-    Square: "M8,6 L32,6 Q34,6 34,8 L34,34 Q34,40 20,40 Q6,40 6,34 L6,8 Q6,6 8,6Z",
-    Heart: "M20,6 Q32,4 34,16 Q34,30 20,40 Q6,30 6,16 Q8,4 20,6Z",
-    Oblong: "M20,2 Q30,4 30,20 Q30,38 20,42 Q10,38 10,20 Q10,4 20,2Z",
-  };
-  return (
-    <svg viewBox="0 0 40 44" className="w-8 h-10 mx-auto">
-      <path d={paths[shape] || paths.Oval} fill="hsl(var(--primary) / 0.15)" stroke="hsl(var(--primary))" strokeWidth="1.5" />
-    </svg>
-  );
-};
-
-// --- Component ---
 const OnboardingScreen = () => {
   const { user, refreshProfile } = useAuth();
   const navigate = useNavigate();
+
+  // Steps: 0=Photos, 1=Body(conditional), 2=Style, 3=ModelGen+Done
   const [step, setStep] = useState(0);
-  const [avatarPreview, setAvatarPreview] = useState<string | null>(null);
-  const [uploading, setUploading] = useState(false);
+
+  // Photo state
+  const [facePreview, setFacePreview] = useState<string | null>(null);
+  const [bodyPreview, setBodyPreview] = useState<string | null>(null);
+  const [faceFile, setFaceFile] = useState<File | null>(null);
+  const [bodyFile, setBodyFile] = useState<File | null>(null);
+  const [uploadingFace, setUploadingFace] = useState(false);
+  const [uploadingBody, setUploadingBody] = useState(false);
+  const [analyzing, setAnalyzing] = useState(false);
+  const [analysisResult, setAnalysisResult] = useState<AnalysisResult | null>(null);
+  const [photosProvided, setPhotosProvided] = useState(false);
+
+  // Manual selection state
   const [bodyType, setBodyType] = useState<string | null>(null);
   const [skinTone, setSkinTone] = useState<string | null>(null);
   const [faceShape, setFaceShape] = useState<string | null>(null);
-  const [selectedStyles, setSelectedStyles] = useState<string[]>([]);
-  const [saving, setSaving] = useState(false);
 
-  const handleAvatarUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+  // Style state
+  const [selectedStyles, setSelectedStyles] = useState<string[]>([]);
+
+  // Final state
+  const [saving, setSaving] = useState(false);
+  const [generatingModel, setGeneratingModel] = useState(false);
+  const [modelImageUrl, setModelImageUrl] = useState<string | null>(null);
+
+  const faceInputRef = useRef<HTMLInputElement>(null);
+  const bodyInputRef = useRef<HTMLInputElement>(null);
+
+  const fileToBase64 = (file: File): Promise<string> =>
+    new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onload = () => resolve((reader.result as string).split(",")[1]);
+      reader.onerror = reject;
+      reader.readAsDataURL(file);
+    });
+
+  const handleFaceUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
-    if (!file || !user) return;
-    setUploading(true);
+    if (!file) return;
+    setFaceFile(file);
+    setFacePreview(URL.createObjectURL(file));
+  };
+
+  const handleBodyUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setBodyFile(file);
+    setBodyPreview(URL.createObjectURL(file));
+  };
+
+  const uploadPhotosAndAnalyze = async () => {
+    if (!user || (!faceFile && !bodyFile)) return;
+    setAnalyzing(true);
+
     try {
-      const ext = file.name.split(".").pop();
-      const path = `${user.id}/avatar.${ext}`;
-      const { error: uploadError } = await supabase.storage.from("wardrobe").upload(path, file, { upsert: true });
-      if (uploadError) throw uploadError;
-      const { data: urlData } = supabase.storage.from("wardrobe").getPublicUrl(path);
-      const avatarUrl = `${urlData.publicUrl}?t=${Date.now()}`;
-      setAvatarPreview(avatarUrl);
-      await supabase.from("profiles").update({ avatar_url: avatarUrl }).eq("user_id", user.id);
-      await refreshProfile();
-      toast.success("Photo uploaded!");
-    } catch {
-      toast.error("Upload failed");
+      // Upload photos to storage
+      let faceUrl: string | null = null;
+      let bodyUrl: string | null = null;
+
+      if (faceFile) {
+        setUploadingFace(true);
+        const ext = faceFile.name.split(".").pop();
+        const path = `${user.id}/face.${ext}`;
+        await supabase.storage.from("wardrobe").upload(path, faceFile, { upsert: true });
+        const { data } = supabase.storage.from("wardrobe").getPublicUrl(path);
+        faceUrl = `${data.publicUrl}?t=${Date.now()}`;
+        setUploadingFace(false);
+      }
+
+      if (bodyFile) {
+        setUploadingBody(true);
+        const ext = bodyFile.name.split(".").pop();
+        const path = `${user.id}/body.${ext}`;
+        await supabase.storage.from("wardrobe").upload(path, bodyFile, { upsert: true });
+        const { data } = supabase.storage.from("wardrobe").getPublicUrl(path);
+        bodyUrl = `${data.publicUrl}?t=${Date.now()}`;
+        setUploadingBody(false);
+      }
+
+      // Also set as avatar if face photo provided
+      if (faceUrl) {
+        await supabase.from("profiles").update({ avatar_url: faceUrl }).eq("user_id", user.id);
+      }
+
+      // Call AI analysis
+      const faceB64 = faceFile ? await fileToBase64(faceFile) : null;
+      const bodyB64 = bodyFile ? await fileToBase64(bodyFile) : null;
+
+      const { data, error } = await supabase.functions.invoke("analyze-body-profile", {
+        body: { faceImageBase64: faceB64, bodyImageBase64: bodyB64 },
+      });
+
+      if (error) throw error;
+
+      setAnalysisResult(data);
+      setPhotosProvided(true);
+
+      // Auto-fill from analysis
+      if (data.face_analysis) {
+        if (data.face_analysis.face_shape) setFaceShape(data.face_analysis.face_shape);
+        if (data.face_analysis.skin_tone) setSkinTone(data.face_analysis.skin_tone);
+      }
+      if (data.body_analysis) {
+        if (data.body_analysis.body_type) setBodyType(data.body_analysis.body_type);
+      }
+
+      // Save photo URLs and analysis to DB
+      await supabase.from("style_profiles").upsert({
+        user_id: user.id,
+        face_photo_url: faceUrl,
+        body_photo_url: bodyUrl,
+        ai_face_analysis: data.face_analysis || null,
+        ai_body_analysis: data.body_analysis || null,
+      }, { onConflict: "user_id" });
+
+      toast.success("AI analysis complete! ✨");
+      // Skip to style step since photos were provided
+      setStep(2);
+    } catch (err) {
+      console.error("Analysis error:", err);
+      toast.error("Analysis failed. You can set preferences manually.");
+      setStep(1);
     } finally {
-      setUploading(false);
+      setAnalyzing(false);
     }
   };
 
@@ -114,25 +203,49 @@ const OnboardingScreen = () => {
     setSelectedStyles(prev => prev.includes(s) ? prev.filter(x => x !== s) : [...prev, s]);
   };
 
-  const saveAndFinish = async () => {
+  const generateModelAndFinish = async () => {
     if (!user) return;
     setSaving(true);
+
     try {
-      const { error } = await supabase.from("style_profiles").upsert({
+      // Save style profile
+      await supabase.from("style_profiles").upsert({
         user_id: user.id,
         body_type: bodyType,
         skin_tone: skinTone,
         face_shape: faceShape,
         style_type: selectedStyles.join(",") || null,
       }, { onConflict: "user_id" });
-      if (error) throw error;
+
+      // Generate model avatar
+      setGeneratingModel(true);
+      const modelDesc = analysisResult?.model_description || 
+        `A person with ${skinTone || "medium"} skin tone, ${bodyType || "average"} body type, ${faceShape || "oval"} face shape. Standing pose, full body.`;
+
+      const { data, error } = await supabase.functions.invoke("generate-model-avatar", {
+        body: { modelDescription: modelDesc, userId: user.id },
+      });
+
+      if (error) {
+        console.error("Model generation error:", error);
+        // Continue anyway
+      } else if (data?.imageUrl) {
+        setModelImageUrl(data.imageUrl);
+      }
+
+      setGeneratingModel(false);
       await refreshProfile();
-      toast.success("Profile complete!");
+      toast.success("Your AI stylist is ready! 🎨");
       navigate("/", { replace: true });
-    } catch {
-      toast.error("Failed to save");
+    } catch (err) {
+      console.error(err);
+      toast.error("Failed to complete setup");
+      // Try to navigate anyway
+      await refreshProfile();
+      navigate("/", { replace: true });
     } finally {
       setSaving(false);
+      setGeneratingModel(false);
     }
   };
 
@@ -140,9 +253,7 @@ const OnboardingScreen = () => {
     if (!user) return;
     setSaving(true);
     try {
-      await supabase.from("style_profiles").upsert({
-        user_id: user.id,
-      }, { onConflict: "user_id" });
+      await supabase.from("style_profiles").upsert({ user_id: user.id }, { onConflict: "user_id" });
       await refreshProfile();
       navigate("/", { replace: true });
     } catch {
@@ -152,11 +263,15 @@ const OnboardingScreen = () => {
     }
   };
 
-  const canProceed = () => {
-    if (step === 1) return bodyType || skinTone || faceShape;
-    if (step === 2) return selectedStyles.length > 0;
-    return true;
+  // Determine actual steps based on photos
+  const getStepLabel = () => {
+    if (step === 0) return "Photos";
+    if (step === 1) return "Body Profile";
+    if (step === 2) return "Style";
+    return "Finishing";
   };
+
+  const totalSteps = photosProvided ? 3 : 4;
 
   const slideVariants = {
     enter: (dir: number) => ({ x: dir > 0 ? 200 : -200, opacity: 0 }),
@@ -169,66 +284,147 @@ const OnboardingScreen = () => {
       <div className="max-w-lg mx-auto w-full flex-1 flex flex-col">
         {/* Progress */}
         <div className="flex items-center gap-2 mb-8">
-          {steps.map((s, i) => (
+          {(photosProvided ? ["Photos", "Style", "Done"] : ["Photos", "Body", "Style", "Done"]).map((s, i) => (
             <div key={s} className="flex-1 flex flex-col items-center gap-1">
-              <div className={`h-1 w-full rounded-full transition-all duration-500 ${i <= step ? "gradient-accent" : "bg-secondary"}`} />
-              <span className={`text-[10px] font-medium transition-colors ${i <= step ? "text-foreground" : "text-muted-foreground"}`}>{s}</span>
+              <div className={`h-1 w-full rounded-full transition-all duration-500 ${i <= (photosProvided ? (step === 0 ? 0 : step - 1) : step) ? "gradient-accent" : "bg-secondary"}`} />
+              <span className={`text-[10px] font-medium transition-colors ${i <= (photosProvided ? (step === 0 ? 0 : step - 1) : step) ? "text-foreground" : "text-muted-foreground"}`}>{s}</span>
             </div>
           ))}
         </div>
 
         {/* Steps */}
         <AnimatePresence mode="wait" custom={1}>
+          {/* Step 0: Photo Upload */}
           {step === 0 && (
-            <motion.div key="photo" custom={1} variants={slideVariants} initial="enter" animate="center" exit="exit" transition={{ duration: 0.3 }} className="flex-1 flex flex-col items-center justify-center gap-6">
-              <h1 className="font-display text-2xl font-semibold text-foreground text-center">Add Your Photo</h1>
-              <p className="text-sm text-muted-foreground text-center max-w-xs">Upload a profile photo so we can personalize your AI styling experience</p>
-              <div className="relative w-36 h-36 rounded-full overflow-hidden bg-secondary border-2 border-border">
-                {avatarPreview ? (
-                  <img src={avatarPreview} alt="Avatar" className="w-full h-full object-cover" />
-                ) : (
-                  <div className="w-full h-full flex items-center justify-center">
-                    <Camera size={40} className="text-muted-foreground" />
-                  </div>
-                )}
-                {uploading && (
-                  <div className="absolute inset-0 bg-background/60 flex items-center justify-center">
-                    <div className="w-6 h-6 border-2 border-foreground border-t-transparent rounded-full animate-spin" />
-                  </div>
-                )}
+            <motion.div key="photos" custom={1} variants={slideVariants} initial="enter" animate="center" exit="exit" transition={{ duration: 0.3 }} className="flex-1 flex flex-col gap-6">
+              <div className="text-center">
+                <h1 className="font-display text-2xl font-semibold text-foreground">Let's Get to Know You</h1>
+                <p className="text-sm text-muted-foreground mt-1">Upload photos for AI body & face analysis, or skip to set preferences manually</p>
               </div>
-              <label className="px-6 py-3 rounded-full gradient-accent text-accent-foreground text-sm font-medium cursor-pointer shadow-soft active:scale-95 transition-transform">
-                <Upload size={16} className="inline mr-2" />
-                {avatarPreview ? "Change Photo" : "Upload Photo"}
-                <input type="file" accept="image/*" className="hidden" onChange={handleAvatarUpload} />
-              </label>
+
+              {analyzing ? (
+                <div className="flex-1 flex flex-col items-center justify-center gap-4">
+                  <motion.div animate={{ rotate: 360 }} transition={{ repeat: Infinity, duration: 2, ease: "linear" }}>
+                    <Sparkles size={40} className="text-primary" />
+                  </motion.div>
+                  <p className="text-base font-medium text-foreground">AI is analyzing your photos...</p>
+                  <p className="text-sm text-muted-foreground text-center">Detecting body type, skin tone, face shape & more</p>
+                  <div className="w-48 h-1.5 bg-secondary rounded-full overflow-hidden">
+                    <motion.div
+                      className="h-full gradient-accent rounded-full"
+                      initial={{ width: "0%" }}
+                      animate={{ width: "100%" }}
+                      transition={{ duration: 8, ease: "linear" }}
+                    />
+                  </div>
+                </div>
+              ) : (
+                <>
+                  {/* Face Photo */}
+                  <div className="glass-card p-4 space-y-3">
+                    <div className="flex items-center gap-2">
+                      <User size={18} className="text-muted-foreground" />
+                      <h3 className="text-sm font-semibold text-foreground">Face Photo</h3>
+                      <span className="text-[10px] text-muted-foreground ml-auto">For skin tone & face shape</span>
+                    </div>
+                    <div className="flex gap-3 items-center">
+                      {facePreview ? (
+                        <div className="w-24 h-24 rounded-2xl overflow-hidden bg-secondary flex-shrink-0">
+                          <img src={facePreview} alt="Face" className="w-full h-full object-cover" />
+                        </div>
+                      ) : (
+                        <div className="w-24 h-24 rounded-2xl bg-secondary flex items-center justify-center flex-shrink-0">
+                          <Camera size={28} className="text-muted-foreground" />
+                        </div>
+                      )}
+                      <div className="flex flex-col gap-2 flex-1">
+                        <label className="px-4 py-2.5 rounded-xl gradient-accent text-accent-foreground text-xs font-medium cursor-pointer text-center active:scale-95 transition-transform">
+                          <Camera size={14} className="inline mr-1.5" />
+                          {facePreview ? "Retake" : "Take Selfie"}
+                          <input type="file" accept="image/*" capture="user" className="hidden" onChange={handleFaceUpload} onClick={(e) => { (e.target as HTMLInputElement).value = ""; }} />
+                        </label>
+                        <label className="px-4 py-2.5 rounded-xl bg-secondary text-secondary-foreground text-xs font-medium cursor-pointer text-center active:scale-95 transition-transform">
+                          <Upload size={14} className="inline mr-1.5" />
+                          Gallery
+                          <input type="file" accept="image/*" className="hidden" onChange={handleFaceUpload} onClick={(e) => { (e.target as HTMLInputElement).value = ""; }} ref={faceInputRef} />
+                        </label>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Body Photo */}
+                  <div className="glass-card p-4 space-y-3">
+                    <div className="flex items-center gap-2">
+                      <User size={18} className="text-muted-foreground" />
+                      <h3 className="text-sm font-semibold text-foreground">Full Body Photo</h3>
+                      <span className="text-[10px] text-muted-foreground ml-auto">For body type & proportions</span>
+                    </div>
+                    <div className="flex gap-3 items-center">
+                      {bodyPreview ? (
+                        <div className="w-24 h-32 rounded-2xl overflow-hidden bg-secondary flex-shrink-0">
+                          <img src={bodyPreview} alt="Body" className="w-full h-full object-cover" />
+                        </div>
+                      ) : (
+                        <div className="w-24 h-32 rounded-2xl bg-secondary flex items-center justify-center flex-shrink-0">
+                          <User size={32} className="text-muted-foreground" />
+                        </div>
+                      )}
+                      <div className="flex flex-col gap-2 flex-1">
+                        <label className="px-4 py-2.5 rounded-xl gradient-accent text-accent-foreground text-xs font-medium cursor-pointer text-center active:scale-95 transition-transform">
+                          <Camera size={14} className="inline mr-1.5" />
+                          {bodyPreview ? "Retake" : "Take Photo"}
+                          <input type="file" accept="image/*" capture="environment" className="hidden" onChange={handleBodyUpload} onClick={(e) => { (e.target as HTMLInputElement).value = ""; }} />
+                        </label>
+                        <label className="px-4 py-2.5 rounded-xl bg-secondary text-secondary-foreground text-xs font-medium cursor-pointer text-center active:scale-95 transition-transform">
+                          <Upload size={14} className="inline mr-1.5" />
+                          Gallery
+                          <input type="file" accept="image/*" className="hidden" onChange={handleBodyUpload} onClick={(e) => { (e.target as HTMLInputElement).value = ""; }} ref={bodyInputRef} />
+                        </label>
+                      </div>
+                    </div>
+                  </div>
+
+                  {(faceFile || bodyFile) && (
+                    <button
+                      onClick={uploadPhotosAndAnalyze}
+                      className="w-full py-4 rounded-2xl gradient-accent text-accent-foreground font-semibold text-base shadow-soft active:scale-[0.98] transition-transform flex items-center justify-center gap-2"
+                    >
+                      <Sparkles size={20} />
+                      Analyze with AI
+                    </button>
+                  )}
+                </>
+              )}
             </motion.div>
           )}
 
-          {step === 1 && (
-            <motion.div key="body" custom={1} variants={slideVariants} initial="enter" animate="center" exit="exit" transition={{ duration: 0.3 }} className="flex-1 space-y-6 overflow-y-auto">
+          {/* Step 1: Manual Body Profile (only if photos skipped) */}
+          {step === 1 && !photosProvided && (
+            <motion.div key="body" custom={1} variants={slideVariants} initial="enter" animate="center" exit="exit" transition={{ duration: 0.3 }} className="flex-1 space-y-5 overflow-y-auto">
               <div className="text-center">
                 <h1 className="font-display text-2xl font-semibold text-foreground">Your Body Profile</h1>
-                <p className="text-sm text-muted-foreground mt-1">Help AI understand your proportions for better styling</p>
+                <p className="text-sm text-muted-foreground mt-1">Select what matches you best</p>
               </div>
 
               {/* Body Type */}
               <div className="glass-card p-4 space-y-3">
                 <h3 className="text-sm font-semibold text-foreground">Body Type</h3>
-                <div className="grid grid-cols-3 gap-2">
+                <div className="grid grid-cols-2 gap-2">
                   {bodyTypes.map(t => (
                     <button
                       key={t.label}
                       onClick={() => setBodyType(t.label)}
-                      className={`flex flex-col items-center gap-1.5 p-3 rounded-xl border-2 transition-all ${
+                      className={`flex items-center gap-3 p-3 rounded-xl border-2 transition-all text-left ${
                         bodyType === t.label
                           ? "border-primary bg-primary/10 shadow-soft"
-                          : "border-border bg-secondary/50 hover:border-primary/40"
+                          : "border-border bg-secondary/50"
                       }`}
                     >
-                      <BodyTypeSVG type={t.label} />
-                      <span className="text-xs font-semibold text-foreground">{t.label}</span>
-                      <span className="text-[10px] text-muted-foreground text-center leading-tight">{t.desc}</span>
+                      <span className="text-2xl">{t.emoji}</span>
+                      <div>
+                        <span className="text-xs font-semibold text-foreground block">{t.label}</span>
+                        <span className="text-[10px] text-muted-foreground leading-tight">{t.desc}</span>
+                      </div>
                     </button>
                   ))}
                 </div>
@@ -239,16 +435,10 @@ const OnboardingScreen = () => {
                 <h3 className="text-sm font-semibold text-foreground">Skin Tone</h3>
                 <div className="flex flex-wrap gap-3 justify-center">
                   {skinTones.map(t => (
-                    <button
-                      key={t.label}
-                      onClick={() => setSkinTone(t.label)}
-                      className="flex flex-col items-center gap-1.5"
-                    >
+                    <button key={t.label} onClick={() => setSkinTone(t.label)} className="flex flex-col items-center gap-1.5">
                       <div
-                        className={`w-11 h-11 rounded-full border-[3px] transition-all ${
-                          skinTone === t.label
-                            ? "border-primary scale-110 shadow-soft"
-                            : "border-transparent hover:border-primary/40"
+                        className={`w-12 h-12 rounded-full border-[3px] transition-all ${
+                          skinTone === t.label ? "border-primary scale-110 shadow-soft" : "border-transparent"
                         }`}
                         style={{ backgroundColor: t.color }}
                       />
@@ -266,15 +456,12 @@ const OnboardingScreen = () => {
                     <button
                       key={t.label}
                       onClick={() => setFaceShape(t.label)}
-                      className={`flex flex-col items-center gap-1.5 p-3 rounded-xl border-2 transition-all ${
-                        faceShape === t.label
-                          ? "border-primary bg-primary/10 shadow-soft"
-                          : "border-border bg-secondary/50 hover:border-primary/40"
+                      className={`flex flex-col items-center gap-1 p-3 rounded-xl border-2 transition-all ${
+                        faceShape === t.label ? "border-primary bg-primary/10 shadow-soft" : "border-border bg-secondary/50"
                       }`}
                     >
-                      <FaceShapeSVG shape={t.label} />
                       <span className="text-xs font-semibold text-foreground">{t.label}</span>
-                      <span className="text-[10px] text-muted-foreground text-center leading-tight">{t.desc}</span>
+                      <span className="text-[9px] text-muted-foreground text-center">{t.desc}</span>
                     </button>
                   ))}
                 </div>
@@ -282,30 +469,59 @@ const OnboardingScreen = () => {
             </motion.div>
           )}
 
+          {/* Step 2: Style Preferences */}
           {step === 2 && (
-            <motion.div key="style" custom={1} variants={slideVariants} initial="enter" animate="center" exit="exit" transition={{ duration: 0.3 }} className="flex-1 space-y-6">
+            <motion.div key="style" custom={1} variants={slideVariants} initial="enter" animate="center" exit="exit" transition={{ duration: 0.3 }} className="flex-1 space-y-5">
               <div className="text-center">
                 <h1 className="font-display text-2xl font-semibold text-foreground">Style Preferences</h1>
-                <p className="text-sm text-muted-foreground mt-1">Select the styles you love (pick multiple)</p>
+                <p className="text-sm text-muted-foreground mt-1">Pick the styles you love (select multiple)</p>
               </div>
+
+              {/* Show AI analysis summary if photos were provided */}
+              {photosProvided && analysisResult && (
+                <div className="glass-card-elevated p-4 space-y-2">
+                  <h3 className="text-xs font-semibold text-foreground flex items-center gap-1.5">
+                    <Sparkles size={14} className="text-primary" /> AI Analysis Results
+                  </h3>
+                  <div className="flex flex-wrap gap-2">
+                    {analysisResult.body_analysis?.body_type && (
+                      <span className="px-3 py-1 rounded-full bg-primary/10 text-xs font-medium text-foreground">
+                        {analysisResult.body_analysis.body_type}
+                      </span>
+                    )}
+                    {analysisResult.face_analysis?.skin_tone && (
+                      <span className="px-3 py-1 rounded-full bg-primary/10 text-xs font-medium text-foreground">
+                        {analysisResult.face_analysis.skin_tone} skin
+                      </span>
+                    )}
+                    {analysisResult.face_analysis?.face_shape && (
+                      <span className="px-3 py-1 rounded-full bg-primary/10 text-xs font-medium text-foreground">
+                        {analysisResult.face_analysis.face_shape} face
+                      </span>
+                    )}
+                    {analysisResult.body_analysis?.build && (
+                      <span className="px-3 py-1 rounded-full bg-primary/10 text-xs font-medium text-foreground">
+                        {analysisResult.body_analysis.build} build
+                      </span>
+                    )}
+                  </div>
+                  {analysisResult.body_analysis?.styling_notes && (
+                    <p className="text-[11px] text-muted-foreground">{analysisResult.body_analysis.styling_notes}</p>
+                  )}
+                </div>
+              )}
 
               <div className="grid grid-cols-2 gap-3">
                 {styleOptions.map(s => {
-                  const Icon = s.icon;
                   const selected = selectedStyles.includes(s.label);
                   return (
                     <button
                       key={s.label}
                       onClick={() => toggleStyle(s.label)}
                       className={`flex flex-col items-center gap-2 p-4 rounded-2xl border-2 transition-all ${
-                        selected
-                          ? "border-primary bg-primary/10 shadow-soft"
-                          : "border-border bg-secondary/50 hover:border-primary/40"
+                        selected ? "border-primary bg-primary/10 shadow-soft" : "border-border bg-secondary/50"
                       }`}
                     >
-                      <div className={`w-10 h-10 rounded-xl flex items-center justify-center ${selected ? "gradient-accent" : "bg-muted"}`}>
-                        <Icon size={20} className={selected ? "text-accent-foreground" : "text-muted-foreground"} />
-                      </div>
                       <span className="text-sm font-semibold text-foreground">{s.label}</span>
                       <span className="text-[10px] text-muted-foreground">{s.desc}</span>
                       {selected && <Check size={14} className="text-primary" />}
@@ -316,33 +532,79 @@ const OnboardingScreen = () => {
             </motion.div>
           )}
 
+          {/* Step 3: Generating Model + Done */}
           {step === 3 && (
             <motion.div key="done" custom={1} variants={slideVariants} initial="enter" animate="center" exit="exit" transition={{ duration: 0.3 }} className="flex-1 flex flex-col items-center justify-center gap-6">
-              <motion.div initial={{ scale: 0 }} animate={{ scale: 1 }} transition={{ type: "spring", delay: 0.2 }} className="w-20 h-20 rounded-full gradient-accent flex items-center justify-center shadow-elevated">
-                <Sparkles size={36} className="text-accent-foreground" />
-              </motion.div>
-              <h1 className="font-display text-2xl font-semibold text-foreground text-center">You're All Set!</h1>
-              <p className="text-sm text-muted-foreground text-center max-w-xs">Your AI stylist is ready to create personalized outfit suggestions just for you</p>
-              <button onClick={saveAndFinish} disabled={saving} className="px-8 py-4 rounded-2xl gradient-accent text-accent-foreground font-semibold text-base shadow-soft active:scale-[0.98] transition-transform flex items-center gap-2">
-                {saving ? <div className="w-5 h-5 border-2 border-accent-foreground border-t-transparent rounded-full animate-spin" /> : <Sparkles size={20} />}
-                Start Styling
-              </button>
+              {generatingModel || saving ? (
+                <>
+                  <motion.div animate={{ rotate: 360 }} transition={{ repeat: Infinity, duration: 2, ease: "linear" }}>
+                    <Sparkles size={40} className="text-primary" />
+                  </motion.div>
+                  <h1 className="font-display text-2xl font-semibold text-foreground text-center">
+                    {generatingModel ? "Creating Your AI Model..." : "Setting up your profile..."}
+                  </h1>
+                  <p className="text-sm text-muted-foreground text-center max-w-xs">
+                    {generatingModel ? "Generating a personalized fashion avatar based on your features" : "Almost done!"}
+                  </p>
+                  <div className="w-48 h-1.5 bg-secondary rounded-full overflow-hidden">
+                    <motion.div className="h-full gradient-accent rounded-full" initial={{ width: "0%" }} animate={{ width: "100%" }} transition={{ duration: 12, ease: "linear" }} />
+                  </div>
+                </>
+              ) : (
+                <>
+                  {modelImageUrl && (
+                    <div className="w-48 h-64 rounded-2xl overflow-hidden shadow-elevated">
+                      <img src={modelImageUrl} alt="Your AI Model" className="w-full h-full object-cover" />
+                    </div>
+                  )}
+                  <motion.div initial={{ scale: 0 }} animate={{ scale: 1 }} transition={{ type: "spring", delay: 0.2 }} className="w-20 h-20 rounded-full gradient-accent flex items-center justify-center shadow-elevated">
+                    <Sparkles size={36} className="text-accent-foreground" />
+                  </motion.div>
+                  <h1 className="font-display text-2xl font-semibold text-foreground text-center">You're All Set!</h1>
+                  <p className="text-sm text-muted-foreground text-center max-w-xs">Your AI stylist is ready to create personalized outfit suggestions</p>
+                  <button onClick={() => { refreshProfile(); navigate("/", { replace: true }); }} className="px-8 py-4 rounded-2xl gradient-accent text-accent-foreground font-semibold text-base shadow-soft active:scale-[0.98] transition-transform flex items-center gap-2">
+                    <Sparkles size={20} /> Start Styling
+                  </button>
+                </>
+              )}
             </motion.div>
           )}
         </AnimatePresence>
 
         {/* Navigation */}
-        {step < 3 && (
+        {step < 3 && !analyzing && (
           <div className="flex items-center justify-between mt-8">
             <button
-              onClick={() => step > 0 ? setStep(step - 1) : handleSkip()}
+              onClick={() => {
+                if (step === 0) handleSkip();
+                else if (step === 2 && photosProvided) setStep(0);
+                else setStep(step - 1);
+              }}
               disabled={saving}
               className="px-4 py-2 rounded-full bg-secondary text-secondary-foreground text-sm font-medium"
             >
               {step === 0 ? "Skip" : <><ChevronLeft size={16} className="inline" /> Back</>}
             </button>
-            <button onClick={() => setStep(step + 1)} disabled={!canProceed()} className="px-6 py-2 rounded-full gradient-accent text-accent-foreground text-sm font-medium shadow-soft disabled:opacity-50 flex items-center gap-1">
-              Next <ChevronRight size={16} />
+            <button
+              onClick={() => {
+                if (step === 0) {
+                  // If no photos, go to manual body profile
+                  setStep(1);
+                } else if (step === 1) {
+                  setStep(2);
+                } else if (step === 2) {
+                  setStep(3);
+                  generateModelAndFinish();
+                }
+              }}
+              disabled={step === 2 && selectedStyles.length === 0}
+              className="px-6 py-2 rounded-full gradient-accent text-accent-foreground text-sm font-medium shadow-soft disabled:opacity-50 flex items-center gap-1"
+            >
+              {step === 2 ? (
+                <><Sparkles size={14} /> Finish</>
+              ) : (
+                <>Next <ChevronRight size={16} /></>
+              )}
             </button>
           </div>
         )}

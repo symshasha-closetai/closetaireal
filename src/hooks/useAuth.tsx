@@ -3,6 +3,15 @@ import { Session, User } from "@supabase/supabase-js";
 import { supabase } from "@/integrations/supabase/client";
 
 type Profile = { name: string | null; avatar_url: string | null };
+type StyleProfile = {
+  model_image_url: string | null;
+  body_type: string | null;
+  skin_tone: string | null;
+  face_shape: string | null;
+  style_type: string | null;
+  ai_body_analysis: any | null;
+  ai_face_analysis: any | null;
+};
 
 type AuthContextType = {
   session: Session | null;
@@ -10,6 +19,7 @@ type AuthContextType = {
   loading: boolean;
   signOut: () => Promise<void>;
   profile: Profile | null;
+  styleProfile: StyleProfile | null;
   refreshProfile: () => Promise<void>;
   hasCompletedOnboarding: boolean | null;
 };
@@ -20,6 +30,7 @@ const AuthContext = createContext<AuthContextType>({
   loading: true,
   signOut: async () => {},
   profile: null,
+  styleProfile: null,
   refreshProfile: async () => {},
   hasCompletedOnboarding: null,
 });
@@ -29,6 +40,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
   const [profile, setProfile] = useState<Profile | null>(null);
+  const [styleProfile, setStyleProfile] = useState<StyleProfile | null>(null);
   const [hasCompletedOnboarding, setHasCompletedOnboarding] = useState<boolean | null>(null);
 
   const fetchProfile = useCallback(async (userId: string) => {
@@ -40,21 +52,22 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     setProfile(data);
   }, []);
 
-  const checkOnboarding = useCallback(async (userId: string) => {
+  const fetchStyleProfile = useCallback(async (userId: string) => {
     const { data } = await supabase
       .from("style_profiles")
-      .select("id")
+      .select("model_image_url, body_type, skin_tone, face_shape, style_type, ai_body_analysis, ai_face_analysis")
       .eq("user_id", userId)
       .maybeSingle();
+    setStyleProfile(data);
     setHasCompletedOnboarding(!!data);
   }, []);
 
   const refreshProfile = useCallback(async () => {
     if (user) {
       await fetchProfile(user.id);
-      await checkOnboarding(user.id);
+      await fetchStyleProfile(user.id);
     }
-  }, [user, fetchProfile, checkOnboarding]);
+  }, [user, fetchProfile, fetchStyleProfile]);
 
   useEffect(() => {
     const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
@@ -64,10 +77,11 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       if (session?.user) {
         setTimeout(() => {
           fetchProfile(session.user.id);
-          checkOnboarding(session.user.id);
+          fetchStyleProfile(session.user.id);
         }, 0);
       } else {
         setProfile(null);
+        setStyleProfile(null);
         setHasCompletedOnboarding(null);
       }
     });
@@ -79,14 +93,14 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     });
 
     return () => subscription.unsubscribe();
-  }, [fetchProfile, checkOnboarding]);
+  }, [fetchProfile, fetchStyleProfile]);
 
   const signOut = async () => {
     await supabase.auth.signOut();
   };
 
   return (
-    <AuthContext.Provider value={{ session, user, loading, signOut, profile, refreshProfile, hasCompletedOnboarding }}>
+    <AuthContext.Provider value={{ session, user, loading, signOut, profile, styleProfile, refreshProfile, hasCompletedOnboarding }}>
       {children}
     </AuthContext.Provider>
   );

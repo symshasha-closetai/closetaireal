@@ -1,6 +1,6 @@
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "../hooks/useAuth";
-import { User } from "lucide-react";
+import { User, Bell, Menu } from "lucide-react";
 import logo from "@/assets/closetai-logo.png";
 
 const AppHeader = () => {
@@ -10,12 +10,12 @@ const AppHeader = () => {
 
   return (
     <div className="flex items-center justify-between">
-      <div className="w-9" />
+      <button className="w-9 h-9 rounded-full bg-secondary border border-border flex items-center justify-center">
+        <Bell size={16} className="text-muted-foreground" />
+      </button>
       <div className="flex items-center gap-2">
         <img src={logo} alt="ClosetAI" className="w-8 h-8 rounded-lg object-contain" />
-        <h1 className="font-display text-lg font-semibold text-foreground">
-          ClosetAI
-        </h1>
+        <h1 className="font-display text-lg font-semibold text-foreground">ClosetAI</h1>
       </div>
       <button
         onClick={() => navigate("/profile")}
