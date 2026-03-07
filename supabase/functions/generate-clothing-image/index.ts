@@ -11,23 +11,25 @@ serve(async (req) => {
   if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
 
   try {
-    const { imageBase64, itemName, itemType, itemColor, itemMaterial, userId } = await req.json();
+    const { imageBase64, itemName, itemType, itemColor, itemMaterial, userId, bodyType } = await req.json();
     const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
     if (!LOVABLE_API_KEY) throw new Error("LOVABLE_API_KEY not configured");
 
     const colorDesc = itemColor ? ` in ${itemColor} color` : "";
     const materialDesc = itemMaterial ? ` made of ${itemMaterial}` : "";
+    const bodyDesc = bodyType ? ` The mannequin should have ${bodyType} body proportions.` : "";
 
     const prompt = `Look at this photo and find the ${itemName || itemType}${colorDesc}${materialDesc}. 
 
-Generate a clean, professional product photograph of ONLY that specific clothing item:
-- Flat-lay style on a pure white background
-- Photorealistic, high-quality product photography
-- Show the complete garment neatly laid out or slightly styled
-- No person, no mannequin, no hangers
+Generate a photorealistic image of ONLY that specific clothing item displayed on a mannequin/dress form:
+- Display the garment on a clean, minimal mannequin/dress form against a pure white or light gray background${bodyDesc}
+- The mannequin should be faceless — just a body form
+- Show the complete garment properly fitted on the form
+- Photorealistic, high-quality fashion photography
 - Natural fabric texture and accurate colors
-- Professional e-commerce product photo quality
-- Well-lit with soft, even lighting and minimal shadows`;
+- Professional fashion store display quality
+- Well-lit with soft, even lighting and minimal shadows
+- No person, no face, just the mannequin form with the clothing`;
 
     const response = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
       method: "POST",

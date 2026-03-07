@@ -1,17 +1,26 @@
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "../hooks/useAuth";
-import { User, Bell, Menu } from "lucide-react";
+import { User, Sun, Moon } from "lucide-react";
+import { useTheme } from "next-themes";
 import logo from "@/assets/closetai-logo.png";
 
 const AppHeader = () => {
   const navigate = useNavigate();
   const { profile } = useAuth();
   const avatarUrl = profile?.avatar_url;
+  const { theme, setTheme } = useTheme();
 
   return (
     <div className="flex items-center justify-between">
-      <button className="w-9 h-9 rounded-full bg-secondary border border-border flex items-center justify-center">
-        <Bell size={16} className="text-muted-foreground" />
+      <button
+        onClick={() => setTheme(theme === "dark" ? "light" : "dark")}
+        className="w-9 h-9 rounded-full bg-secondary border border-border flex items-center justify-center active:scale-95 transition-transform"
+      >
+        {theme === "dark" ? (
+          <Sun size={16} className="text-muted-foreground" />
+        ) : (
+          <Moon size={16} className="text-muted-foreground" />
+        )}
       </button>
       <div className="flex items-center gap-2">
         <img src={logo} alt="ClosetAI" className="w-8 h-8 rounded-lg object-contain dark:brightness-0 dark:invert" />

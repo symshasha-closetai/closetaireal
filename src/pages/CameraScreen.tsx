@@ -9,13 +9,18 @@ import { toast } from "sonner";
 
 type RatingResult = {
   overall_score: number;
+  overall_reason?: string;
   color_score: number;
+  color_reason?: string;
   style_score: number;
+  style_reason?: string;
   fit_score: number;
+  fit_reason?: string;
   occasion: string;
   advice: string;
-  wardrobe_suggestions: { item_name: string; category: string; reason: string }[];
-  shopping_suggestions: { item_name: string; category: string; reason: string }[];
+  praise_line?: string;
+  wardrobe_suggestions: { item_name: string; category: string; reason: string; wardrobe_item_id?: string }[];
+  shopping_suggestions: { item_name: string; category: string; reason: string; image_prompt?: string }[];
 };
 
 const CameraScreen = () => {

@@ -25,7 +25,7 @@ type DetectedItem = {
 const categories = ["All", "Tops", "Bottoms", "Shoes", "Dresses", "Accessories"];
 
 const WardrobeScreen = () => {
-  const { user } = useAuth();
+  const { user, styleProfile } = useAuth();
   const [activeCategory, setActiveCategory] = useState("All");
   const [items, setItems] = useState<ClothingItem[]>([]);
   const [loading, setLoading] = useState(true);
@@ -152,6 +152,7 @@ const WardrobeScreen = () => {
               itemColor: item.color,
               itemMaterial: item.material,
               userId: user.id,
+              bodyType: styleProfile?.body_type || null,
             },
           });
 
@@ -360,7 +361,7 @@ const WardrobeScreen = () => {
                 exit={{ opacity: 0, scale: 0.95 }}
                 transition={{ type: "spring", damping: 25, stiffness: 300 }}
                 onClick={(e) => e.stopPropagation()}
-                className="w-full max-w-md bg-card rounded-3xl p-6 space-y-4 max-h-[85vh] overflow-y-auto"
+                className="w-full max-w-md bg-card rounded-3xl p-6 space-y-4 max-h-[85vh] overflow-y-auto pb-24"
               >
                 <div className="flex items-center justify-between">
                   <h3 className="font-semibold text-foreground text-lg">Add Clothing</h3>
@@ -461,17 +462,23 @@ const WardrobeScreen = () => {
                             );
                           })}
                         </div>
+                        {generatingImages && (
+                          <div className="w-full py-3 rounded-xl bg-secondary text-center">
+                            <span className="flex items-center justify-center gap-2 text-sm font-medium text-foreground">
+                              <Loader2 size={16} className="animate-spin" />
+                              Generating clean images... {genProgress}%
+                            </span>
+                            <div className="mt-2 mx-4 h-1.5 rounded-full bg-border overflow-hidden">
+                              <div className="h-full rounded-full gradient-accent transition-all duration-300" style={{ width: `${genProgress}%` }} />
+                            </div>
+                          </div>
+                        )}
                         <button
                           onClick={handleSaveDetected}
                           disabled={uploading || selectedDetected.length === 0}
                           className="w-full py-3.5 rounded-xl gradient-accent text-accent-foreground font-medium text-sm shadow-soft active:scale-[0.98] transition-transform disabled:opacity-60"
                         >
-                          {generatingImages ? (
-                            <span className="flex items-center justify-center gap-2">
-                              <Loader2 size={16} className="animate-spin" />
-                              Generating clean images... {genProgress}%
-                            </span>
-                          ) : uploading ? "Saving..." : `Add ${selectedDetected.length} Item(s)`}
+                          {uploading && !generatingImages ? "Saving..." : `Add ${selectedDetected.length} Item(s)`}
                         </button>
                       </>
                     )}
