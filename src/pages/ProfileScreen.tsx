@@ -22,6 +22,12 @@ const ProfileScreen = () => {
 
   const avatarUrl = avatarPreview || profile?.avatar_url || null;
 
+  useEffect(() => {
+    if (profile?.name !== undefined && profile?.name !== null) {
+      setName(profile.name);
+    }
+  }, [profile?.name]);
+
   const handleAvatarUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file || !user) return;
