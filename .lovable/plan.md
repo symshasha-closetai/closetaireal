@@ -1,82 +1,67 @@
 
 
-# Plan: Multi-Provider Architecture — R2 Storage, Gemini Analysis, OpenAI Styling
+# Plan: Switch to Google Gemini 1.5 Flash + Anthropic Haiku, Keep Supabase Storage
 
 ## Overview
 
-Migrate from all-Lovable-AI-gateway to a split architecture:
-- **Gemini Flash** (via Google AI API) → clothing analysis, body profile analysis
-- **OpenAI GPT-4o mini** → style-me suggestions, outfit rating/scoring
-- **Cloudflare R2** → all image storage (replace Supabase Storage)
-- **Supabase** → database only (keep as-is)
+Replace the Lovable AI Gateway calls with direct API calls:
+- **Google Gemini 1.5 Flash** → clothing analysis, body profile analysis, image generation
+- **Anthropic Claude Haiku** → styling suggestions (style-me), outfit rating (rate-outfit)
+- **Supabase Storage** → keep as-is (no R2 migration)
 
-## Prerequisites (User Action Required)
+## Secrets Needed
 
-User needs to provide 5 secrets:
-1. `GOOGLE_AI_API_KEY` — from Google AI Studio
-2. `OPENAI_API_KEY` — from OpenAI platform
-3. `R2_ACCOUNT_ID` — Cloudflare account ID
-4. `R2_ACCESS_KEY_ID` — R2 API token access key
-5. `R2_SECRET_ACCESS_KEY` — R2 API token secret
-6. `R2_BUCKET_NAME` — e.g. `closetai-images`
+Two API keys to add:
+1. `GOOGLE_AI_API_KEY` — from [Google AI Studio](https://aistudio.google.com/apikey)
+2. `ANTHROPIC_API_KEY` — from [console.anthropic.com](https://console.anthropic.com/)
 
 ## Changes
 
-### 1. New Edge Function: `supabase/functions/r2-upload/index.ts`
-- Accepts file (base64) + path, uploads to R2 via S3-compatible API
-- Returns public URL
-- Used by all other functions and client code that currently upload to Supabase Storage
+### 1. Analysis Functions → Google Gemini 1.5 Flash Direct API
 
-### 2. Update Analysis Functions (Gemini Flash direct)
 **Files:** `analyze-clothing/index.ts`, `analyze-body-profile/index.ts`
-- Replace Lovable AI gateway URL with `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent`
+
+- Replace `https://ai.gateway.lovable.dev/v1/chat/completions` with `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent`
 - Use `GOOGLE_AI_API_KEY` instead of `LOVABLE_API_KEY`
-- Keep same prompts and tool schemas
+- Convert OpenAI-style messages to Gemini format (contents array with parts)
 
-### 3. Update Styling Functions (OpenAI GPT-4o mini)
+### 2. Styling Functions → Anthropic Claude Haiku
+
 **Files:** `style-me/index.ts`, `rate-outfit/index.ts`
-- Replace Lovable AI gateway with `https://api.openai.com/v1/chat/completions`
-- Use `OPENAI_API_KEY`, model: `gpt-4o-mini`
-- Keep same prompts and tool schemas (OpenAI-native format, no changes needed)
 
-### 4. Update Image Generation Functions
+- Replace gateway URL with `https://api.anthropic.com/v1/messages`
+- Use `ANTHROPIC_API_KEY`, model: `claude-3-haiku-20240307`
+- Convert from OpenAI tool calling format to Anthropic tool use format
+- Add `anthropic-version: 2023-06-01` header
+
+### 3. Image Generation Functions → Google Gemini Direct
+
 **Files:** `generate-clothing-image/index.ts`, `generate-model-avatar/index.ts`, `generate-option-images/index.ts`, `generate-suggestion-image/index.ts`
-- These use Gemini image models — switch to Google AI direct API
-- Upload generated images to R2 instead of Supabase Storage
 
-### 5. Update Client-Side Storage References
-**Files:** `WardrobeScreen.tsx`, `OnboardingScreen.tsx`, `StyleProfileEditor.tsx`, `CameraScreen.tsx`
-- Replace `supabase.storage.from('wardrobe').upload(...)` with calls to `r2-upload` edge function
-- Replace `supabase.storage.from('wardrobe').getPublicUrl(...)` with R2 public URLs
+- Switch to Google AI direct API with `GOOGLE_AI_API_KEY`
+- Keep Supabase Storage uploads unchanged
 
-### 6. Keep Supabase For
-- Database (all tables unchanged)
-- Authentication (unchanged)
-- Edge function hosting (unchanged)
+### 4. No Storage Changes
+
+All Supabase Storage code stays as-is.
 
 ## Files to Edit
 
 | File | Change |
 |------|--------|
-| `supabase/functions/r2-upload/index.ts` | **New**: R2 upload helper |
-| `supabase/functions/analyze-clothing/index.ts` | Gemini direct API |
-| `supabase/functions/analyze-body-profile/index.ts` | Gemini direct API |
-| `supabase/functions/style-me/index.ts` | OpenAI GPT-4o mini |
-| `supabase/functions/rate-outfit/index.ts` | OpenAI GPT-4o mini |
-| `supabase/functions/generate-clothing-image/index.ts` | Gemini direct + R2 upload |
-| `supabase/functions/generate-model-avatar/index.ts` | Gemini direct + R2 upload |
-| `supabase/functions/generate-option-images/index.ts` | Gemini direct + R2 upload |
-| `supabase/functions/generate-suggestion-image/index.ts` | Gemini direct + R2 upload |
-| `src/pages/WardrobeScreen.tsx` | R2 upload via edge function |
-| `src/pages/OnboardingScreen.tsx` | R2 upload via edge function |
-| `src/components/StyleProfileEditor.tsx` | R2 upload via edge function |
+| `supabase/functions/analyze-clothing/index.ts` | Gemini 1.5 Flash direct |
+| `supabase/functions/analyze-body-profile/index.ts` | Gemini 1.5 Flash direct |
+| `supabase/functions/style-me/index.ts` | Anthropic Haiku |
+| `supabase/functions/rate-outfit/index.ts` | Anthropic Haiku |
+| `supabase/functions/generate-clothing-image/index.ts` | Gemini direct |
+| `supabase/functions/generate-model-avatar/index.ts` | Gemini direct |
+| `supabase/functions/generate-option-images/index.ts` | Gemini direct |
+| `supabase/functions/generate-suggestion-image/index.ts` | Gemini direct |
 
 ## Implementation Order
 
-1. Add all secrets (user provides credentials)
-2. Create R2 upload edge function
-3. Migrate analysis functions to Gemini direct
-4. Migrate styling functions to OpenAI
-5. Migrate image gen functions to Gemini direct + R2
-6. Update client-side to use R2 uploads
+1. Add `GOOGLE_AI_API_KEY` and `ANTHROPIC_API_KEY` secrets
+2. Migrate analysis functions to Gemini 1.5 Flash
+3. Migrate styling/rating functions to Anthropic Haiku
+4. Migrate image generation functions to Gemini direct
 
