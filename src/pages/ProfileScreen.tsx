@@ -1,4 +1,4 @@
-import { useState, useRef } from "react";
+import { useState, useRef, useEffect } from "react";
 import { motion } from "framer-motion";
 import { ArrowLeft, Camera, LogOut, User, Save, Trash2, AlertTriangle } from "lucide-react";
 import StyleProfileEditor from "../components/StyleProfileEditor";
@@ -21,6 +21,12 @@ const ProfileScreen = () => {
   const [deleteConfirmText, setDeleteConfirmText] = useState("");
 
   const avatarUrl = avatarPreview || profile?.avatar_url || null;
+
+  useEffect(() => {
+    if (profile?.name !== undefined && profile?.name !== null) {
+      setName(profile.name);
+    }
+  }, [profile?.name]);
 
   const handleAvatarUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];

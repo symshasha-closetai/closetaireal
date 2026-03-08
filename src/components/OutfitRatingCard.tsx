@@ -72,11 +72,24 @@ const OutfitRatingCard = ({ image, result, wardrobeItems = [] }: Props) => {
   const [loadingImages, setLoadingImages] = useState<Record<number, boolean>>({});
 
   const handleShare = async () => {
-    const praise = result.praise_line ? `\n\n${result.praise_line}` : "";
-    const text = `My outfit scored ${result.overall_score}/10! 🔥\n\nColor: ${result.color_score}/10 | Style: ${result.style_score}/10 | Fit: ${result.fit_score}/10\nOccasion: ${result.occasion}${praise}\n\n"${result.advice}"\n\nRated by ClosetAI`;
+    const praise = result.praise_line ? `\n${result.praise_line}` : "";
+    const text = `My outfit scored ${result.overall_score}/10! 🔥\nColor: ${result.color_score}/10 | Style: ${result.style_score}/10 | Fit: ${result.fit_score}/10${praise}\n\nRated by ClosetAI`;
+
     try {
+      // Try to convert the image to a File for sharing
+      let imageFile: File | undefined;
+      try {
+        const res = await fetch(image);
+        const blob = await res.blob();
+        imageFile = new File([blob], "outfit-rating.jpg", { type: blob.type || "image/jpeg" });
+      } catch {}
+
       if (navigator.share) {
-        await navigator.share({ title: "My Outfit Rating", text });
+        const shareData: ShareData = { title: "My Outfit Rating", text };
+        if (imageFile && navigator.canShare?.({ files: [imageFile] })) {
+          shareData.files = [imageFile];
+        }
+        await navigator.share(shareData);
       } else if (navigator.clipboard) {
         await navigator.clipboard.writeText(text);
         toast.success("Rating copied to clipboard!");
