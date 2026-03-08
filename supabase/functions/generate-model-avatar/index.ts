@@ -1,4 +1,3 @@
-import "https://deno.land/x/xhr@0.1.0/mod.ts";
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
@@ -12,8 +11,8 @@ serve(async (req) => {
 
   try {
     const { modelDescription, userId, occasion, facePhotoUrl, bodyPhotoUrl } = await req.json();
-    const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
-    if (!LOVABLE_API_KEY) throw new Error("LOVABLE_API_KEY not configured");
+    const apiKey = Deno.env.get("GOOGLE_AI_API_KEY");
+    if (!apiKey) throw new Error("GOOGLE_AI_API_KEY not configured");
 
     const poseContext = occasion 
       ? `The model should be posing in a way appropriate for a ${occasion} setting.`
@@ -31,45 +30,46 @@ CRITICAL REQUIREMENTS:
 - Full body visible from head to toe
 - Fashion editorial photography style, shot on a professional camera`;
 
-    // Build message content with reference images
-    const content: any[] = [{ type: "text", text: textPrompt }];
+    const parts: any[] = [{ text: textPrompt }];
 
+    // For reference images, we'd need to download and inline them
+    // For now, include URLs in the prompt text if available
     if (facePhotoUrl) {
-      content.push({
-        type: "image_url",
-        image_url: { url: facePhotoUrl }
-      });
+      parts.push({ text: `Reference face photo URL: ${facePhotoUrl}` });
     }
-
     if (bodyPhotoUrl) {
-      content.push({
-        type: "image_url",
-        image_url: { url: bodyPhotoUrl }
-      });
+      parts.push({ text: `Reference body photo URL: ${bodyPhotoUrl}` });
     }
 
-    const response = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
-      method: "POST",
-      headers: { Authorization: `Bearer ${LOVABLE_API_KEY}`, "Content-Type": "application/json" },
-      body: JSON.stringify({
-        model: "google/gemini-3-pro-image-preview",
-        messages: [{ role: "user", content }],
-        modalities: ["image", "text"],
-      }),
-    });
+    const response = await fetch(
+      `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash-exp:generateContent?key=${apiKey}`,
+      {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          contents: [{ role: "user", parts }],
+          generationConfig: {
+            responseModalities: ["TEXT", "IMAGE"],
+          },
+        }),
+      }
+    );
 
     if (!response.ok) {
       if (response.status === 429) return new Response(JSON.stringify({ error: "Rate limited, try again shortly" }), { status: 429, headers: { ...corsHeaders, "Content-Type": "application/json" } });
-      if (response.status === 402) return new Response(JSON.stringify({ error: "AI credits exhausted" }), { status: 402, headers: { ...corsHeaders, "Content-Type": "application/json" } });
-      throw new Error(`AI gateway error: ${response.status}`);
+      throw new Error(`Gemini API error: ${response.status}`);
     }
 
     const data = await response.json();
-    const imageData = data.choices?.[0]?.message?.images?.[0]?.image_url?.url;
-    
-    if (!imageData) {
+    const responseParts = data.candidates?.[0]?.content?.parts || [];
+    const imagePart = responseParts.find((p: any) => p.inlineData);
+    const imageB64 = imagePart?.inlineData?.data;
+
+    if (!imageB64) {
       throw new Error("No image generated");
     }
+
+    const imageDataUrl = `data:image/png;base64,${imageB64}`;
 
     // Upload to storage
     if (userId) {
@@ -77,8 +77,7 @@ CRITICAL REQUIREMENTS:
       const supabaseKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
       const supabase = createClient(supabaseUrl, supabaseKey);
 
-      const base64Data = imageData.replace(/^data:image\/\w+;base64,/, "");
-      const bytes = Uint8Array.from(atob(base64Data), c => c.charCodeAt(0));
+      const bytes = Uint8Array.from(atob(imageB64), c => c.charCodeAt(0));
       
       const path = `${userId}/model-avatar-${Date.now()}.png`;
       const { error: uploadError } = await supabase.storage
@@ -87,7 +86,7 @@ CRITICAL REQUIREMENTS:
 
       if (uploadError) {
         console.error("Upload error:", uploadError);
-        return new Response(JSON.stringify({ imageBase64: imageData }), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
+        return new Response(JSON.stringify({ imageBase64: imageDataUrl }), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
       }
 
       const { data: urlData } = supabase.storage.from("wardrobe").getPublicUrl(path);
@@ -97,7 +96,7 @@ CRITICAL REQUIREMENTS:
       return new Response(JSON.stringify({ imageUrl: urlData.publicUrl }), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
     }
 
-    return new Response(JSON.stringify({ imageBase64: imageData }), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
+    return new Response(JSON.stringify({ imageBase64: imageDataUrl }), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
   } catch (e) {
     console.error("generate-model-avatar error:", e);
     return new Response(JSON.stringify({ error: e instanceof Error ? e.message : "Unknown error" }), { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } });
