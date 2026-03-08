@@ -1,4 +1,3 @@
-import "https://deno.land/x/xhr@0.1.0/mod.ts";
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 
 const corsHeaders = {
@@ -11,106 +10,71 @@ serve(async (req) => {
 
   try {
     const { faceImageBase64, bodyImageBase64 } = await req.json();
-    const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
-    if (!LOVABLE_API_KEY) throw new Error("LOVABLE_API_KEY not configured");
+    const apiKey = Deno.env.get("GOOGLE_AI_API_KEY");
+    if (!apiKey) throw new Error("GOOGLE_AI_API_KEY not configured");
 
-    const messages: any[] = [
-      {
-        role: "system",
-        content: `You are an expert body and face analyzer for a fashion styling app. Analyze the provided photos and extract precise physical attributes to help with clothing recommendations. Be respectful and objective.`
-      },
-      {
-        role: "user",
-        content: []
-      }
-    ];
+    const systemPrompt = `You are an expert body and face analyzer for a fashion styling app. Analyze the provided photos and extract precise physical attributes to help with clothing recommendations. Be respectful and objective.
 
-    const userContent: any[] = [
-      { type: "text", text: "Analyze these photos. The first is a face photo and the second is a full body photo. Extract detailed physical attributes for fashion styling purposes." }
+You MUST respond with a JSON object (no markdown) containing:
+{
+  "face_analysis": {
+    "face_shape": "Oval|Round|Square|Heart|Oblong|Diamond|Triangle",
+    "skin_tone": "Fair|Light|Medium|Olive|Dark|Deep",
+    "skin_undertone": "Warm|Cool|Neutral",
+    "hair_color": "string",
+    "eye_color": "string",
+    "facial_features": "string"
+  },
+  "body_analysis": {
+    "body_type": "Hourglass|Pear|Rectangle|Apple|Inverted Triangle|Athletic|Slim|Plus Size",
+    "build": "Slim|Average|Athletic|Curvy|Plus Size",
+    "height_estimate": "Petite|Average|Tall",
+    "proportions": "string",
+    "shoulder_type": "Narrow|Average|Broad",
+    "best_features": "string",
+    "styling_notes": "string"
+  },
+  "model_description": "A detailed visual description of the person for generating an AI fashion model avatar..."
+}`;
+
+    const parts: any[] = [
+      { text: "Analyze these photos. The first is a face photo and the second is a full body photo. Extract detailed physical attributes for fashion styling purposes. Return JSON only." },
     ];
 
     if (faceImageBase64) {
-      userContent.push({
-        type: "image_url",
-        image_url: { url: `data:image/jpeg;base64,${faceImageBase64}` }
-      });
+      parts.push({ inlineData: { mimeType: "image/jpeg", data: faceImageBase64 } });
     }
-
     if (bodyImageBase64) {
-      userContent.push({
-        type: "image_url",
-        image_url: { url: `data:image/jpeg;base64,${bodyImageBase64}` }
-      });
+      parts.push({ inlineData: { mimeType: "image/jpeg", data: bodyImageBase64 } });
     }
 
-    messages[1].content = userContent;
-
-    const response = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
-      method: "POST",
-      headers: { Authorization: `Bearer ${LOVABLE_API_KEY}`, "Content-Type": "application/json" },
-      body: JSON.stringify({
-        model: "google/gemini-2.5-flash-lite",
-        messages,
-        tools: [{
-          type: "function",
-          function: {
-            name: "analyze_body_profile",
-            description: "Return detailed face and body analysis from photos",
-            parameters: {
-              type: "object",
-              properties: {
-                face_analysis: {
-                  type: "object",
-                  properties: {
-                    face_shape: { type: "string", enum: ["Oval", "Round", "Square", "Heart", "Oblong", "Diamond", "Triangle"], description: "Detected face shape" },
-                    skin_tone: { type: "string", enum: ["Fair", "Light", "Medium", "Olive", "Dark", "Deep"], description: "Detected skin tone" },
-                    skin_undertone: { type: "string", enum: ["Warm", "Cool", "Neutral"], description: "Skin undertone" },
-                    hair_color: { type: "string", description: "Detected hair color" },
-                    eye_color: { type: "string", description: "Detected eye color" },
-                    facial_features: { type: "string", description: "Brief description of notable facial features for styling" },
-                  },
-                  required: ["face_shape", "skin_tone", "skin_undertone"],
-                  additionalProperties: false,
-                },
-                body_analysis: {
-                  type: "object",
-                  properties: {
-                    body_type: { type: "string", enum: ["Hourglass", "Pear", "Rectangle", "Apple", "Inverted Triangle", "Athletic", "Slim", "Plus Size"], description: "Detected body type" },
-                    build: { type: "string", enum: ["Slim", "Average", "Athletic", "Curvy", "Plus Size"], description: "Overall build" },
-                    height_estimate: { type: "string", enum: ["Petite", "Average", "Tall"], description: "Estimated height category" },
-                    proportions: { type: "string", description: "Description of body proportions (e.g., long torso, long legs, balanced)" },
-                    shoulder_type: { type: "string", enum: ["Narrow", "Average", "Broad"], description: "Shoulder width" },
-                    best_features: { type: "string", description: "Physical features that can be highlighted through clothing" },
-                    styling_notes: { type: "string", description: "Key notes for AI stylist about what styles would flatter this body" },
-                  },
-                  required: ["body_type", "build", "height_estimate"],
-                  additionalProperties: false,
-                },
-                model_description: {
-                  type: "string",
-                  description: "A detailed visual description of the person for generating an AI fashion model avatar that resembles them. Include skin tone, body shape, height, hair, and distinguishing features. Be specific enough to generate a realistic avatar."
-                },
-              },
-              required: ["face_analysis", "body_analysis", "model_description"],
-              additionalProperties: false,
-            },
-          },
-        }],
-        tool_choice: { type: "function", function: { name: "analyze_body_profile" } },
-      }),
-    });
+    const response = await fetch(
+      `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${apiKey}`,
+      {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          systemInstruction: { parts: [{ text: systemPrompt }] },
+          contents: [{ role: "user", parts }],
+          generationConfig: { maxOutputTokens: 2048 },
+        }),
+      }
+    );
 
     if (!response.ok) {
       if (response.status === 429) return new Response(JSON.stringify({ error: "Rate limited, try again shortly" }), { status: 429, headers: { ...corsHeaders, "Content-Type": "application/json" } });
-      if (response.status === 402) return new Response(JSON.stringify({ error: "AI credits exhausted" }), { status: 402, headers: { ...corsHeaders, "Content-Type": "application/json" } });
-      throw new Error(`AI gateway error: ${response.status}`);
+      throw new Error(`Gemini API error: ${response.status}`);
     }
 
     const data = await response.json();
-    const toolCall = data.choices?.[0]?.message?.tool_calls?.[0];
+    const content = data.candidates?.[0]?.content?.parts?.[0]?.text || "{}";
+
     let result = {};
-    if (toolCall?.function?.arguments) {
-      result = JSON.parse(toolCall.function.arguments);
+    try {
+      const cleaned = content.replace(/```json\n?/g, "").replace(/```\n?/g, "").trim();
+      result = JSON.parse(cleaned);
+    } catch {
+      console.error("Failed to parse Gemini response:", content);
     }
 
     return new Response(JSON.stringify(result), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
