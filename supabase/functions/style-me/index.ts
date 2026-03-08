@@ -10,8 +10,8 @@ serve(async (req) => {
 
   try {
     const { wardrobeItems, occasion, timeOfDay, weather, styleProfile } = await req.json();
-    const ANTHROPIC_API_KEY = Deno.env.get("ANTHROPIC_API_KEY");
-    if (!ANTHROPIC_API_KEY) throw new Error("ANTHROPIC_API_KEY not configured");
+    const apiKey = Deno.env.get("GOOGLE_AI_API_KEY");
+    if (!apiKey) throw new Error("GOOGLE_AI_API_KEY not configured");
 
     const wardrobeDesc = wardrobeItems.map((i: any) =>
       `ID:${i.id} - ${i.name || i.type} (${i.type}, color: ${i.color || "unknown"}, material: ${i.material || "unknown"})`
@@ -21,89 +21,58 @@ serve(async (req) => {
       ? `Body type: ${styleProfile.body_type || "unknown"}, Skin tone: ${styleProfile.skin_tone || "unknown"}, Style preference: ${styleProfile.style_type || "any"}, Face shape: ${styleProfile.face_shape || "unknown"}`
       : "No style profile available";
 
-    const bodyAnalysis = styleProfile?.ai_body_analysis
-      ? `\nAI Body Analysis: ${JSON.stringify(styleProfile.ai_body_analysis)}`
-      : "";
-
-    const faceAnalysis = styleProfile?.ai_face_analysis
-      ? `\nAI Face Analysis: ${JSON.stringify(styleProfile.ai_face_analysis)}`
-      : "";
-
+    const bodyAnalysis = styleProfile?.ai_body_analysis ? `\nAI Body Analysis: ${JSON.stringify(styleProfile.ai_body_analysis)}` : "";
+    const faceAnalysis = styleProfile?.ai_face_analysis ? `\nAI Face Analysis: ${JSON.stringify(styleProfile.ai_face_analysis)}` : "";
     const weatherInfo = weather ? `\nWeather conditions: ${weather}` : "";
 
     const systemPrompt = `You are an expert fashion stylist AI. Given the user's wardrobe items, occasion, time of day, weather, body profile, and face analysis, suggest 2-3 complete outfit combinations using ONLY items from their wardrobe.
 
-Consider these factors when making suggestions:
-1. Color combination and harmony - ensure colors complement each other and the user's skin tone
-2. Body type flattery - choose pieces that flatter the user's body type
-3. Occasion appropriateness - match the formality and vibe of the occasion
-4. Season and time of day - appropriate for the selected time
-5. Material compatibility - fabrics that work well together. Consider weather conditions, material breathability and comfort, and how fabrics interact with temperature and humidity.
-6. Style coherence - a unified look that tells a story
-7. Weather awareness - ensure the outfit is comfortable and practical for the current weather conditions
+Consider these factors:
+1. Color combination and harmony
+2. Body type flattery
+3. Occasion appropriateness
+4. Season and time of day
+5. Material compatibility and weather
+6. Style coherence
+7. Weather awareness
 
 Each outfit must use real item IDs from the provided wardrobe.
 
-You must respond by using the suggest_outfits tool.`;
+Return ONLY valid JSON (no markdown) with this structure:
+{"outfits":[{"name":"string","top_id":"string or null","bottom_id":"string or null","shoes_id":"string or null","accessories":["string"],"score":number,"explanation":"string"}]}`;
 
-    const userPrompt = `Wardrobe items:\n${wardrobeDesc}\n\nOccasion: ${occasion}\nTime of day: ${timeOfDay}${weatherInfo}\nProfile: ${profileDesc}${bodyAnalysis}${faceAnalysis}\n\nSuggest 2-3 outfits that best complement this person's features and are appropriate for the weather.`;
+    const userPrompt = `Wardrobe items:\n${wardrobeDesc}\n\nOccasion: ${occasion}\nTime of day: ${timeOfDay}${weatherInfo}\nProfile: ${profileDesc}${bodyAnalysis}${faceAnalysis}\n\nSuggest 2-3 outfits. Return JSON only.`;
 
-    const response = await fetch("https://api.anthropic.com/v1/messages", {
-      method: "POST",
-      headers: {
-        "x-api-key": ANTHROPIC_API_KEY,
-        "anthropic-version": "2023-06-01",
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
-        model: "claude-3-haiku-20240307",
-        max_tokens: 2048,
-        system: systemPrompt,
-        messages: [{ role: "user", content: userPrompt }],
-        tools: [{
-          name: "suggest_outfits",
-          description: "Return outfit suggestions from the wardrobe",
-          input_schema: {
-            type: "object",
-            properties: {
-              outfits: {
-                type: "array",
-                items: {
-                  type: "object",
-                  properties: {
-                    name: { type: "string", description: "Creative outfit name" },
-                    top_id: { type: "string", description: "Wardrobe item ID for top, or null" },
-                    bottom_id: { type: "string", description: "Wardrobe item ID for bottom, or null" },
-                    shoes_id: { type: "string", description: "Wardrobe item ID for shoes, or null" },
-                    accessories: { type: "array", items: { type: "string" }, description: "Wardrobe item IDs for accessories" },
-                    score: { type: "number", description: "Outfit score 1-10" },
-                    explanation: { type: "string", description: "Why this outfit works" },
-                  },
-                  required: ["name", "score", "explanation"],
-                },
-              },
-            },
-            required: ["outfits"],
-          },
-        }],
-        tool_choice: { type: "tool", name: "suggest_outfits" },
-      }),
-    });
+    const response = await fetch(
+      `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${apiKey}`,
+      {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          systemInstruction: { parts: [{ text: systemPrompt }] },
+          contents: [{ role: "user", parts: [{ text: userPrompt }] }],
+          generationConfig: { maxOutputTokens: 2048 },
+        }),
+      }
+    );
 
     if (!response.ok) {
       if (response.status === 429) return new Response(JSON.stringify({ error: "Rate limited, try again shortly" }), { status: 429, headers: { ...corsHeaders, "Content-Type": "application/json" } });
       const errText = await response.text();
-      console.error("Anthropic error:", errText);
-      throw new Error(`Anthropic API error: ${response.status}`);
+      console.error("Gemini error:", errText);
+      throw new Error(`Gemini API error: ${response.status}`);
     }
 
     const data = await response.json();
-    let outfits = [];
+    const content = data.candidates?.[0]?.content?.parts?.[0]?.text || "{}";
 
-    // Anthropic returns tool use in content blocks
-    const toolUseBlock = data.content?.find((b: any) => b.type === "tool_use");
-    if (toolUseBlock?.input?.outfits) {
-      outfits = toolUseBlock.input.outfits;
+    let outfits = [];
+    try {
+      const cleaned = content.replace(/```json\n?/g, "").replace(/```\n?/g, "").trim();
+      const parsed = JSON.parse(cleaned);
+      outfits = parsed.outfits || [];
+    } catch {
+      console.error("Failed to parse Gemini response:", content);
     }
 
     return new Response(JSON.stringify({ outfits }), { headers: { ...corsHeaders, "Content-Type": "application/json" } });

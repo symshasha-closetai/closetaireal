@@ -12,8 +12,8 @@ serve(async (req) => {
     const { imageBase64, wardrobeItems } = await req.json();
     if (!imageBase64) return new Response(JSON.stringify({ error: "No image provided" }), { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } });
 
-    const ANTHROPIC_API_KEY = Deno.env.get("ANTHROPIC_API_KEY");
-    if (!ANTHROPIC_API_KEY) throw new Error("ANTHROPIC_API_KEY not configured");
+    const apiKey = Deno.env.get("GOOGLE_AI_API_KEY");
+    if (!apiKey) throw new Error("GOOGLE_AI_API_KEY not configured");
 
     const wardrobeDesc = wardrobeItems?.length
       ? `User's wardrobe contains: ${wardrobeItems.map((i: any) => `${i.name || i.type} (id: ${i.id}, ${i.type}, ${i.color || "unknown"} color)`).join(", ")}`
@@ -21,102 +21,44 @@ serve(async (req) => {
 
     const systemPrompt = `You are an expert fashion stylist and outfit rater who speaks Gen Z language fluently. Analyze the outfit in the photo and provide detailed scoring, improvement suggestions, and a fire Gen Z praising caption. Consider color harmony, style cohesion, fit, and occasion appropriateness. ${wardrobeDesc}
 
-You must respond by using the rate_outfit tool.`;
+Return ONLY valid JSON (no markdown) with this exact structure:
+{"overall_score":number,"overall_reason":"string","color_score":number,"color_reason":"string","style_score":number,"style_reason":"string","fit_score":number,"fit_reason":"string","occasion":"string","advice":"string","praise_line":"string","wardrobe_suggestions":[{"item_name":"string","category":"string","reason":"string","wardrobe_item_id":"string or null"}],"shopping_suggestions":[{"item_name":"string","category":"string","reason":"string","image_prompt":"string"}]}`;
 
-    const response = await fetch("https://api.anthropic.com/v1/messages", {
-      method: "POST",
-      headers: {
-        "x-api-key": ANTHROPIC_API_KEY,
-        "anthropic-version": "2023-06-01",
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
-        model: "claude-3-haiku-20240307",
-        max_tokens: 2048,
-        system: systemPrompt,
-        messages: [
-          {
+    const response = await fetch(
+      `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${apiKey}`,
+      {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          systemInstruction: { parts: [{ text: systemPrompt }] },
+          contents: [{
             role: "user",
-            content: [
-              {
-                type: "image",
-                source: {
-                  type: "base64",
-                  media_type: "image/jpeg",
-                  data: imageBase64,
-                },
-              },
-              {
-                type: "text",
-                text: "Rate this outfit and suggest improvements. If the user has wardrobe items, suggest swaps from their wardrobe too. Give a trending Gen Z praise caption and explain reasoning for each score.",
-              },
+            parts: [
+              { text: "Rate this outfit and suggest improvements. If the user has wardrobe items, suggest swaps from their wardrobe too. Give a trending Gen Z praise caption and explain reasoning for each score. Return JSON only." },
+              { inlineData: { mimeType: "image/jpeg", data: imageBase64 } },
             ],
-          },
-        ],
-        tools: [{
-          name: "rate_outfit",
-          description: "Return outfit rating with scores, reasons, advice, Gen Z praise, and improvement suggestions",
-          input_schema: {
-            type: "object",
-            properties: {
-              overall_score: { type: "number", description: "Overall outfit score 1-10" },
-              overall_reason: { type: "string" },
-              color_score: { type: "number" },
-              color_reason: { type: "string" },
-              style_score: { type: "number" },
-              style_reason: { type: "string" },
-              fit_score: { type: "number" },
-              fit_reason: { type: "string" },
-              occasion: { type: "string" },
-              advice: { type: "string" },
-              praise_line: { type: "string", description: "A trending Gen Z praising caption" },
-              wardrobe_suggestions: {
-                type: "array",
-                items: {
-                  type: "object",
-                  properties: {
-                    item_name: { type: "string" },
-                    category: { type: "string" },
-                    reason: { type: "string" },
-                    wardrobe_item_id: { type: "string" },
-                  },
-                  required: ["item_name", "category", "reason"],
-                },
-              },
-              shopping_suggestions: {
-                type: "array",
-                items: {
-                  type: "object",
-                  properties: {
-                    item_name: { type: "string" },
-                    category: { type: "string" },
-                    reason: { type: "string" },
-                    image_prompt: { type: "string" },
-                  },
-                  required: ["item_name", "category", "reason", "image_prompt"],
-                },
-              },
-            },
-            required: ["overall_score", "overall_reason", "color_score", "color_reason", "style_score", "style_reason", "fit_score", "fit_reason", "occasion", "advice", "praise_line", "wardrobe_suggestions", "shopping_suggestions"],
-          },
-        }],
-        tool_choice: { type: "tool", name: "rate_outfit" },
-      }),
-    });
+          }],
+          generationConfig: { maxOutputTokens: 2048 },
+        }),
+      }
+    );
 
     if (!response.ok) {
       if (response.status === 429) return new Response(JSON.stringify({ error: "Rate limited, try again shortly" }), { status: 429, headers: { ...corsHeaders, "Content-Type": "application/json" } });
       const errText = await response.text();
-      console.error("Anthropic error:", errText);
-      throw new Error(`Anthropic API error: ${response.status}`);
+      console.error("Gemini error:", errText);
+      throw new Error(`Gemini API error: ${response.status}`);
     }
 
     const data = await response.json();
-    let result = null;
+    const content = data.candidates?.[0]?.content?.parts?.[0]?.text || "{}";
 
-    const toolUseBlock = data.content?.find((b: any) => b.type === "tool_use");
-    if (toolUseBlock?.input) {
-      result = toolUseBlock.input;
+    let result = null;
+    try {
+      const cleaned = content.replace(/```json\n?/g, "").replace(/```\n?/g, "").trim();
+      result = JSON.parse(cleaned);
+    } catch {
+      console.error("Failed to parse Gemini response:", content);
     }
 
     return new Response(JSON.stringify({ result }), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
