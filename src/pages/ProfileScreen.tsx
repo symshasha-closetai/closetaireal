@@ -1,4 +1,4 @@
-import { useState, useRef } from "react";
+import { useState, useRef, useEffect } from "react";
 import { motion } from "framer-motion";
 import { ArrowLeft, Camera, LogOut, User, Save, Trash2, AlertTriangle } from "lucide-react";
 import StyleProfileEditor from "../components/StyleProfileEditor";
