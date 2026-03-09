@@ -1,9 +1,10 @@
 import { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { Share2, ShoppingBag, Shirt, Footprints, Watch, Gem, Loader2, X } from "lucide-react";
+import { Share2, ShoppingBag, Shirt, Footprints, Watch, Gem, Loader2, X, Info } from "lucide-react";
 import ScoreRing from "./ScoreRing";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
+import type { RatingResult } from "@/pages/CameraScreen";
 
 type Suggestion = {
   item_name: string;
@@ -11,22 +12,6 @@ type Suggestion = {
   reason: string;
   wardrobe_item_id?: string;
   image_prompt?: string;
-};
-
-type RatingResult = {
-  overall_score: number;
-  overall_reason?: string;
-  color_score: number;
-  color_reason?: string;
-  style_score: number;
-  style_reason?: string;
-  fit_score: number;
-  fit_reason?: string;
-  occasion: string;
-  advice: string;
-  praise_line?: string;
-  wardrobe_suggestions: Suggestion[];
-  shopping_suggestions: Suggestion[];
 };
 
 type WardrobeItem = {
@@ -72,20 +57,20 @@ const OutfitRatingCard = ({ image, result, wardrobeItems = [] }: Props) => {
   const [loadingImages, setLoadingImages] = useState<Record<number, boolean>>({});
 
   const handleShare = async () => {
-    const praise = result.praise_line ? `\n${result.praise_line}` : "";
-    const text = `My outfit scored ${result.overall_score}/10! 🔥\nColor: ${result.color_score}/10 | Style: ${result.style_score}/10 | Fit: ${result.fit_score}/10${praise}\n\nRated by ClosetAI`;
+    const killerTag = result.killer_tag || "Slay";
+    const praiseLine = result.praise_line || "";
+    const text = `ClosetAI\n🔥 ${killerTag} 🔥\nDrip: ${result.drip_score}/10 | Confidence: ${result.confidence_rating}/10\n"${praiseLine}"\nCheck your drip score → closetaireal.lovable.app`;
 
     try {
-      // Try to convert the image to a File for sharing
       let imageFile: File | undefined;
       try {
         const res = await fetch(image);
         const blob = await res.blob();
-        imageFile = new File([blob], "outfit-rating.jpg", { type: blob.type || "image/jpeg" });
+        imageFile = new File([blob], "drip-check.jpg", { type: blob.type || "image/jpeg" });
       } catch {}
 
       if (navigator.share) {
-        const shareData: ShareData = { title: "My Outfit Rating", text };
+        const shareData: ShareData = { title: "My Drip Check", text };
         if (imageFile && navigator.canShare?.({ files: [imageFile] })) {
           shareData.files = [imageFile];
         }
@@ -130,26 +115,63 @@ const OutfitRatingCard = ({ image, result, wardrobeItems = [] }: Props) => {
     }
   };
 
-  const scores = [
-    { key: "overall", score: result.overall_score, label: "Overall", reason: result.overall_reason },
-    { key: "color", score: result.color_score, label: "Color", size: 70, colorClass: "stroke-fashion-sage", reason: result.color_reason },
-    { key: "style", score: result.style_score, label: "Style", size: 70, colorClass: "stroke-fashion-gold", reason: result.style_reason },
-    { key: "fit", score: result.fit_score, label: "Fit", size: 70, colorClass: "stroke-fashion-rose", reason: result.fit_reason },
+  const subScores = [
+    { key: "color", score: result.color_score, label: "Color", colorClass: "stroke-fashion-sage", reason: result.color_reason },
+    { key: "style", score: result.style_score, label: "Style", colorClass: "stroke-fashion-gold", reason: result.style_reason },
+    { key: "fit", score: result.fit_score, label: "Fit", colorClass: "stroke-fashion-rose", reason: result.fit_reason },
   ];
 
   return (
     <div className="space-y-4">
-      {/* Shareable Card */}
+      {/* Main Shareable Card */}
       <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="glass-card-elevated overflow-hidden">
-        {/* Photo + Score Overlay */}
+        {/* Photo with Killer Tag Overlay */}
         <div className="relative">
           <img src={image} alt="Outfit" className="w-full aspect-[3/4] object-cover" />
-          <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-card via-card/80 to-transparent pt-16 pb-4 px-4">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-lg font-display font-semibold text-foreground">{result.overall_score}/10</p>
-                <span className="px-3 py-1 rounded-full bg-secondary text-xs font-medium text-secondary-foreground">{result.occasion}</span>
+          
+          {/* App name top-left */}
+          <div className="absolute top-3 left-3">
+            <span className="text-xs font-bold tracking-wider text-white/90 drop-shadow-lg bg-foreground/30 backdrop-blur-sm px-2.5 py-1 rounded-full">
+              ClosetAI
+            </span>
+          </div>
+
+          {/* Killer Tag — bold overlay on photo */}
+          {result.killer_tag && (
+            <motion.div
+              initial={{ opacity: 0, scale: 0.5, rotate: -12 }}
+              animate={{ opacity: 1, scale: 1, rotate: -6 }}
+              transition={{ delay: 0.4, type: "spring", stiffness: 200 }}
+              className="absolute top-16 right-4 z-10"
+            >
+              <div className="bg-accent/90 backdrop-blur-sm px-4 py-2 rounded-xl shadow-lg transform">
+                <span className="text-base font-display font-bold text-accent-foreground tracking-wide">
+                  {result.killer_tag} 🔥
+                </span>
               </div>
+            </motion.div>
+          )}
+
+          {/* Bottom gradient with Drip Score + Confidence */}
+          <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-card via-card/80 to-transparent pt-16 pb-4 px-4">
+            <div className="flex items-end justify-between">
+              <div className="space-y-1.5">
+                <div className="flex items-baseline gap-1.5">
+                  <span className="text-3xl font-display font-bold text-foreground">{result.drip_score}</span>
+                  <span className="text-sm text-muted-foreground font-medium">/10</span>
+                </div>
+                <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Drip Score</p>
+              </div>
+              <div className="text-right space-y-1.5">
+                <div className="flex items-baseline gap-1.5 justify-end">
+                  <span className="text-3xl font-display font-bold text-foreground">{result.confidence_rating}</span>
+                  <span className="text-sm text-muted-foreground font-medium">/10</span>
+                </div>
+                <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Confidence</p>
+              </div>
+            </div>
+            <div className="flex items-center justify-between mt-3">
+              <span className="px-3 py-1 rounded-full bg-secondary text-xs font-medium text-secondary-foreground">{result.occasion}</span>
               <button type="button" onClick={handleShare} className="w-10 h-10 rounded-full bg-secondary flex items-center justify-center active:scale-95 transition-transform">
                 <Share2 size={18} className="text-foreground" />
               </button>
@@ -157,24 +179,37 @@ const OutfitRatingCard = ({ image, result, wardrobeItems = [] }: Props) => {
           </div>
         </div>
 
-        {/* Scores */}
+        {/* Scores Section */}
         <div className="p-5 space-y-4">
-          {/* Gen Z Praise Line */}
+          {/* Praise Line */}
           {result.praise_line && (
             <motion.div initial={{ opacity: 0, scale: 0.9 }} animate={{ opacity: 1, scale: 1 }} transition={{ delay: 0.2 }}
               className="text-center py-2">
-              <p className="text-base font-display font-semibold text-primary">{result.praise_line}</p>
+              <p className="text-base font-display font-semibold text-primary">"{result.praise_line}"</p>
             </motion.div>
           )}
 
-          <div className="flex justify-around relative">
-            {scores.map((s) => (
-              <div key={s.key} className="relative">
-                <button onClick={() => toggleTooltip(s.key)} className="focus:outline-none active:scale-95 transition-transform">
-                  <ScoreRing score={s.score} label={s.label} size={s.size} colorClass={s.colorClass} />
-                </button>
-              </div>
-            ))}
+          {/* Sub-scores with tap hint */}
+          <div className="relative">
+            <div className="flex justify-around">
+              {subScores.map((s) => (
+                <div key={s.key} className="relative">
+                  <button onClick={() => toggleTooltip(s.key)} className="focus:outline-none active:scale-95 transition-transform">
+                    <ScoreRing score={s.score} label={s.label} size={70} colorClass={s.colorClass} />
+                  </button>
+                </div>
+              ))}
+            </div>
+            {/* Tap for details hint */}
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              transition={{ delay: 1.5 }}
+              className="flex items-center justify-center gap-1 mt-2"
+            >
+              <Info size={10} className="text-muted-foreground" />
+              <span className="text-[10px] text-muted-foreground">Tap scores for details</span>
+            </motion.div>
           </div>
 
           {/* Score Tooltip */}
@@ -191,7 +226,7 @@ const OutfitRatingCard = ({ image, result, wardrobeItems = [] }: Props) => {
                 </button>
                 <p className="text-xs font-semibold text-background capitalize mb-1">{activeTooltip}</p>
                 <p className="text-xs text-background/80 leading-relaxed">
-                  {scores.find(s => s.key === activeTooltip)?.reason || "No detailed reasoning available."}
+                  {subScores.find(s => s.key === activeTooltip)?.reason || "No detailed reasoning available."}
                 </p>
               </motion.div>
             )}
@@ -249,7 +284,6 @@ const OutfitRatingCard = ({ image, result, wardrobeItems = [] }: Props) => {
               const imgSrc = suggestionImages[i];
               const isLoading = loadingImages[i];
 
-              // Lazy-load AI image when visible
               if (s.image_prompt && suggestionImages[i] === undefined && !loadingImages[i]) {
                 generateSuggestionImage(i, s.image_prompt);
               }

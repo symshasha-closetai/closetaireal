@@ -19,10 +19,18 @@ serve(async (req) => {
       ? `User's wardrobe contains: ${wardrobeItems.map((i: any) => `${i.name || i.type} (id: ${i.id}, ${i.type}, ${i.color || "unknown"} color)`).join(", ")}`
       : "No wardrobe data available";
 
-    const systemPrompt = `You are an expert fashion stylist and outfit rater who speaks Gen Z language fluently. Analyze the outfit in the photo and provide detailed scoring, improvement suggestions, and a fire Gen Z praising caption. Consider color harmony, style cohesion, fit, and occasion appropriateness. ${wardrobeDesc}
+    const systemPrompt = `You are an expert fashion stylist and outfit rater who speaks Gen Z language fluently. Analyze the outfit in the photo and provide detailed scoring, improvement suggestions, and a killer Gen Z vibe tag. Consider color harmony, style cohesion, fit, and occasion appropriateness. ${wardrobeDesc}
 
 Return ONLY valid JSON (no markdown) with this exact structure:
-{"overall_score":number,"overall_reason":"string","color_score":number,"color_reason":"string","style_score":number,"style_reason":"string","fit_score":number,"fit_reason":"string","occasion":"string","advice":"string","praise_line":"string","wardrobe_suggestions":[{"item_name":"string","category":"string","reason":"string","wardrobe_item_id":"string or null"}],"shopping_suggestions":[{"item_name":"string","category":"string","reason":"string","image_prompt":"string"}]}`;
+{"drip_score":number,"confidence_rating":number,"killer_tag":"string","color_score":number,"color_reason":"string","style_score":number,"style_reason":"string","fit_score":number,"fit_reason":"string","occasion":"string","advice":"string","praise_line":"string","wardrobe_suggestions":[{"item_name":"string","category":"string","reason":"string","wardrobe_item_id":"string or null"}],"shopping_suggestions":[{"item_name":"string","category":"string","reason":"string","image_prompt":"string"}]}
+
+IMPORTANT RULES:
+- drip_score: Overall drip/outfit score as a decimal (e.g. 8.5, 7.6, 9.2). Range 0-10.
+- confidence_rating: How confident/powerful the person looks in this outfit, as a decimal (e.g. 8.5, 9.0). Range 0-10.
+- killer_tag: A 1-2 word Gen Z attention-grabbing tag like "Bombshell", "Patakha Kudi", "Aesthetic Queen", "Main Character", "It Girl", "Slay Machine", "Vibe Check", "Street King", "Drip Lord". Pick something that fits the outfit vibe. Make it bold and catchy.
+- praise_line: A one-liner compliment with PROPER grammar and capitalization. Start with a capital letter. Make it punchy and Gen Z.
+- All score reasons should use proper grammar and capitalization.
+- color_score, style_score, fit_score: integers 1-10.`;
 
     const response = await fetch(
       `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${apiKey}`,
@@ -34,7 +42,7 @@ Return ONLY valid JSON (no markdown) with this exact structure:
           contents: [{
             role: "user",
             parts: [
-              { text: "Rate this outfit and suggest improvements. If the user has wardrobe items, suggest swaps from their wardrobe too. Give a trending Gen Z praise caption and explain reasoning for each score. Return JSON only." },
+              { text: "Rate this outfit — give a drip score, confidence rating, killer tag, and suggest improvements. If the user has wardrobe items, suggest swaps from their wardrobe too. Return JSON only." },
               { inlineData: { mimeType: "image/jpeg", data: imageBase64 } },
             ],
           }],

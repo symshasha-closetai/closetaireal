@@ -7,9 +7,10 @@ import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { toast } from "sonner";
 
-type RatingResult = {
-  overall_score: number;
-  overall_reason?: string;
+export type RatingResult = {
+  drip_score: number;
+  confidence_rating: number;
+  killer_tag?: string;
   color_score: number;
   color_reason?: string;
   style_score: number;
@@ -57,7 +58,6 @@ const CameraScreen = () => {
     try {
       const imageBase64 = await toBase64(file);
 
-      // Fetch wardrobe items for context
       let fetchedWardrobe: any[] = [];
       if (user) {
         const { data } = await supabase.from("wardrobe").select("id, name, type, color, material, image_url").eq("user_id", user.id);
@@ -97,7 +97,7 @@ const CameraScreen = () => {
           <AppHeader />
         </motion.div>
         <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.05 }}>
-          <h1 className="font-display text-2xl font-semibold text-foreground">Rate My Outfit</h1>
+          <h1 className="font-display text-2xl font-semibold text-foreground">Drip Check</h1>
           <p className="text-sm text-muted-foreground mt-1">Upload or capture your outfit for AI analysis</p>
         </motion.div>
 
@@ -138,7 +138,7 @@ const CameraScreen = () => {
                       <motion.div animate={{ rotate: 360 }} transition={{ repeat: Infinity, duration: 1.5, ease: "linear" }}>
                         <Sparkles size={28} className="text-accent" />
                       </motion.div>
-                      <p className="text-sm font-medium text-foreground">Analyzing your outfit...</p>
+                      <p className="text-sm font-medium text-foreground">Checking your drip...</p>
                     </div>
                   </div>
                 </div>
