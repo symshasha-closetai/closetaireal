@@ -42,27 +42,31 @@ const ProfileScreen = () => {
         .from("wardrobe")
         .upload(path, compressedBlob, { upsert: true, contentType: "image/jpeg" });
 
-    if (uploadError) {
-      toast.error("Failed to upload avatar");
-      setUploading(false);
-      return;
-    }
+      if (uploadError) {
+        toast.error("Failed to upload avatar");
+        setUploading(false);
+        return;
+      }
 
-    const { data: { publicUrl } } = supabase.storage
-      .from("wardrobe")
-      .getPublicUrl(path);
+      const { data: { publicUrl } } = supabase.storage
+        .from("wardrobe")
+        .getPublicUrl(path);
 
-    const { error: updateError } = await supabase
-      .from("profiles")
-      .update({ avatar_url: publicUrl })
-      .eq("user_id", user.id);
+      const { error: updateError } = await supabase
+        .from("profiles")
+        .update({ avatar_url: publicUrl })
+        .eq("user_id", user.id);
 
-    if (updateError) {
-      toast.error("Failed to save avatar");
-    } else {
-      setAvatarPreview(publicUrl);
-      await refreshProfile();
-      toast.success("Avatar updated!");
+      if (updateError) {
+        toast.error("Failed to save avatar");
+      } else {
+        setAvatarPreview(publicUrl);
+        await refreshProfile();
+        toast.success("Avatar updated!");
+      }
+    } catch (err) {
+      console.error(err);
+      toast.error("Failed to process image");
     }
     setUploading(false);
   };
