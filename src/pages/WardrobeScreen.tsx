@@ -355,7 +355,7 @@ const WardrobeScreen = () => {
                   </div>
                   <button
                     onClick={() => openEdit(item)}
-                    className="absolute top-2 left-2 w-7 h-7 rounded-full bg-foreground/50 text-primary-foreground flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity backdrop-blur-sm"
+                    className="absolute top-2 left-2 w-7 h-7 rounded-full bg-foreground/50 text-primary-foreground flex items-center justify-center opacity-100 sm:opacity-0 sm:group-hover:opacity-100 transition-opacity backdrop-blur-sm"
                   >
                     <Pencil size={13} />
                   </button>
