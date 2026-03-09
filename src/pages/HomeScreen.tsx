@@ -142,7 +142,12 @@ const HomeScreen = () => {
         },
       });
 
-      if (error) throw error;
+      if (error) {
+        // Try to extract meaningful error message from response
+        const msg = data?.error || (error as any)?.message || "Failed to generate outfits";
+        toast.error(msg);
+        return;
+      }
       if (data?.error) { toast.error(data.error); return; }
 
       if (data?.outfits?.length) {
