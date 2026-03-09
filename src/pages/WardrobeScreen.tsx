@@ -355,6 +355,12 @@ const WardrobeScreen = () => {
                     <p className="text-[11px] text-muted-foreground">{item.color || item.type} · {item.material || "—"}</p>
                   </div>
                   <button
+                    onClick={() => openEdit(item)}
+                    className="absolute top-2 left-2 w-7 h-7 rounded-full bg-foreground/50 text-primary-foreground flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity backdrop-blur-sm"
+                  >
+                    <Pencil size={13} />
+                  </button>
+                  <button
                     onClick={() => deleteItem(item.id)}
                     className="absolute top-2 right-2 w-7 h-7 rounded-full bg-foreground/50 text-primary-foreground flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity backdrop-blur-sm"
                   >
