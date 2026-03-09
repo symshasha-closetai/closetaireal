@@ -23,9 +23,13 @@ serve(async (req) => {
 
     const bodyAnalysis = styleProfile?.ai_body_analysis ? `\nAI Body Analysis: ${JSON.stringify(styleProfile.ai_body_analysis)}` : "";
     const faceAnalysis = styleProfile?.ai_face_analysis ? `\nAI Face Analysis: ${JSON.stringify(styleProfile.ai_face_analysis)}` : "";
-    const weatherInfo = weather ? `\nWeather conditions: ${weather}` : "";
+    const weatherInfo = weather && weather !== "Any" ? `\nWeather conditions: ${weather}` : "";
 
-    const systemPrompt = `You are an expert fashion stylist AI with deep knowledge of color theory, fabric science, and seasonal dressing. Given the user's wardrobe items, occasion, time of day, weather, body profile, and face analysis, suggest 2-3 complete outfit combinations using ONLY items from their wardrobe.
+    const surpriseInstruction = surpriseMe
+      ? `\n\n## SURPRISE ME MODE:\nThe user wants you to pick the BEST possible outfit without any occasion/time/weather constraints. Choose the most stylish, versatile, and flattering combination from their wardrobe. Pick an occasion that suits the outfit best and mention it. Be creative and bold!`
+      : "";
+
+    const systemPrompt = `You are an expert fashion stylist AI with deep knowledge of color theory, fabric science, and seasonal dressing. Given the user's wardrobe items, occasion, time of day, weather, body profile, and face analysis, suggest 2-3 complete outfit combinations using ONLY items from their wardrobe.${surpriseInstruction}
 
 ## COLOR RULES (Critical — apply rigorously):
 - **Complementary**: Pair opposites on the color wheel (navy + burnt orange, burgundy + olive).
