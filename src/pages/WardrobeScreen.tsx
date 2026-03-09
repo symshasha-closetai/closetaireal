@@ -361,7 +361,7 @@ const WardrobeScreen = () => {
                   </button>
                   <button
                     onClick={() => deleteItem(item.id)}
-                    className="absolute top-2 right-2 w-7 h-7 rounded-full bg-foreground/50 text-primary-foreground flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity backdrop-blur-sm"
+                    className="absolute top-2 right-2 w-7 h-7 rounded-full bg-foreground/50 text-primary-foreground flex items-center justify-center opacity-100 sm:opacity-0 sm:group-hover:opacity-100 transition-opacity backdrop-blur-sm"
                   >
                     <Trash2 size={13} />
                   </button>
