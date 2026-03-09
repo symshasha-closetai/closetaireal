@@ -11,8 +11,8 @@ serve(async (req) => {
 
   try {
     const { modelImageUrl, outfitDescription, occasion, userId } = await req.json();
-    const apiKey = Deno.env.get("GOOGLE_AI_API_KEY");
-    if (!apiKey) throw new Error("GOOGLE_AI_API_KEY not configured");
+    const lovableApiKey = Deno.env.get("LOVABLE_API_KEY");
+    if (!lovableApiKey) throw new Error("LOVABLE_API_KEY not configured");
 
     if (!modelImageUrl) throw new Error("Model image URL required");
 
@@ -22,54 +22,51 @@ ${outfitDescription}
 
 Keep the model's body type, skin tone, and overall appearance exactly the same. Only change their clothes to match the described outfit. Make it look natural and realistic. Full body visible, clean background, fashion editorial style.`;
 
-    // Download the model image to inline it
-    let imageParts: any[] = [{ text: prompt }];
-    try {
-      const imgResp = await fetch(modelImageUrl);
-      const imgBuffer = await imgResp.arrayBuffer();
-      const imgB64 = btoa(String.fromCharCode(...new Uint8Array(imgBuffer)));
-      imageParts.push({ inlineData: { mimeType: "image/png", data: imgB64 } });
-    } catch (imgErr) {
-      console.error("Failed to download model image:", imgErr);
-      imageParts.push({ text: `Reference model image URL: ${modelImageUrl}` });
-    }
-
-    const response = await fetch(
-      `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash-exp:generateContent?key=${apiKey}`,
-      {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          contents: [{ role: "user", parts: imageParts }],
-          generationConfig: {
-            responseModalities: ["TEXT", "IMAGE"],
-          },
-        }),
-      }
-    );
+    const response = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
+      method: "POST",
+      headers: {
+        "Authorization": `Bearer ${lovableApiKey}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        model: "google/gemini-2.5-flash-image",
+        messages: [{
+          role: "user",
+          content: [
+            { type: "text", text: prompt },
+            { type: "image_url", image_url: { url: modelImageUrl } },
+          ],
+        }],
+        modalities: ["image", "text"],
+      }),
+    });
 
     if (!response.ok) {
       if (response.status === 429) return new Response(JSON.stringify({ error: "Rate limited, try again shortly" }), { status: 429, headers: { ...corsHeaders, "Content-Type": "application/json" } });
-      throw new Error(`Gemini API error: ${response.status}`);
+      if (response.status === 402) return new Response(JSON.stringify({ error: "AI credits exhausted" }), { status: 402, headers: { ...corsHeaders, "Content-Type": "application/json" } });
+      const errText = await response.text();
+      console.error("AI gateway error:", response.status, errText);
+      throw new Error(`AI gateway error: ${response.status}`);
     }
 
     const data = await response.json();
-    const responseParts = data.candidates?.[0]?.content?.parts || [];
-    const imagePart = responseParts.find((p: any) => p.inlineData);
-    const imageB64 = imagePart?.inlineData?.data;
+    const imageDataUrl = data.choices?.[0]?.message?.images?.[0]?.image_url?.url;
 
-    if (!imageB64) throw new Error("No image generated");
+    if (!imageDataUrl) {
+      console.error("No image in response:", JSON.stringify(data).slice(0, 500));
+      throw new Error("No image generated");
+    }
 
-    const imageDataUrl = `data:image/png;base64,${imageB64}`;
+    const b64Match = imageDataUrl.match(/^data:image\/[^;]+;base64,(.+)$/);
+    if (!b64Match) throw new Error("Invalid image data URL format");
+    const imageB64 = b64Match[1];
 
-    // Upload to storage if userId provided
     if (userId) {
       const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
       const supabaseKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
       const supabase = createClient(supabaseUrl, supabaseKey);
 
       const bytes = Uint8Array.from(atob(imageB64), c => c.charCodeAt(0));
-
       const path = `${userId}/tryon-${Date.now()}.png`;
       const { error: uploadError } = await supabase.storage
         .from("wardrobe")
