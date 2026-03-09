@@ -6,6 +6,7 @@ import { useAuth } from "@/hooks/useAuth";
 import { toast } from "sonner";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useOptionImage } from "@/hooks/useOptionImage";
+import { compressImage } from "@/lib/imageCompression";
 
 const bodyTypes = [
   { label: "Hourglass", emoji: "⏳" },
@@ -113,35 +114,29 @@ const StyleProfileEditor = () => {
     setReanalyzing(true);
 
     try {
-      const fileToBase64 = (file: File): Promise<string> =>
-        new Promise((resolve, reject) => {
-          const reader = new FileReader();
-          reader.onload = () => resolve((reader.result as string).split(",")[1]);
-          reader.onerror = reject;
-          reader.readAsDataURL(file);
-        });
 
       let faceUrl: string | null = null;
       let bodyUrl: string | null = null;
+      let faceB64: string | null = null;
+      let bodyB64: string | null = null;
 
       if (faceFile) {
-        const ext = faceFile.name.split(".").pop();
-        const path = `${user.id}/face.${ext}`;
-        await supabase.storage.from("wardrobe").upload(path, faceFile, { upsert: true });
+        const { blob, base64 } = await compressImage(faceFile);
+        faceB64 = base64;
+        const path = `${user.id}/face.jpg`;
+        await supabase.storage.from("wardrobe").upload(path, blob, { upsert: true, contentType: "image/jpeg" });
         const { data } = supabase.storage.from("wardrobe").getPublicUrl(path);
         faceUrl = `${data.publicUrl}?t=${Date.now()}`;
       }
 
       if (bodyFile) {
-        const ext = bodyFile.name.split(".").pop();
-        const path = `${user.id}/body.${ext}`;
-        await supabase.storage.from("wardrobe").upload(path, bodyFile, { upsert: true });
+        const { blob, base64 } = await compressImage(bodyFile);
+        bodyB64 = base64;
+        const path = `${user.id}/body.jpg`;
+        await supabase.storage.from("wardrobe").upload(path, blob, { upsert: true, contentType: "image/jpeg" });
         const { data } = supabase.storage.from("wardrobe").getPublicUrl(path);
         bodyUrl = `${data.publicUrl}?t=${Date.now()}`;
       }
-
-      const faceB64 = faceFile ? await fileToBase64(faceFile) : null;
-      const bodyB64 = bodyFile ? await fileToBase64(bodyFile) : null;
 
       const { data, error } = await supabase.functions.invoke("analyze-body-profile", {
         body: { faceImageBase64: faceB64, bodyImageBase64: bodyB64 },
@@ -182,10 +177,21 @@ const StyleProfileEditor = () => {
         </h3>
         {modelImageUrl ? (
           <div className="w-full h-48 rounded-xl overflow-hidden bg-secondary">
-            <img src={modelImageUrl} alt="AI Model" className="w-full h-full object-cover object-top" />
+            <img
+              src={modelImageUrl}
+              alt="AI Model"
+              className="w-full h-full object-cover object-top"
+              onError={(e) => {
+                (e.target as HTMLImageElement).style.display = "none";
+                (e.target as HTMLImageElement).parentElement!.innerHTML = '<div class="w-full h-full flex items-center justify-center"><p class="text-xs text-muted-foreground">Image failed to load</p></div>';
+              }}
+            />
           </div>
         ) : (
-          <div className="w-full h-32 rounded-xl bg-secondary flex items-center justify-center">
+          <div className="w-full h-32 rounded-xl bg-secondary flex flex-col items-center justify-center gap-2">
+            <div className="w-16 h-16 rounded-full bg-muted flex items-center justify-center">
+              <User size={28} className="text-muted-foreground" />
+            </div>
             <p className="text-xs text-muted-foreground">No model generated yet</p>
           </div>
         )}

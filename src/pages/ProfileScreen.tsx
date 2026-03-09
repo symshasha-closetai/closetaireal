@@ -6,6 +6,7 @@ import { useNavigate } from "react-router-dom";
 import { useAuth } from "../hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
+import { compressImage } from "@/lib/imageCompression";
 import AppHeader from "../components/AppHeader";
 
 const ProfileScreen = () => {
@@ -33,34 +34,39 @@ const ProfileScreen = () => {
     if (!file || !user) return;
 
     setUploading(true);
-    const ext = file.name.split(".").pop();
-    const path = `${user.id}/avatar.${ext}`;
+    try {
+      const { blob: compressedBlob } = await compressImage(file);
+      const path = `${user.id}/avatar.jpg`;
 
-    const { error: uploadError } = await supabase.storage
-      .from("wardrobe")
-      .upload(path, file, { upsert: true });
+      const { error: uploadError } = await supabase.storage
+        .from("wardrobe")
+        .upload(path, compressedBlob, { upsert: true, contentType: "image/jpeg" });
 
-    if (uploadError) {
-      toast.error("Failed to upload avatar");
-      setUploading(false);
-      return;
-    }
+      if (uploadError) {
+        toast.error("Failed to upload avatar");
+        setUploading(false);
+        return;
+      }
 
-    const { data: { publicUrl } } = supabase.storage
-      .from("wardrobe")
-      .getPublicUrl(path);
+      const { data: { publicUrl } } = supabase.storage
+        .from("wardrobe")
+        .getPublicUrl(path);
 
-    const { error: updateError } = await supabase
-      .from("profiles")
-      .update({ avatar_url: publicUrl })
-      .eq("user_id", user.id);
+      const { error: updateError } = await supabase
+        .from("profiles")
+        .update({ avatar_url: publicUrl })
+        .eq("user_id", user.id);
 
-    if (updateError) {
-      toast.error("Failed to save avatar");
-    } else {
-      setAvatarPreview(publicUrl);
-      await refreshProfile();
-      toast.success("Avatar updated!");
+      if (updateError) {
+        toast.error("Failed to save avatar");
+      } else {
+        setAvatarPreview(publicUrl);
+        await refreshProfile();
+        toast.success("Avatar updated!");
+      }
+    } catch (err) {
+      console.error(err);
+      toast.error("Failed to process image");
     }
     setUploading(false);
   };

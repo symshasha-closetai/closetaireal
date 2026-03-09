@@ -1,10 +1,11 @@
 import { useState, useRef, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { Plus, Trash2, X, Loader2, Camera, Upload, Sparkles } from "lucide-react";
+import { Plus, Trash2, X, Loader2, Camera, Upload, Sparkles, Pencil, Save } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { toast } from "sonner";
 import AppHeader from "../components/AppHeader";
+import { compressImage } from "@/lib/imageCompression";
 
 type ClothingItem = {
   id: string;
@@ -40,7 +41,9 @@ const WardrobeScreen = () => {
   const [addMode, setAddMode] = useState<"choose" | "manual" | "ai">("choose");
   const fileRef = useRef<HTMLInputElement>(null);
   const cameraRef = useRef<HTMLInputElement>(null);
-
+  const [editingItem, setEditingItem] = useState<ClothingItem | null>(null);
+  const [editForm, setEditForm] = useState<{ name: string; type: string; color: string; material: string }>({ name: "", type: "", color: "", material: "" });
+  const [savingEdit, setSavingEdit] = useState(false);
   useEffect(() => {
     if (user) fetchItems();
   }, [user]);
@@ -97,7 +100,7 @@ const WardrobeScreen = () => {
     setSelectedDetected([]);
 
     try {
-      const base64 = await fileToBase64(file);
+      const { base64 } = await compressImage(file);
       const { data, error } = await supabase.functions.invoke("analyze-clothing", {
         body: { imageBase64: base64 },
       });
@@ -132,7 +135,7 @@ const WardrobeScreen = () => {
     setGenProgress(0);
 
     try {
-      const base64 = await fileToBase64(uploadedFile);
+      const { base64, blob: compressedBlob } = await compressImage(uploadedFile);
       const totalItems = selectedDetected.length;
       const savedItems: ClothingItem[] = [];
 
@@ -166,9 +169,8 @@ const WardrobeScreen = () => {
 
         // Fallback: upload original photo if generation failed
         if (!imageUrl) {
-          const ext = uploadedFile.name.split(".").pop();
-          const path = `${user.id}/${Date.now()}-${i}.${ext}`;
-          await supabase.storage.from("wardrobe").upload(path, uploadedFile);
+          const path = `${user.id}/${Date.now()}-${i}.jpg`;
+          await supabase.storage.from("wardrobe").upload(path, compressedBlob, { contentType: "image/jpeg" });
           const { data: { publicUrl } } = supabase.storage.from("wardrobe").getPublicUrl(path);
           imageUrl = publicUrl;
         }
@@ -208,12 +210,12 @@ const WardrobeScreen = () => {
     setUploading(true);
 
     try {
-      const ext = uploadedFile.name.split(".").pop();
-      const path = `${user.id}/${Date.now()}.${ext}`;
+      const { blob: compressedBlob } = await compressImage(uploadedFile);
+      const path = `${user.id}/${Date.now()}.jpg`;
 
       const { error: uploadError } = await supabase.storage
         .from("wardrobe")
-        .upload(path, uploadedFile);
+        .upload(path, compressedBlob, { contentType: "image/jpeg" });
 
       if (uploadError) throw uploadError;
 
@@ -261,6 +263,27 @@ const WardrobeScreen = () => {
     );
   };
 
+  const openEdit = (item: ClothingItem) => {
+    setEditingItem(item);
+    setEditForm({ name: item.name || "", type: item.type, color: item.color || "", material: item.material || "" });
+  };
+
+  const handleSaveEdit = async () => {
+    if (!editingItem) return;
+    setSavingEdit(true);
+    const { error } = await supabase
+      .from("wardrobe")
+      .update({ name: editForm.name, type: editForm.type, color: editForm.color || null, material: editForm.material || null })
+      .eq("id", editingItem.id);
+    if (error) {
+      toast.error("Failed to update item");
+    } else {
+      setItems(prev => prev.map(i => i.id === editingItem.id ? { ...i, ...editForm, color: editForm.color || null, material: editForm.material || null } : i));
+      toast.success("Item updated!");
+      setEditingItem(null);
+    }
+    setSavingEdit(false);
+  };
   const updateDetectedItem = (idx: number, field: keyof DetectedItem, value: string) => {
     setDetectedItems(prev => prev.map((item, i) => i === idx ? { ...item, [field]: value } : item));
   };
@@ -330,6 +353,12 @@ const WardrobeScreen = () => {
                     <p className="text-sm font-medium text-foreground truncate">{item.name || "Unnamed"}</p>
                     <p className="text-[11px] text-muted-foreground">{item.color || item.type} · {item.material || "—"}</p>
                   </div>
+                  <button
+                    onClick={() => openEdit(item)}
+                    className="absolute top-2 left-2 w-7 h-7 rounded-full bg-foreground/50 text-primary-foreground flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity backdrop-blur-sm"
+                  >
+                    <Pencil size={13} />
+                  </button>
                   <button
                     onClick={() => deleteItem(item.id)}
                     className="absolute top-2 right-2 w-7 h-7 rounded-full bg-foreground/50 text-primary-foreground flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity backdrop-blur-sm"
@@ -520,6 +549,95 @@ const WardrobeScreen = () => {
                     </button>
                   </>
                 )}
+              </motion.div>
+            </motion.div>
+          )}
+        </AnimatePresence>
+
+        {/* Edit Item Modal */}
+        <AnimatePresence>
+          {editingItem && (
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              className="fixed inset-0 bg-foreground/30 backdrop-blur-sm z-50 flex items-center justify-center p-5"
+              onClick={() => setEditingItem(null)}
+            >
+              <motion.div
+                initial={{ opacity: 0, scale: 0.95 }}
+                animate={{ opacity: 1, scale: 1 }}
+                exit={{ opacity: 0, scale: 0.95 }}
+                transition={{ type: "spring", damping: 25, stiffness: 300 }}
+                onClick={(e) => e.stopPropagation()}
+                className="w-full max-w-md bg-card rounded-3xl p-6 space-y-4"
+              >
+                <div className="flex items-center justify-between">
+                  <h3 className="font-semibold text-foreground text-lg">Edit Item</h3>
+                  <button onClick={() => setEditingItem(null)}>
+                    <X size={20} className="text-muted-foreground" />
+                  </button>
+                </div>
+
+                <div className="w-full h-40 rounded-2xl overflow-hidden bg-secondary">
+                  <img src={editingItem.image_url} alt={editingItem.name || "Item"} className="w-full h-full object-cover" />
+                </div>
+
+                <div className="space-y-3">
+                  <div className="space-y-1">
+                    <label className="text-xs font-medium text-muted-foreground">Name</label>
+                    <input
+                      value={editForm.name}
+                      onChange={(e) => setEditForm(f => ({ ...f, name: e.target.value }))}
+                      className="w-full px-3 py-2.5 rounded-xl bg-secondary border border-border text-foreground text-sm focus:outline-none focus:ring-2 focus:ring-accent/30"
+                    />
+                  </div>
+                  <div className="space-y-1">
+                    <label className="text-xs font-medium text-muted-foreground">Category</label>
+                    <select
+                      value={editForm.type}
+                      onChange={(e) => setEditForm(f => ({ ...f, type: e.target.value }))}
+                      className="w-full px-3 py-2.5 rounded-xl bg-secondary border border-border text-foreground text-sm"
+                    >
+                      {["Tops", "Bottoms", "Shoes", "Dresses", "Accessories"].map(t => (
+                        <option key={t} value={t}>{t}</option>
+                      ))}
+                    </select>
+                  </div>
+                  <div className="grid grid-cols-2 gap-3">
+                    <div className="space-y-1">
+                      <label className="text-xs font-medium text-muted-foreground">Color</label>
+                      <input
+                        value={editForm.color}
+                        onChange={(e) => setEditForm(f => ({ ...f, color: e.target.value }))}
+                        placeholder="e.g. Black"
+                        className="w-full px-3 py-2.5 rounded-xl bg-secondary border border-border text-foreground text-sm placeholder:text-muted-foreground"
+                      />
+                    </div>
+                    <div className="space-y-1">
+                      <label className="text-xs font-medium text-muted-foreground">Material</label>
+                      <select
+                        value={editForm.material}
+                        onChange={(e) => setEditForm(f => ({ ...f, material: e.target.value }))}
+                        className="w-full px-3 py-2.5 rounded-xl bg-secondary border border-border text-foreground text-sm"
+                      >
+                        <option value="">Select</option>
+                        {["Cotton", "Linen", "Polyester", "Silk", "Wool", "Denim", "Leather", "Nylon", "Chiffon", "Velvet", "Satin", "Other"].map(m => (
+                          <option key={m} value={m}>{m}</option>
+                        ))}
+                      </select>
+                    </div>
+                  </div>
+                </div>
+
+                <button
+                  onClick={handleSaveEdit}
+                  disabled={savingEdit}
+                  className="w-full flex items-center justify-center gap-2 py-3 rounded-xl gradient-accent text-accent-foreground font-medium text-sm shadow-soft active:scale-[0.98] transition-transform disabled:opacity-60"
+                >
+                  <Save size={16} />
+                  {savingEdit ? "Saving..." : "Save Changes"}
+                </button>
               </motion.div>
             </motion.div>
           )}
