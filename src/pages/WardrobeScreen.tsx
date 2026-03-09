@@ -210,12 +210,12 @@ const WardrobeScreen = () => {
     setUploading(true);
 
     try {
-      const ext = uploadedFile.name.split(".").pop();
-      const path = `${user.id}/${Date.now()}.${ext}`;
+      const { blob: compressedBlob } = await compressImage(uploadedFile);
+      const path = `${user.id}/${Date.now()}.jpg`;
 
       const { error: uploadError } = await supabase.storage
         .from("wardrobe")
-        .upload(path, uploadedFile);
+        .upload(path, compressedBlob, { contentType: "image/jpeg" });
 
       if (uploadError) throw uploadError;
 
