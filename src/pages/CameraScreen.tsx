@@ -27,11 +27,13 @@ export type RatingResult = {
 const CameraScreen = () => {
   const { user } = useAuth();
   const [image, setImage] = useState<string | null>(null);
+  const [imageBase64, setImageBase64] = useState<string | null>(null);
   const [analyzing, setAnalyzing] = useState(false);
   const [result, setResult] = useState<RatingResult | null>(null);
   const [wardrobeItems, setWardrobeItems] = useState<any[]>([]);
   const fileRef = useRef<HTMLInputElement>(null);
   const cameraFileRef = useRef<HTMLInputElement>(null);
+  const abortControllerRef = useRef<AbortController | null>(null);
 
   const toBase64 = (file: File): Promise<string> =>
     new Promise((resolve, reject) => {
@@ -44,17 +46,28 @@ const CameraScreen = () => {
       reader.readAsDataURL(file);
     });
 
+  const toDataUrl = (file: File): Promise<string> =>
+    new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onload = () => resolve(reader.result as string);
+      reader.onerror = reject;
+      reader.readAsDataURL(file);
+    });
+
   const handleUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
     const url = URL.createObjectURL(file);
+    const dataUrl = await toDataUrl(file);
     setImage(url);
+    setImageBase64(dataUrl);
     setResult(null);
     await analyzeOutfit(file);
   };
 
   const analyzeOutfit = async (file: File) => {
     setAnalyzing(true);
+    abortControllerRef.current = new AbortController();
     try {
       const imageBase64 = await toBase64(file);
 
@@ -69,6 +82,8 @@ const CameraScreen = () => {
         body: { imageBase64, wardrobeItems: fetchedWardrobe },
       });
 
+      if (abortControllerRef.current?.signal.aborted) return;
+
       if (error) throw error;
       if (data?.error) {
         toast.error(data.error);
@@ -78,15 +93,28 @@ const CameraScreen = () => {
         setResult(data.result);
       }
     } catch (err: any) {
+      if (err?.name === "AbortError" || abortControllerRef.current?.signal.aborted) return;
       console.error("Rating error:", err);
       toast.error("Failed to analyze outfit. Please try again.");
     } finally {
       setAnalyzing(false);
+      abortControllerRef.current = null;
     }
+  };
+
+  const cancelAnalysis = () => {
+    if (abortControllerRef.current) {
+      abortControllerRef.current.abort();
+    }
+    setAnalyzing(false);
+    setImage(null);
+    setImageBase64(null);
+    setResult(null);
   };
 
   const clearImage = () => {
     setImage(null);
+    setImageBase64(null);
     setResult(null);
   };
 
@@ -130,15 +158,15 @@ const CameraScreen = () => {
               {analyzing ? (
                 <div className="glass-card-elevated overflow-hidden relative">
                   <img src={image} alt="Outfit" className="w-full aspect-[3/4] object-cover" />
-                  <button onClick={clearImage} className="absolute top-3 right-3 w-8 h-8 rounded-full bg-foreground/60 text-primary-foreground flex items-center justify-center backdrop-blur-sm">
-                    <X size={16} />
+                  <button onClick={cancelAnalysis} className="absolute top-3 right-3 z-20 flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-destructive/90 text-destructive-foreground backdrop-blur-sm text-xs font-medium active:scale-95 transition-transform">
+                    <X size={14} /> Cancel
                   </button>
-                  <div className="absolute inset-0 bg-background/60 backdrop-blur-sm flex items-center justify-center">
+                  <div className="absolute inset-0 bg-background/40 backdrop-blur-sm flex items-center justify-center">
                     <div className="flex flex-col items-center gap-3">
                       <motion.div animate={{ rotate: 360 }} transition={{ repeat: Infinity, duration: 1.5, ease: "linear" }}>
-                        <Sparkles size={28} className="text-accent" />
+                        <Sparkles size={36} className="text-accent drop-shadow-[0_0_12px_hsl(var(--accent))]" />
                       </motion.div>
-                      <p className="text-sm font-medium text-foreground">Checking your drip...</p>
+                      <p className="text-sm font-medium text-foreground drop-shadow-sm">Checking your drip...</p>
                     </div>
                   </div>
                 </div>
@@ -147,7 +175,7 @@ const CameraScreen = () => {
                   <button onClick={clearImage} className="absolute top-3 right-3 z-10 w-8 h-8 rounded-full bg-foreground/60 text-primary-foreground flex items-center justify-center backdrop-blur-sm">
                     <X size={16} />
                   </button>
-                  <OutfitRatingCard image={image} result={result} wardrobeItems={wardrobeItems} />
+                  <OutfitRatingCard image={image} imageBase64={imageBase64 || undefined} result={result} wardrobeItems={wardrobeItems} />
                   <motion.button
                     initial={{ opacity: 0, y: 10 }}
                     animate={{ opacity: 1, y: 0 }}
