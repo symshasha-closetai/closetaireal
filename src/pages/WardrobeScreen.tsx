@@ -553,6 +553,95 @@ const WardrobeScreen = () => {
             </motion.div>
           )}
         </AnimatePresence>
+
+        {/* Edit Item Modal */}
+        <AnimatePresence>
+          {editingItem && (
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              className="fixed inset-0 bg-foreground/30 backdrop-blur-sm z-50 flex items-center justify-center p-5"
+              onClick={() => setEditingItem(null)}
+            >
+              <motion.div
+                initial={{ opacity: 0, scale: 0.95 }}
+                animate={{ opacity: 1, scale: 1 }}
+                exit={{ opacity: 0, scale: 0.95 }}
+                transition={{ type: "spring", damping: 25, stiffness: 300 }}
+                onClick={(e) => e.stopPropagation()}
+                className="w-full max-w-md bg-card rounded-3xl p-6 space-y-4"
+              >
+                <div className="flex items-center justify-between">
+                  <h3 className="font-semibold text-foreground text-lg">Edit Item</h3>
+                  <button onClick={() => setEditingItem(null)}>
+                    <X size={20} className="text-muted-foreground" />
+                  </button>
+                </div>
+
+                <div className="w-full h-40 rounded-2xl overflow-hidden bg-secondary">
+                  <img src={editingItem.image_url} alt={editingItem.name || "Item"} className="w-full h-full object-cover" />
+                </div>
+
+                <div className="space-y-3">
+                  <div className="space-y-1">
+                    <label className="text-xs font-medium text-muted-foreground">Name</label>
+                    <input
+                      value={editForm.name}
+                      onChange={(e) => setEditForm(f => ({ ...f, name: e.target.value }))}
+                      className="w-full px-3 py-2.5 rounded-xl bg-secondary border border-border text-foreground text-sm focus:outline-none focus:ring-2 focus:ring-accent/30"
+                    />
+                  </div>
+                  <div className="space-y-1">
+                    <label className="text-xs font-medium text-muted-foreground">Category</label>
+                    <select
+                      value={editForm.type}
+                      onChange={(e) => setEditForm(f => ({ ...f, type: e.target.value }))}
+                      className="w-full px-3 py-2.5 rounded-xl bg-secondary border border-border text-foreground text-sm"
+                    >
+                      {["Tops", "Bottoms", "Shoes", "Dresses", "Accessories"].map(t => (
+                        <option key={t} value={t}>{t}</option>
+                      ))}
+                    </select>
+                  </div>
+                  <div className="grid grid-cols-2 gap-3">
+                    <div className="space-y-1">
+                      <label className="text-xs font-medium text-muted-foreground">Color</label>
+                      <input
+                        value={editForm.color}
+                        onChange={(e) => setEditForm(f => ({ ...f, color: e.target.value }))}
+                        placeholder="e.g. Black"
+                        className="w-full px-3 py-2.5 rounded-xl bg-secondary border border-border text-foreground text-sm placeholder:text-muted-foreground"
+                      />
+                    </div>
+                    <div className="space-y-1">
+                      <label className="text-xs font-medium text-muted-foreground">Material</label>
+                      <select
+                        value={editForm.material}
+                        onChange={(e) => setEditForm(f => ({ ...f, material: e.target.value }))}
+                        className="w-full px-3 py-2.5 rounded-xl bg-secondary border border-border text-foreground text-sm"
+                      >
+                        <option value="">Select</option>
+                        {["Cotton", "Linen", "Polyester", "Silk", "Wool", "Denim", "Leather", "Nylon", "Chiffon", "Velvet", "Satin", "Other"].map(m => (
+                          <option key={m} value={m}>{m}</option>
+                        ))}
+                      </select>
+                    </div>
+                  </div>
+                </div>
+
+                <button
+                  onClick={handleSaveEdit}
+                  disabled={savingEdit}
+                  className="w-full flex items-center justify-center gap-2 py-3 rounded-xl gradient-accent text-accent-foreground font-medium text-sm shadow-soft active:scale-[0.98] transition-transform disabled:opacity-60"
+                >
+                  <Save size={16} />
+                  {savingEdit ? "Saving..." : "Save Changes"}
+                </button>
+              </motion.div>
+            </motion.div>
+          )}
+        </AnimatePresence>
       </div>
     </div>
   );
