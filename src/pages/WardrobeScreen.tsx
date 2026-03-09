@@ -264,6 +264,27 @@ const WardrobeScreen = () => {
     );
   };
 
+  const openEdit = (item: ClothingItem) => {
+    setEditingItem(item);
+    setEditForm({ name: item.name || "", type: item.type, color: item.color || "", material: item.material || "" });
+  };
+
+  const handleSaveEdit = async () => {
+    if (!editingItem) return;
+    setSavingEdit(true);
+    const { error } = await supabase
+      .from("wardrobe")
+      .update({ name: editForm.name, type: editForm.type, color: editForm.color || null, material: editForm.material || null })
+      .eq("id", editingItem.id);
+    if (error) {
+      toast.error("Failed to update item");
+    } else {
+      setItems(prev => prev.map(i => i.id === editingItem.id ? { ...i, ...editForm, color: editForm.color || null, material: editForm.material || null } : i));
+      toast.success("Item updated!");
+      setEditingItem(null);
+    }
+    setSavingEdit(false);
+  };
   const updateDetectedItem = (idx: number, field: keyof DetectedItem, value: string) => {
     setDetectedItems(prev => prev.map((item, i) => i === idx ? { ...item, [field]: value } : item));
   };
