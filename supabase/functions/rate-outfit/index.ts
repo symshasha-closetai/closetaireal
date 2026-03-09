@@ -12,8 +12,8 @@ serve(async (req) => {
     const { imageBase64, wardrobeItems } = await req.json();
     if (!imageBase64) return new Response(JSON.stringify({ error: "No image provided" }), { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } });
 
-    const apiKey = Deno.env.get("GOOGLE_AI_API_KEY");
-    if (!apiKey) throw new Error("GOOGLE_AI_API_KEY not configured");
+    const apiKey = Deno.env.get("LOVABLE_API_KEY");
+    if (!apiKey) throw new Error("LOVABLE_API_KEY not configured");
 
     const wardrobeDesc = wardrobeItems?.length
       ? `User's wardrobe contains: ${wardrobeItems.map((i: any) => `${i.name || i.type} (id: ${i.id}, ${i.type}, ${i.color || "unknown"} color)`).join(", ")}`
@@ -32,41 +32,44 @@ IMPORTANT RULES:
 - All score reasons should use proper grammar and capitalization.
 - color_score, style_score, fit_score: integers 1-10.`;
 
-    const response = await fetch(
-      `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${apiKey}`,
-      {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          systemInstruction: { parts: [{ text: systemPrompt }] },
-          contents: [{
+    const response = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
+      method: "POST",
+      headers: {
+        "Authorization": `Bearer ${apiKey}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        model: "google/gemini-2.5-flash",
+        messages: [
+          { role: "system", content: systemPrompt },
+          {
             role: "user",
-            parts: [
-              { text: "Rate this outfit — give a drip score, confidence rating, killer tag, and suggest improvements. If the user has wardrobe items, suggest swaps from their wardrobe too. Return JSON only." },
-              { inlineData: { mimeType: "image/jpeg", data: imageBase64 } },
+            content: [
+              { type: "text", text: "Rate this outfit — give a drip score, confidence rating, killer tag, and suggest improvements. If the user has wardrobe items, suggest swaps from their wardrobe too. Return JSON only." },
+              { type: "image_url", image_url: { url: `data:image/jpeg;base64,${imageBase64}` } },
             ],
-          }],
-          generationConfig: { maxOutputTokens: 2048 },
-        }),
-      }
-    );
+          },
+        ],
+      }),
+    });
 
     if (!response.ok) {
       if (response.status === 429) return new Response(JSON.stringify({ error: "Rate limited, try again shortly" }), { status: 429, headers: { ...corsHeaders, "Content-Type": "application/json" } });
+      if (response.status === 402) return new Response(JSON.stringify({ error: "AI credits exhausted, please try later" }), { status: 402, headers: { ...corsHeaders, "Content-Type": "application/json" } });
       const errText = await response.text();
-      console.error("Gemini error:", errText);
-      throw new Error(`Gemini API error: ${response.status}`);
+      console.error("AI gateway error:", response.status, errText);
+      throw new Error(`AI gateway error: ${response.status}`);
     }
 
     const data = await response.json();
-    const content = data.candidates?.[0]?.content?.parts?.[0]?.text || "{}";
+    const content = data.choices?.[0]?.message?.content || "{}";
 
     let result = null;
     try {
       const cleaned = content.replace(/```json\n?/g, "").replace(/```\n?/g, "").trim();
       result = JSON.parse(cleaned);
     } catch {
-      console.error("Failed to parse Gemini response:", content);
+      console.error("Failed to parse AI response:", content);
     }
 
     return new Response(JSON.stringify({ result }), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
