@@ -60,13 +60,36 @@ const OutfitRatingCard = ({ image, result, wardrobeItems = [] }: Props) => {
   const [showShareCard, setShowShareCard] = useState(false);
   const shareRef = useRef<HTMLDivElement>(null);
 
+  // Convert blob/object URL to base64 for html2canvas
+  const imageToBase64 = useCallback(async (url: string): Promise<string> => {
+    if (url.startsWith("data:")) return url;
+    try {
+      const res = await fetch(url);
+      const blob = await res.blob();
+      return new Promise((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onloadend = () => resolve(reader.result as string);
+        reader.onerror = reject;
+        reader.readAsDataURL(blob);
+      });
+    } catch {
+      return url;
+    }
+  }, []);
+
+  const [shareImageBase64, setShareImageBase64] = useState<string | null>(null);
+
   const handleShare = useCallback(async () => {
     if (sharing) return;
     setSharing(true);
+
+    // Convert image to base64 first
+    const base64 = await imageToBase64(image);
+    setShareImageBase64(base64);
     setShowShareCard(true);
 
     // Wait for the hidden share card to render
-    await new Promise(r => setTimeout(r, 300));
+    await new Promise(r => setTimeout(r, 500));
 
     try {
       if (!shareRef.current) throw new Error("Share card not ready");
