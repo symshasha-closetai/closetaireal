@@ -26,6 +26,7 @@ type WardrobeItem = {
 
 type Props = {
   image: string;
+  imageBase64?: string;
   result: RatingResult;
   wardrobeItems?: WardrobeItem[];
 };
@@ -52,7 +53,7 @@ const findWardrobeMatch = (suggestion: Suggestion, wardrobeItems: WardrobeItem[]
   );
 };
 
-const OutfitRatingCard = ({ image, result, wardrobeItems = [] }: Props) => {
+const OutfitRatingCard = ({ image, imageBase64, result, wardrobeItems = [] }: Props) => {
   const [activeTooltip, setActiveTooltip] = useState<string | null>(null);
   const [suggestionImages, setSuggestionImages] = useState<Record<number, string | null>>({});
   const [loadingImages, setLoadingImages] = useState<Record<number, boolean>>({});
@@ -60,32 +61,9 @@ const OutfitRatingCard = ({ image, result, wardrobeItems = [] }: Props) => {
   const [showShareCard, setShowShareCard] = useState(false);
   const shareRef = useRef<HTMLDivElement>(null);
 
-  // Convert blob/object URL to base64 for html2canvas
-  const imageToBase64 = useCallback(async (url: string): Promise<string> => {
-    if (url.startsWith("data:")) return url;
-    try {
-      const res = await fetch(url);
-      const blob = await res.blob();
-      return new Promise((resolve, reject) => {
-        const reader = new FileReader();
-        reader.onloadend = () => resolve(reader.result as string);
-        reader.onerror = reject;
-        reader.readAsDataURL(blob);
-      });
-    } catch {
-      return url;
-    }
-  }, []);
-
-  const [shareImageBase64, setShareImageBase64] = useState<string | null>(null);
-
   const handleShare = useCallback(async () => {
     if (sharing) return;
     setSharing(true);
-
-    // Convert image to base64 first
-    const base64 = await imageToBase64(image);
-    setShareImageBase64(base64);
     setShowShareCard(true);
 
     // Wait for the hidden share card to render
@@ -134,7 +112,7 @@ const OutfitRatingCard = ({ image, result, wardrobeItems = [] }: Props) => {
       setShowShareCard(false);
       setSharing(false);
     }
-  }, [sharing, result, image, imageToBase64]);
+  }, [sharing, result, image, imageBase64]);
 
   const toggleTooltip = (key: string) => {
     setActiveTooltip(prev => prev === key ? null : key);
@@ -169,7 +147,7 @@ const OutfitRatingCard = ({ image, result, wardrobeItems = [] }: Props) => {
     <div className="space-y-4">
       {/* Main Shareable Card */}
       <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="glass-card-elevated overflow-hidden">
-        {/* Photo with Killer Tag Overlay */}
+        {/* Photo */}
         <div className="relative">
           <img src={image} alt="Outfit" className="w-full aspect-[3/4] object-cover" />
           
@@ -180,23 +158,7 @@ const OutfitRatingCard = ({ image, result, wardrobeItems = [] }: Props) => {
             </span>
           </div>
 
-          {/* Killer Tag — bold overlay on photo */}
-          {result.killer_tag && (
-            <motion.div
-              initial={{ opacity: 0, scale: 0.5, rotate: -12 }}
-              animate={{ opacity: 1, scale: 1, rotate: -6 }}
-              transition={{ delay: 0.4, type: "spring", stiffness: 200 }}
-              className="absolute bottom-24 right-4 z-10"
-            >
-              <div className="bg-accent/90 backdrop-blur-sm px-4 py-2 rounded-xl shadow-lg transform">
-                <span className="text-base font-display font-bold text-accent-foreground tracking-wide">
-                  {result.killer_tag} 🔥
-                </span>
-              </div>
-            </motion.div>
-          )}
-
-          {/* Bottom gradient with Drip Score + Confidence */}
+          {/* Bottom gradient with Drip Score + Killer Tag + Confidence */}
           <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-card via-card/80 to-transparent pt-16 pb-4 px-4">
             <div className="flex items-end justify-between">
               <div className="space-y-1.5">
@@ -206,6 +168,23 @@ const OutfitRatingCard = ({ image, result, wardrobeItems = [] }: Props) => {
                 </div>
                 <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Drip Score</p>
               </div>
+
+              {/* Killer Tag — centered between scores */}
+              {result.killer_tag && (
+                <motion.div
+                  initial={{ opacity: 0, scale: 0.5 }}
+                  animate={{ opacity: 1, scale: 1 }}
+                  transition={{ delay: 0.4, type: "spring", stiffness: 200 }}
+                  className="flex-shrink-0"
+                >
+                  <div className="bg-accent/90 backdrop-blur-sm px-3 py-1.5 rounded-xl shadow-lg">
+                    <span className="text-xs font-display font-bold text-accent-foreground tracking-wide whitespace-nowrap">
+                      {result.killer_tag} 🔥
+                    </span>
+                  </div>
+                </motion.div>
+              )}
+
               <div className="text-right space-y-1.5">
                 <div className="flex items-baseline gap-1.5 justify-end">
                   <span className="text-3xl font-display font-bold text-foreground">{result.confidence_rating}</span>
@@ -377,7 +356,7 @@ const OutfitRatingCard = ({ image, result, wardrobeItems = [] }: Props) => {
         >
           {/* Photo with overlay */}
           <div style={{ position: "relative" }}>
-            <img src={shareImageBase64 || image} alt="Outfit" style={{ width: 390, height: 520, objectFit: "cover", display: "block" }} crossOrigin="anonymous" />
+            <img src={imageBase64 || image} alt="Outfit" style={{ width: 390, height: 520, objectFit: "cover", display: "block" }} crossOrigin="anonymous" />
             
             {/* Brand top-left */}
             <div style={{ position: "absolute", top: 16, left: 16 }}>
@@ -390,20 +369,7 @@ const OutfitRatingCard = ({ image, result, wardrobeItems = [] }: Props) => {
               </span>
             </div>
 
-            {/* Killer Tag */}
-            {result.killer_tag && (
-              <div style={{
-                position: "absolute", bottom: 120, right: 16,
-                background: "rgba(232,121,249,0.9)", backdropFilter: "blur(8px)",
-                padding: "8px 16px", borderRadius: 14, transform: "rotate(-6deg)",
-              }}>
-                <span style={{ fontSize: 15, fontWeight: 700, color: "#fff", letterSpacing: 1 }}>
-                  {result.killer_tag} 🔥
-                </span>
-              </div>
-            )}
-
-            {/* Bottom gradient with scores */}
+            {/* Bottom gradient with scores + killer tag between them */}
             <div style={{
               position: "absolute", bottom: 0, left: 0, right: 0,
               background: "linear-gradient(to top, #1a1a2e 0%, rgba(26,26,46,0.85) 60%, transparent 100%)",
@@ -417,6 +383,19 @@ const OutfitRatingCard = ({ image, result, wardrobeItems = [] }: Props) => {
                   </div>
                   <p style={{ fontSize: 10, fontWeight: 600, color: "rgba(255,255,255,0.5)", textTransform: "uppercase", letterSpacing: 2, marginTop: 2 }}>Drip Score</p>
                 </div>
+
+                {/* Killer Tag centered */}
+                {result.killer_tag && (
+                  <div style={{
+                    background: "rgba(232,121,249,0.9)", backdropFilter: "blur(8px)",
+                    padding: "6px 14px", borderRadius: 14,
+                  }}>
+                    <span style={{ fontSize: 12, fontWeight: 700, color: "#fff", letterSpacing: 1, whiteSpace: "nowrap" }}>
+                      {result.killer_tag} 🔥
+                    </span>
+                  </div>
+                )}
+
                 <div style={{ textAlign: "right" }}>
                   <div style={{ display: "flex", alignItems: "baseline", gap: 4, justifyContent: "flex-end" }}>
                     <span style={{ fontSize: 36, fontWeight: 800, color: "#fff" }}>{result.confidence_rating}</span>
