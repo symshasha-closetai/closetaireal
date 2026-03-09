@@ -134,7 +134,7 @@ const OutfitRatingCard = ({ image, result, wardrobeItems = [] }: Props) => {
       setShowShareCard(false);
       setSharing(false);
     }
-  }, [sharing, result, image]);
+  }, [sharing, result, image, imageToBase64]);
 
   const toggleTooltip = (key: string) => {
     setActiveTooltip(prev => prev === key ? null : key);
