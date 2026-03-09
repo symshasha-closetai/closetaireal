@@ -82,8 +82,8 @@ Return ONLY valid JSON (no markdown) with this structure:
     });
 
     if (!response.ok) {
-      if (response.status === 429) return new Response(JSON.stringify({ error: "Rate limited, try again shortly" }), { status: 429, headers: { ...corsHeaders, "Content-Type": "application/json" } });
-      if (response.status === 402) return new Response(JSON.stringify({ error: "AI credits exhausted" }), { status: 402, headers: { ...corsHeaders, "Content-Type": "application/json" } });
+      if (response.status === 429) return new Response(JSON.stringify({ error: "Rate limited — please try again in a minute." }), { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } });
+      if (response.status === 402) return new Response(JSON.stringify({ error: "AI credits exhausted. Please try again later or top up your credits." }), { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } });
       const errText = await response.text();
       console.error("AI gateway error:", response.status, errText);
       throw new Error(`AI gateway error: ${response.status}`);
