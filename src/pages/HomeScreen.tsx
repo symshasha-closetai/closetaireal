@@ -143,13 +143,10 @@ const HomeScreen = () => {
       });
 
       if (error) {
-        // Check if the error response contains a specific message
-        const errorBody = typeof error === 'object' && error?.context?.body ? JSON.parse(error.context.body) : null;
-        if (errorBody?.error) {
-          toast.error(errorBody.error);
-          return;
-        }
-        throw error;
+        // Try to extract meaningful error message from response
+        const msg = data?.error || (error as any)?.message || "Failed to generate outfits";
+        toast.error(msg);
+        return;
       }
       if (data?.error) { toast.error(data.error); return; }
 
