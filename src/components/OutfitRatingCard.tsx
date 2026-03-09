@@ -393,7 +393,7 @@ const OutfitRatingCard = ({ image, result, wardrobeItems = [] }: Props) => {
             {/* Killer Tag */}
             {result.killer_tag && (
               <div style={{
-                position: "absolute", top: 60, right: 16,
+                position: "absolute", bottom: 120, right: 16,
                 background: "rgba(232,121,249,0.9)", backdropFilter: "blur(8px)",
                 padding: "8px 16px", borderRadius: 14, transform: "rotate(-6deg)",
               }}>
