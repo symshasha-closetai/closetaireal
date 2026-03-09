@@ -58,6 +58,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         .select("name, avatar_url")
         .single();
       setProfile(newProfile);
+      toast("Welcome to ClosetAI!", { description: "Let's set up your style profile." });
     } else {
       setProfile(data);
     }
