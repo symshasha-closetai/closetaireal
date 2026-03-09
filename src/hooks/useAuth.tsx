@@ -1,6 +1,7 @@
 import { createContext, useContext, useEffect, useState, ReactNode, useCallback } from "react";
 import { Session, User } from "@supabase/supabase-js";
 import { supabase } from "@/integrations/supabase/client";
+import { toast } from "sonner";
 
 type Profile = { name: string | null; avatar_url: string | null };
 type StyleProfile = {
@@ -57,6 +58,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         .select("name, avatar_url")
         .single();
       setProfile(newProfile);
+      toast("Welcome to ClosetAI!", { description: "Let's set up your style profile." });
     } else {
       setProfile(data);
     }
