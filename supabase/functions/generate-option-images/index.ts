@@ -45,8 +45,8 @@ serve(async (req) => {
       return new Response(JSON.stringify({ error: "category and label required" }), { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } });
     }
 
-    const apiKey = Deno.env.get("GOOGLE_AI_API_KEY");
-    if (!apiKey) throw new Error("GOOGLE_AI_API_KEY not configured");
+    const lovableApiKey = Deno.env.get("LOVABLE_API_KEY");
+    if (!lovableApiKey) throw new Error("LOVABLE_API_KEY not configured");
 
     // Check cache in storage first
     const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
@@ -61,38 +61,62 @@ serve(async (req) => {
       return new Response(JSON.stringify({ imageUrl: urlData.publicUrl }), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
     }
 
-    // Generate image
+    // Generate image via Lovable AI gateway
     let prompt = prompts[category]?.[label] || `A professional fashion reference image for ${category}: ${label}, studio photography on clean white background`;
     if (gender) {
-      prompt = prompt.replace("A fashion silhouette", `A ${gender} fashion silhouette`);
-      prompt = prompt.replace("A casual style", `A ${gender} casual style`);
+      prompt = prompt.replace("a real person", `a ${gender} person`);
+      prompt = prompt.replace("a person", `a ${gender} person`);
     }
 
-    const response = await fetch(
-      `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${apiKey}`,
-      {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          contents: [{ role: "user", parts: [{ text: prompt }] }],
-          generationConfig: {
-            responseModalities: ["TEXT", "IMAGE"],
-          },
-        }),
-      }
-    );
+    const response = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
+      method: "POST",
+      headers: {
+        "Authorization": `Bearer ${lovableApiKey}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        model: "google/gemini-2.5-flash-image",
+        messages: [
+          { role: "user", content: prompt }
+        ],
+      }),
+    });
 
     if (!response.ok) {
-      if (response.status === 429) return new Response(JSON.stringify({ error: "Rate limited" }), { status: 429, headers: { ...corsHeaders, "Content-Type": "application/json" } });
-      throw new Error(`Gemini API error: ${response.status}`);
+      if (response.status === 429) return new Response(JSON.stringify({ error: "Rate limited, please try again later" }), { status: 429, headers: { ...corsHeaders, "Content-Type": "application/json" } });
+      if (response.status === 402) return new Response(JSON.stringify({ error: "AI credits exhausted" }), { status: 402, headers: { ...corsHeaders, "Content-Type": "application/json" } });
+      const errText = await response.text();
+      console.error("AI gateway error:", response.status, errText);
+      throw new Error(`AI gateway error: ${response.status}`);
     }
 
     const data = await response.json();
-    const parts = data.candidates?.[0]?.content?.parts || [];
-    const imagePart = parts.find((p: any) => p.inlineData);
-    const imageB64 = imagePart?.inlineData?.data;
+    
+    // Extract image from response - Lovable AI gateway returns base64 image in content
+    const content = data.choices?.[0]?.message?.content;
+    let imageB64: string | null = null;
+
+    if (typeof content === "string") {
+      // Check if content contains base64 image data
+      const b64Match = content.match(/data:image\/[^;]+;base64,([A-Za-z0-9+/=]+)/);
+      if (b64Match) {
+        imageB64 = b64Match[1];
+      }
+    } else if (Array.isArray(content)) {
+      // Multi-part content - look for image parts
+      for (const part of content) {
+        if (part.type === "image_url" && part.image_url?.url) {
+          const b64Match = part.image_url.url.match(/data:image\/[^;]+;base64,([A-Za-z0-9+/=]+)/);
+          if (b64Match) {
+            imageB64 = b64Match[1];
+            break;
+          }
+        }
+      }
+    }
 
     if (!imageB64) {
+      console.error("No image in response. Content type:", typeof content, "Content preview:", JSON.stringify(content)?.slice(0, 200));
       return new Response(JSON.stringify({ error: "No image generated" }), { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } });
     }
 
