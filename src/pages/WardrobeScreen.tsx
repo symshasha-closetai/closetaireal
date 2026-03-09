@@ -161,6 +161,7 @@ const WardrobeScreen = () => {
           }
         } catch (genErr) {
           console.error("Image generation failed for item:", item.name, genErr);
+          // Silently continue — will fall back to original photo upload
         }
 
         // Fallback: upload original photo if generation failed

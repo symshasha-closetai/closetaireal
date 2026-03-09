@@ -169,7 +169,7 @@ const HomeScreen = () => {
         .map(id => allWardrobeItems.find(w => w.id === id))
         .filter(Boolean);
       const desc = items.map(i => `${i!.name || i!.type} (${i!.color || ""} ${i!.material || ""})`).join(", ");
-      const { data } = await supabase.functions.invoke("virtual-tryon", {
+      const { data, error } = await supabase.functions.invoke("virtual-tryon", {
         body: {
           modelImageUrl: styleProfile.model_image_url,
           outfitDescription: desc,
@@ -177,6 +177,13 @@ const HomeScreen = () => {
           userId: user.id,
         },
       });
+      if (error) {
+        const errorMsg = typeof data?.error === "string" ? data.error : "";
+        if (errorMsg.includes("Rate limited") || errorMsg.includes("credits")) {
+          toast.error("Try-on temporarily unavailable. Please try again later.");
+          return;
+        }
+      }
       if (data?.imageUrl || data?.imageBase64) {
         setOutfitSuggestions(prev =>
           prev.map((o, i) => i === idx ? { ...o, tryon_image: data.imageUrl || data.imageBase64 } : o)
