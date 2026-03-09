@@ -142,7 +142,15 @@ const HomeScreen = () => {
         },
       });
 
-      if (error) throw error;
+      if (error) {
+        // Check if the error response contains a specific message
+        const errorBody = typeof error === 'object' && error?.context?.body ? JSON.parse(error.context.body) : null;
+        if (errorBody?.error) {
+          toast.error(errorBody.error);
+          return;
+        }
+        throw error;
+      }
       if (data?.error) { toast.error(data.error); return; }
 
       if (data?.outfits?.length) {
