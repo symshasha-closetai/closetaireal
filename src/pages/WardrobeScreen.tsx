@@ -169,9 +169,8 @@ const WardrobeScreen = () => {
 
         // Fallback: upload original photo if generation failed
         if (!imageUrl) {
-          const ext = uploadedFile.name.split(".").pop();
-          const path = `${user.id}/${Date.now()}-${i}.${ext}`;
-          await supabase.storage.from("wardrobe").upload(path, uploadedFile);
+          const path = `${user.id}/${Date.now()}-${i}.jpg`;
+          await supabase.storage.from("wardrobe").upload(path, compressedBlob, { contentType: "image/jpeg" });
           const { data: { publicUrl } } = supabase.storage.from("wardrobe").getPublicUrl(path);
           imageUrl = publicUrl;
         }
