@@ -1,9 +1,10 @@
-import { useState } from "react";
+import { useState, useRef, useCallback } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { Share2, ShoppingBag, Shirt, Footprints, Watch, Gem, Loader2, X, Info } from "lucide-react";
 import ScoreRing from "./ScoreRing";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
+import html2canvas from "html2canvas";
 import type { RatingResult } from "@/pages/CameraScreen";
 
 type Suggestion = {
@@ -55,42 +56,62 @@ const OutfitRatingCard = ({ image, result, wardrobeItems = [] }: Props) => {
   const [activeTooltip, setActiveTooltip] = useState<string | null>(null);
   const [suggestionImages, setSuggestionImages] = useState<Record<number, string | null>>({});
   const [loadingImages, setLoadingImages] = useState<Record<number, boolean>>({});
+  const [sharing, setSharing] = useState(false);
+  const [showShareCard, setShowShareCard] = useState(false);
+  const shareRef = useRef<HTMLDivElement>(null);
 
-  const handleShare = async () => {
-    const killerTag = result.killer_tag || "Slay";
-    const praiseLine = result.praise_line || "";
-    const text = `ClosetAI\n🔥 ${killerTag} 🔥\nDrip: ${result.drip_score}/10 | Confidence: ${result.confidence_rating}/10\n"${praiseLine}"\nCheck your drip score → closetaireal.lovable.app`;
+  const handleShare = useCallback(async () => {
+    if (sharing) return;
+    setSharing(true);
+    setShowShareCard(true);
+
+    // Wait for the hidden share card to render
+    await new Promise(r => setTimeout(r, 300));
 
     try {
-      let imageFile: File | undefined;
-      try {
-        const res = await fetch(image);
-        const blob = await res.blob();
-        imageFile = new File([blob], "drip-check.jpg", { type: blob.type || "image/jpeg" });
-      } catch {}
+      if (!shareRef.current) throw new Error("Share card not ready");
 
-      if (navigator.share) {
-        const shareData: ShareData = { title: "My Drip Check", text };
-        if (imageFile && navigator.canShare?.({ files: [imageFile] })) {
-          shareData.files = [imageFile];
-        }
-        await navigator.share(shareData);
-      } else if (navigator.clipboard) {
-        await navigator.clipboard.writeText(text);
-        toast.success("Rating copied to clipboard!");
+      const canvas = await html2canvas(shareRef.current, {
+        useCORS: true,
+        allowTaint: true,
+        backgroundColor: null,
+        scale: 2,
+      });
+
+      const blob = await new Promise<Blob | null>(resolve =>
+        canvas.toBlob(resolve, "image/png", 1)
+      );
+
+      if (!blob) throw new Error("Failed to create image");
+
+      const file = new File([blob], "drip-check.png", { type: "image/png" });
+
+      if (navigator.share && navigator.canShare?.({ files: [file] })) {
+        await navigator.share({
+          title: "My Drip Check",
+          files: [file],
+        });
       } else {
-        const ta = document.createElement("textarea");
-        ta.value = text;
-        document.body.appendChild(ta);
-        ta.select();
-        document.execCommand("copy");
-        document.body.removeChild(ta);
-        toast.success("Rating copied to clipboard!");
+        // Fallback: download
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement("a");
+        a.href = url;
+        a.download = "drip-check.png";
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        URL.revokeObjectURL(url);
+        toast.success("Image saved!");
       }
-    } catch {
-      toast.info("Couldn't share — try copying manually");
+    } catch (e: any) {
+      if (e?.name !== "AbortError") {
+        toast.info("Couldn't share — try again");
+      }
+    } finally {
+      setShowShareCard(false);
+      setSharing(false);
     }
-  };
+  }, [sharing, result, image]);
 
   const toggleTooltip = (key: string) => {
     setActiveTooltip(prev => prev === key ? null : key);
@@ -172,8 +193,8 @@ const OutfitRatingCard = ({ image, result, wardrobeItems = [] }: Props) => {
             </div>
             <div className="flex items-center justify-between mt-3">
               <span className="px-3 py-1 rounded-full bg-secondary text-xs font-medium text-secondary-foreground">{result.occasion}</span>
-              <button type="button" onClick={handleShare} className="w-10 h-10 rounded-full bg-secondary flex items-center justify-center active:scale-95 transition-transform">
-                <Share2 size={18} className="text-foreground" />
+              <button type="button" onClick={handleShare} disabled={sharing} className="w-10 h-10 rounded-full bg-secondary flex items-center justify-center active:scale-95 transition-transform disabled:opacity-50">
+                {sharing ? <Loader2 size={18} className="animate-spin text-foreground" /> : <Share2 size={18} className="text-foreground" />}
               </button>
             </div>
           </div>
@@ -313,6 +334,125 @@ const OutfitRatingCard = ({ image, result, wardrobeItems = [] }: Props) => {
             })}
           </div>
         </motion.div>
+      )}
+
+      {/* Hidden Share Card for html2canvas capture */}
+      {showShareCard && (
+        <div
+          ref={shareRef}
+          style={{
+            position: "fixed",
+            left: "-9999px",
+            top: 0,
+            width: 390,
+            zIndex: -1,
+            background: "linear-gradient(180deg, #1a1a2e 0%, #16213e 50%, #0f3460 100%)",
+            borderRadius: 24,
+            overflow: "hidden",
+            fontFamily: "'Inter', 'Montserrat', sans-serif",
+          }}
+        >
+          {/* Photo with overlay */}
+          <div style={{ position: "relative" }}>
+            <img src={image} alt="Outfit" style={{ width: 390, height: 520, objectFit: "cover", display: "block" }} crossOrigin="anonymous" />
+            
+            {/* Brand top-left */}
+            <div style={{ position: "absolute", top: 16, left: 16 }}>
+              <span style={{
+                fontSize: 12, fontWeight: 700, letterSpacing: 2, color: "rgba(255,255,255,0.9)",
+                background: "rgba(0,0,0,0.35)", backdropFilter: "blur(8px)",
+                padding: "5px 12px", borderRadius: 20,
+              }}>
+                ClosetAI
+              </span>
+            </div>
+
+            {/* Killer Tag */}
+            {result.killer_tag && (
+              <div style={{
+                position: "absolute", top: 60, right: 16,
+                background: "rgba(232,121,249,0.9)", backdropFilter: "blur(8px)",
+                padding: "8px 16px", borderRadius: 14, transform: "rotate(-6deg)",
+              }}>
+                <span style={{ fontSize: 15, fontWeight: 700, color: "#fff", letterSpacing: 1 }}>
+                  {result.killer_tag} 🔥
+                </span>
+              </div>
+            )}
+
+            {/* Bottom gradient with scores */}
+            <div style={{
+              position: "absolute", bottom: 0, left: 0, right: 0,
+              background: "linear-gradient(to top, #1a1a2e 0%, rgba(26,26,46,0.85) 60%, transparent 100%)",
+              padding: "60px 20px 16px",
+            }}>
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-end" }}>
+                <div>
+                  <div style={{ display: "flex", alignItems: "baseline", gap: 4 }}>
+                    <span style={{ fontSize: 36, fontWeight: 800, color: "#fff" }}>{result.drip_score}</span>
+                    <span style={{ fontSize: 14, color: "rgba(255,255,255,0.5)", fontWeight: 500 }}>/10</span>
+                  </div>
+                  <p style={{ fontSize: 10, fontWeight: 600, color: "rgba(255,255,255,0.5)", textTransform: "uppercase", letterSpacing: 2, marginTop: 2 }}>Drip Score</p>
+                </div>
+                <div style={{ textAlign: "right" }}>
+                  <div style={{ display: "flex", alignItems: "baseline", gap: 4, justifyContent: "flex-end" }}>
+                    <span style={{ fontSize: 36, fontWeight: 800, color: "#fff" }}>{result.confidence_rating}</span>
+                    <span style={{ fontSize: 14, color: "rgba(255,255,255,0.5)", fontWeight: 500 }}>/10</span>
+                  </div>
+                  <p style={{ fontSize: 10, fontWeight: 600, color: "rgba(255,255,255,0.5)", textTransform: "uppercase", letterSpacing: 2, marginTop: 2 }}>Confidence</p>
+                </div>
+              </div>
+              {result.occasion && (
+                <div style={{ marginTop: 10 }}>
+                  <span style={{ fontSize: 11, fontWeight: 500, color: "rgba(255,255,255,0.7)", background: "rgba(255,255,255,0.1)", padding: "4px 12px", borderRadius: 20 }}>
+                    {result.occasion}
+                  </span>
+                </div>
+              )}
+            </div>
+          </div>
+
+          {/* Sub-scores */}
+          <div style={{ display: "flex", justifyContent: "space-around", padding: "20px 16px 12px" }}>
+            {[
+              { label: "Color", score: result.color_score, color: "#86efac" },
+              { label: "Style", score: result.style_score, color: "#fbbf24" },
+              { label: "Fit", score: result.fit_score, color: "#f9a8d4" },
+            ].map(s => (
+              <div key={s.label} style={{ textAlign: "center" }}>
+                <div style={{
+                  width: 56, height: 56, borderRadius: "50%",
+                  border: `3px solid ${s.color}`, display: "flex", alignItems: "center", justifyContent: "center",
+                  margin: "0 auto",
+                }}>
+                  <span style={{ fontSize: 18, fontWeight: 700, color: "#fff" }}>
+                    {Number.isInteger(s.score) ? s.score : s.score.toFixed(1)}
+                  </span>
+                </div>
+                <span style={{ fontSize: 10, color: "rgba(255,255,255,0.6)", fontWeight: 500, marginTop: 6, display: "block" }}>{s.label}</span>
+              </div>
+            ))}
+          </div>
+
+          {/* Divider */}
+          <div style={{ height: 1, background: "rgba(255,255,255,0.1)", margin: "0 20px" }} />
+
+          {/* Praise line */}
+          {result.praise_line && (
+            <div style={{ padding: "16px 20px 8px", textAlign: "center" }}>
+              <p style={{ fontSize: 15, fontWeight: 600, color: "#e0e7ff", fontStyle: "italic", lineHeight: 1.5 }}>
+                🔥 "{result.praise_line}" ✨
+              </p>
+            </div>
+          )}
+
+          {/* CTA */}
+          <div style={{ padding: "8px 20px 20px", textAlign: "center" }}>
+            <p style={{ fontSize: 11, color: "rgba(255,255,255,0.4)", letterSpacing: 0.5 }}>
+              Check your drip score → <span style={{ fontWeight: 600, color: "rgba(255,255,255,0.6)" }}>closetaireal.lovable.app</span>
+            </p>
+          </div>
+        </div>
       )}
     </div>
   );
