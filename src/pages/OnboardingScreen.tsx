@@ -6,6 +6,7 @@ import { useAuth } from "@/hooks/useAuth";
 import { useNavigate } from "react-router-dom";
 import { toast } from "sonner";
 import { Skeleton } from "@/components/ui/skeleton";
+import { useOptionImage } from "@/hooks/useOptionImage";
 
 const bodyTypes = [
   { label: "Hourglass", desc: "Balanced bust & hips, defined waist", emoji: "⏳" },
