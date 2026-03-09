@@ -124,25 +124,26 @@ const StyleProfileEditor = () => {
 
       let faceUrl: string | null = null;
       let bodyUrl: string | null = null;
+      let faceB64: string | null = null;
+      let bodyB64: string | null = null;
 
       if (faceFile) {
-        const ext = faceFile.name.split(".").pop();
-        const path = `${user.id}/face.${ext}`;
-        await supabase.storage.from("wardrobe").upload(path, faceFile, { upsert: true });
+        const { blob, base64 } = await compressImage(faceFile);
+        faceB64 = base64;
+        const path = `${user.id}/face.jpg`;
+        await supabase.storage.from("wardrobe").upload(path, blob, { upsert: true, contentType: "image/jpeg" });
         const { data } = supabase.storage.from("wardrobe").getPublicUrl(path);
         faceUrl = `${data.publicUrl}?t=${Date.now()}`;
       }
 
       if (bodyFile) {
-        const ext = bodyFile.name.split(".").pop();
-        const path = `${user.id}/body.${ext}`;
-        await supabase.storage.from("wardrobe").upload(path, bodyFile, { upsert: true });
+        const { blob, base64 } = await compressImage(bodyFile);
+        bodyB64 = base64;
+        const path = `${user.id}/body.jpg`;
+        await supabase.storage.from("wardrobe").upload(path, blob, { upsert: true, contentType: "image/jpeg" });
         const { data } = supabase.storage.from("wardrobe").getPublicUrl(path);
         bodyUrl = `${data.publicUrl}?t=${Date.now()}`;
       }
-
-      const faceB64 = faceFile ? await fileToBase64(faceFile) : null;
-      const bodyB64 = bodyFile ? await fileToBase64(bodyFile) : null;
 
       const { data, error } = await supabase.functions.invoke("analyze-body-profile", {
         body: { faceImageBase64: faceB64, bodyImageBase64: bodyB64 },
