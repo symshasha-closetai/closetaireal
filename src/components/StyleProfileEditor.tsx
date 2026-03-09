@@ -33,49 +33,7 @@ const styleOptions = [
   "Casual", "Formal", "Streetwear", "Minimalist", "Bohemian", "Classic", "Sporty",
 ];
 
-// Hook for lazy-loading option images
-const useOptionImage = (category: string, label: string) => {
-  const [imageUrl, setImageUrl] = useState<string | null>(null);
-  const [loading, setLoading] = useState(false);
-
-  useEffect(() => {
-    let cancelled = false;
-    const loadImage = async () => {
-      // Check cache first via public URL pattern
-      const cachePath = `option-images/${category}/${label.toLowerCase().replace(/\s+/g, "-")}.png`;
-      const { data: urlData } = supabase.storage.from("wardrobe").getPublicUrl(cachePath);
-      
-      // Try fetching cached image
-      try {
-        const res = await fetch(urlData.publicUrl, { method: "HEAD" });
-        if (res.ok) {
-          if (!cancelled) setImageUrl(urlData.publicUrl);
-          return;
-        }
-      } catch {}
-
-      // Generate via edge function
-      setLoading(true);
-      try {
-        const { data, error } = await supabase.functions.invoke("generate-option-images", {
-          body: { category, label },
-        });
-        if (!error && data?.imageUrl && !cancelled) {
-          setImageUrl(data.imageUrl);
-        }
-        // Silently ignore 402/429 — just show no thumbnail
-      } catch {
-        // Silently fail — UI shows emoji/text fallback
-      }
-      if (!cancelled) setLoading(false);
-    };
-
-    loadImage();
-    return () => { cancelled = true; };
-  }, [category, label]);
-
-  return { imageUrl, loading };
-};
+// useOptionImage is now imported from shared hook
 
 const OptionImageThumbnail = ({ category, label }: { category: string; label: string }) => {
   const { imageUrl, loading } = useOptionImage(category, label);
