@@ -57,7 +57,7 @@ serve(async (req) => {
         "Content-Type": "application/json",
       },
       body: JSON.stringify({
-        version: "5a43adbb09b52a55e79ed81e40507580e294e578cf1ff894c28c6e6f3e16c220",
+        model: "black-forest-labs/flux-schnell",
         input,
       }),
     });
