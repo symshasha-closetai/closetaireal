@@ -135,7 +135,7 @@ const WardrobeScreen = () => {
     setGenProgress(0);
 
     try {
-      const base64 = await fileToBase64(uploadedFile);
+      const { base64, blob: compressedBlob } = await compressImage(uploadedFile);
       const totalItems = selectedDetected.length;
       const savedItems: ClothingItem[] = [];
 
