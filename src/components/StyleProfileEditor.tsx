@@ -5,6 +5,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { toast } from "sonner";
 import { Skeleton } from "@/components/ui/skeleton";
+import { useOptionImage } from "@/hooks/useOptionImage";
 
 const bodyTypes = [
   { label: "Hourglass", emoji: "⏳" },
