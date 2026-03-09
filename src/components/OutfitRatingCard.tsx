@@ -56,42 +56,62 @@ const OutfitRatingCard = ({ image, result, wardrobeItems = [] }: Props) => {
   const [activeTooltip, setActiveTooltip] = useState<string | null>(null);
   const [suggestionImages, setSuggestionImages] = useState<Record<number, string | null>>({});
   const [loadingImages, setLoadingImages] = useState<Record<number, boolean>>({});
+  const [sharing, setSharing] = useState(false);
+  const [showShareCard, setShowShareCard] = useState(false);
+  const shareRef = useRef<HTMLDivElement>(null);
 
-  const handleShare = async () => {
-    const killerTag = result.killer_tag || "Slay";
-    const praiseLine = result.praise_line || "";
-    const text = `ClosetAI\n🔥 ${killerTag} 🔥\nDrip: ${result.drip_score}/10 | Confidence: ${result.confidence_rating}/10\n"${praiseLine}"\nCheck your drip score → closetaireal.lovable.app`;
+  const handleShare = useCallback(async () => {
+    if (sharing) return;
+    setSharing(true);
+    setShowShareCard(true);
+
+    // Wait for the hidden share card to render
+    await new Promise(r => setTimeout(r, 300));
 
     try {
-      let imageFile: File | undefined;
-      try {
-        const res = await fetch(image);
-        const blob = await res.blob();
-        imageFile = new File([blob], "drip-check.jpg", { type: blob.type || "image/jpeg" });
-      } catch {}
+      if (!shareRef.current) throw new Error("Share card not ready");
 
-      if (navigator.share) {
-        const shareData: ShareData = { title: "My Drip Check", text };
-        if (imageFile && navigator.canShare?.({ files: [imageFile] })) {
-          shareData.files = [imageFile];
-        }
-        await navigator.share(shareData);
-      } else if (navigator.clipboard) {
-        await navigator.clipboard.writeText(text);
-        toast.success("Rating copied to clipboard!");
+      const canvas = await html2canvas(shareRef.current, {
+        useCORS: true,
+        allowTaint: true,
+        backgroundColor: null,
+        scale: 2,
+      });
+
+      const blob = await new Promise<Blob | null>(resolve =>
+        canvas.toBlob(resolve, "image/png", 1)
+      );
+
+      if (!blob) throw new Error("Failed to create image");
+
+      const file = new File([blob], "drip-check.png", { type: "image/png" });
+
+      if (navigator.share && navigator.canShare?.({ files: [file] })) {
+        await navigator.share({
+          title: "My Drip Check",
+          files: [file],
+        });
       } else {
-        const ta = document.createElement("textarea");
-        ta.value = text;
-        document.body.appendChild(ta);
-        ta.select();
-        document.execCommand("copy");
-        document.body.removeChild(ta);
-        toast.success("Rating copied to clipboard!");
+        // Fallback: download
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement("a");
+        a.href = url;
+        a.download = "drip-check.png";
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        URL.revokeObjectURL(url);
+        toast.success("Image saved!");
       }
-    } catch {
-      toast.info("Couldn't share — try copying manually");
+    } catch (e: any) {
+      if (e?.name !== "AbortError") {
+        toast.info("Couldn't share — try again");
+      }
+    } finally {
+      setShowShareCard(false);
+      setSharing(false);
     }
-  };
+  }, [sharing, result, image]);
 
   const toggleTooltip = (key: string) => {
     setActiveTooltip(prev => prev === key ? null : key);
