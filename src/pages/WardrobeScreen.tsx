@@ -100,7 +100,7 @@ const WardrobeScreen = () => {
     setSelectedDetected([]);
 
     try {
-      const base64 = await fileToBase64(file);
+      const { base64 } = await compressImage(file);
       const { data, error } = await supabase.functions.invoke("analyze-clothing", {
         body: { imageBase64: base64 },
       });
