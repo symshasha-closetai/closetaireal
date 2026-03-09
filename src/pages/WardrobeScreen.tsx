@@ -41,7 +41,9 @@ const WardrobeScreen = () => {
   const [addMode, setAddMode] = useState<"choose" | "manual" | "ai">("choose");
   const fileRef = useRef<HTMLInputElement>(null);
   const cameraRef = useRef<HTMLInputElement>(null);
-
+  const [editingItem, setEditingItem] = useState<ClothingItem | null>(null);
+  const [editForm, setEditForm] = useState<{ name: string; type: string; color: string; material: string }>({ name: "", type: "", color: "", material: "" });
+  const [savingEdit, setSavingEdit] = useState(false);
   useEffect(() => {
     if (user) fetchItems();
   }, [user]);
