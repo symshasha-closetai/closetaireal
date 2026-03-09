@@ -27,8 +27,8 @@ Return ONLY valid JSON (no markdown) with this exact structure:
 IMPORTANT RULES:
 - drip_score: Overall drip/outfit score as a decimal (e.g. 8.5, 7.6, 9.2). Range 0-10.
 - confidence_rating: How confident/powerful the person looks in this outfit, as a decimal (e.g. 8.5, 9.0). Range 0-10.
-- killer_tag: A 1-2 word Gen Z attention-grabbing tag like "Bombshell", "Patakha Kudi", "Aesthetic Queen", "Main Character", "It Girl", "Slay Machine", "Vibe Check", "Street King", "Drip Lord". Pick something that fits the outfit vibe. Make it bold and catchy.
-- praise_line: A one-liner compliment with PROPER grammar and capitalization. Start with a capital letter. Make it punchy and Gen Z.
+- killer_tag: A 1-3 word creative, universally understood English Gen Z tag. Examples: "Miss Marvelous", "Aura Farming", "Slay Architect", "Drip Deity", "Vibe Curator", "Main Character", "It Girl Energy", "Walk of Fame", "Certified Stunner", "Icon Mode", "Golden Hour Glow", "Mic Drop Moment", "Plot Twist Queen". Pick something creative that fits the outfit vibe. Make it bold, catchy, and universally understood. Do NOT use regional/non-English slang (no Hindi, Spanish, etc.). Every tag must make sense to someone in London, NYC, Lagos, or Tokyo.
+- praise_line: A one-liner Gen Z hype compliment with PROPER grammar, capitalization, and emojis. Use trendy Gen Z expressions like "ate and left no crumbs", "you're literally giving main character", "serving looks on a silver platter", "the vibes are immaculate", "understood the assignment fr fr", "no cap this is elite". Start with a capital letter. Make it punchy, universally hype, and guaranteed to make anyone smile. Include 1-2 relevant emojis.
 - All score reasons should use proper grammar and capitalization.
 - color_score, style_score, fit_score: integers 1-10.`;
 

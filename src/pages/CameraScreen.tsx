@@ -148,6 +148,15 @@ const CameraScreen = () => {
                     <X size={16} />
                   </button>
                   <OutfitRatingCard image={image} result={result} wardrobeItems={wardrobeItems} />
+                  <motion.button
+                    initial={{ opacity: 0, y: 10 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ delay: 0.3 }}
+                    onClick={clearImage}
+                    className="w-full mt-4 py-3 rounded-xl gradient-accent text-accent-foreground font-medium text-sm shadow-soft active:scale-[0.98] transition-transform flex items-center justify-center gap-2"
+                  >
+                    <Camera size={16} /> Check Another Photo
+                  </motion.button>
                 </div>
               ) : null}
             </motion.div>

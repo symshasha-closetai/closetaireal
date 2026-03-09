@@ -426,7 +426,7 @@ const OutfitRatingCard = ({ image, result, wardrobeItems = [] }: Props) => {
                 </div>
               </div>
               {result.occasion && (
-                <div style={{ marginTop: 10 }}>
+                <div style={{ marginTop: 10, textAlign: "center" }}>
                   <span style={{ fontSize: 11, fontWeight: 500, color: "rgba(255,255,255,0.7)", background: "rgba(255,255,255,0.1)", padding: "4px 12px", borderRadius: 20 }}>
                     {result.occasion}
                   </span>
