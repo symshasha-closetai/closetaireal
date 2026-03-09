@@ -1,4 +1,4 @@
-import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
+import { serve } from "https://deno.land/std@0.177.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
 const corsHeaders = {
@@ -11,8 +11,8 @@ serve(async (req) => {
 
   try {
     const { imageBase64, itemName, itemType, itemColor, itemMaterial, userId, bodyType } = await req.json();
-    const apiKey = Deno.env.get("GOOGLE_AI_API_KEY");
-    if (!apiKey) throw new Error("GOOGLE_AI_API_KEY not configured");
+    const apiKey = Deno.env.get("LOVABLE_API_KEY");
+    if (!apiKey) throw new Error("LOVABLE_API_KEY not configured");
 
     const colorDesc = itemColor ? ` in ${itemColor} color` : "";
     const materialDesc = itemMaterial ? ` made of ${itemMaterial}` : "";
@@ -30,39 +30,38 @@ Generate a photorealistic image of ONLY that specific clothing item displayed on
 - Well-lit with soft, even lighting and minimal shadows
 - No person, no face, just the mannequin form with the clothing`;
 
-    const response = await fetch(
-      `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash-exp:generateContent?key=${apiKey}`,
-      {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          contents: [{
-            role: "user",
-            parts: [
-              { text: prompt },
-              { inlineData: { mimeType: "image/jpeg", data: imageBase64 } },
-            ],
-          }],
-          generationConfig: {
-            responseModalities: ["TEXT", "IMAGE"],
-          },
-        }),
-      }
-    );
+    const response = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
+      method: "POST",
+      headers: {
+        "Authorization": `Bearer ${apiKey}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        model: "google/gemini-2.5-flash-image",
+        messages: [{
+          role: "user",
+          content: [
+            { type: "text", text: prompt },
+            { type: "image_url", image_url: { url: `data:image/jpeg;base64,${imageBase64}` } },
+          ],
+        }],
+        modalities: ["image", "text"],
+      }),
+    });
 
     if (!response.ok) {
       if (response.status === 429) return new Response(JSON.stringify({ error: "Rate limited" }), { status: 429, headers: { ...corsHeaders, "Content-Type": "application/json" } });
-      throw new Error(`Gemini API error: ${response.status}`);
+      if (response.status === 402) return new Response(JSON.stringify({ error: "AI credits exhausted" }), { status: 402, headers: { ...corsHeaders, "Content-Type": "application/json" } });
+      const errText = await response.text();
+      console.error("AI gateway error:", response.status, errText);
+      throw new Error(`AI gateway error: ${response.status}`);
     }
 
     const data = await response.json();
-    // Extract image from Gemini response
-    const parts = data.candidates?.[0]?.content?.parts || [];
-    const imagePart = parts.find((p: any) => p.inlineData);
-    const generatedImageB64 = imagePart?.inlineData?.data;
+    const imageUrl = data.choices?.[0]?.message?.images?.[0]?.image_url?.url || null;
 
-    if (!generatedImageB64 || !userId) {
-      return new Response(JSON.stringify({ imageBase64: generatedImageB64 ? `data:image/png;base64,${generatedImageB64}` : null }), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
+    if (!imageUrl || !userId) {
+      return new Response(JSON.stringify({ imageBase64: imageUrl }), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
     }
 
     // Upload to Supabase storage
@@ -70,7 +69,9 @@ Generate a photorealistic image of ONLY that specific clothing item displayed on
     const supabaseKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
     const supabase = createClient(supabaseUrl, supabaseKey);
 
-    const bytes = Uint8Array.from(atob(generatedImageB64), c => c.charCodeAt(0));
+    // Extract base64 data from data URL
+    const b64Data = imageUrl.replace(/^data:image\/\w+;base64,/, "");
+    const bytes = Uint8Array.from(atob(b64Data), c => c.charCodeAt(0));
 
     const path = `${userId}/clothing-${Date.now()}-${Math.random().toString(36).slice(2, 6)}.png`;
     const { error: uploadError } = await supabase.storage
@@ -79,7 +80,7 @@ Generate a photorealistic image of ONLY that specific clothing item displayed on
 
     if (uploadError) {
       console.error("Upload error:", uploadError);
-      return new Response(JSON.stringify({ imageBase64: `data:image/png;base64,${generatedImageB64}` }), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
+      return new Response(JSON.stringify({ imageBase64: imageUrl }), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
     }
 
     const { data: urlData } = supabase.storage.from("wardrobe").getPublicUrl(path);
