@@ -34,12 +34,13 @@ const ProfileScreen = () => {
     if (!file || !user) return;
 
     setUploading(true);
-    const ext = file.name.split(".").pop();
-    const path = `${user.id}/avatar.${ext}`;
+    try {
+      const { blob: compressedBlob } = await compressImage(file);
+      const path = `${user.id}/avatar.jpg`;
 
-    const { error: uploadError } = await supabase.storage
-      .from("wardrobe")
-      .upload(path, file, { upsert: true });
+      const { error: uploadError } = await supabase.storage
+        .from("wardrobe")
+        .upload(path, compressedBlob, { upsert: true, contentType: "image/jpeg" });
 
     if (uploadError) {
       toast.error("Failed to upload avatar");
