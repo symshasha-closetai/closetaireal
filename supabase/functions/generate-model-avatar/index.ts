@@ -50,16 +50,13 @@ serve(async (req) => {
       input.prompt = `${prompt} The person's face should match the reference photo exactly.`;
     }
 
-    const createRes = await fetch("https://api.replicate.com/v1/predictions", {
+    const createRes = await fetch("https://api.replicate.com/v1/models/black-forest-labs/flux-schnell/predictions", {
       method: "POST",
       headers: {
         "Authorization": `Bearer ${replicateKey}`,
         "Content-Type": "application/json",
       },
-      body: JSON.stringify({
-        model: "black-forest-labs/flux-schnell",
-        input,
-      }),
+      body: JSON.stringify({ input }),
     });
 
     if (!createRes.ok) {
