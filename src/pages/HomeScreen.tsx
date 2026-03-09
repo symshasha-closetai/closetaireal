@@ -75,25 +75,11 @@ const HomeScreen = () => {
   const [selectedTime, setSelectedTime] = useState("Day");
   const [selectedWeather, setSelectedWeather] = useState("Warm");
   const [styling, setStyling] = useState(false);
+  const [surprising, setSurprising] = useState(false);
   const [outfitSuggestions, setOutfitSuggestions] = useState<OutfitSuggestion[]>([]);
   const [showResults, setShowResults] = useState(false);
-
-  // 3D tilt effect
-  const mouseX = useMotionValue(0.5);
-  const mouseY = useMotionValue(0.5);
-  const rotateX = useTransform(mouseY, [0, 1], [8, -8]);
-  const rotateY = useTransform(mouseX, [0, 1], [-8, 8]);
-
-  const handleModelMouseMove = (e: React.MouseEvent<HTMLDivElement>) => {
-    const rect = e.currentTarget.getBoundingClientRect();
-    mouseX.set((e.clientX - rect.left) / rect.width);
-    mouseY.set((e.clientY - rect.top) / rect.height);
-  };
-
-  const handleModelMouseLeave = () => {
-    mouseX.set(0.5);
-    mouseY.set(0.5);
-  };
+  const [fullSizeModelUrl, setFullSizeModelUrl] = useState<string | null>(null);
+  const [generatingModel, setGeneratingModel] = useState(false);
 
   useEffect(() => {
     if (user) {
