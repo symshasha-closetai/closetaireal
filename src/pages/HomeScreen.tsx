@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
-import { motion, AnimatePresence, useMotionValue, useTransform } from "framer-motion";
-import { Sparkles, Camera, ChevronRight, X, Heart, GraduationCap, PartyPopper, Shirt, Palette, Music, Church, Briefcase, Sun, Moon, Sunset, CloudRain, Thermometer, CloudSun, Snowflake } from "lucide-react";
+import { motion, AnimatePresence } from "framer-motion";
+import { Sparkles, Camera, ChevronRight, X, Heart, GraduationCap, PartyPopper, Shirt, Palette, Music, Church, Briefcase, Sun, Moon, Sunset, CloudRain, Thermometer, CloudSun, Snowflake, Shuffle } from "lucide-react";
 import AppHeader from "../components/AppHeader";
 import { useAuth } from "../hooks/useAuth";
 import { useNavigate } from "react-router-dom";
@@ -75,25 +75,11 @@ const HomeScreen = () => {
   const [selectedTime, setSelectedTime] = useState("Day");
   const [selectedWeather, setSelectedWeather] = useState("Warm");
   const [styling, setStyling] = useState(false);
+  const [surprising, setSurprising] = useState(false);
   const [outfitSuggestions, setOutfitSuggestions] = useState<OutfitSuggestion[]>([]);
   const [showResults, setShowResults] = useState(false);
-
-  // 3D tilt effect
-  const mouseX = useMotionValue(0.5);
-  const mouseY = useMotionValue(0.5);
-  const rotateX = useTransform(mouseY, [0, 1], [8, -8]);
-  const rotateY = useTransform(mouseX, [0, 1], [-8, 8]);
-
-  const handleModelMouseMove = (e: React.MouseEvent<HTMLDivElement>) => {
-    const rect = e.currentTarget.getBoundingClientRect();
-    mouseX.set((e.clientX - rect.left) / rect.width);
-    mouseY.set((e.clientY - rect.top) / rect.height);
-  };
-
-  const handleModelMouseLeave = () => {
-    mouseX.set(0.5);
-    mouseY.set(0.5);
-  };
+  const [fullSizeModelUrl, setFullSizeModelUrl] = useState<string | null>(null);
+  const [generatingModel, setGeneratingModel] = useState(false);
 
   useEffect(() => {
     if (user) {
@@ -126,6 +112,8 @@ const HomeScreen = () => {
     }
     setStyling(true);
     try {
+      generateFullSizeModel();
+
       let sp = null;
       if (user) {
         const { data } = await supabase.from("style_profiles").select("*").eq("user_id", user.id).maybeSingle();
@@ -143,7 +131,6 @@ const HomeScreen = () => {
       });
 
       if (error) {
-        // Try to extract meaningful error message from response
         const msg = data?.error || (error as any)?.message || "Failed to generate outfits";
         toast.error(msg);
         return;
@@ -164,6 +151,81 @@ const HomeScreen = () => {
       toast.error("Failed to generate outfits. Please try again.");
     } finally {
       setStyling(false);
+    }
+  };
+
+  const generateFullSizeModel = async () => {
+    if (!user || !styleProfile?.model_image_url) return;
+    setGeneratingModel(true);
+    try {
+      const sp = await supabase.from("style_profiles").select("*").eq("user_id", user.id).maybeSingle();
+      const bodyAnalysis = sp.data?.ai_body_analysis as any;
+      const desc = bodyAnalysis
+        ? `${bodyAnalysis.body_type || ""} build, ${bodyAnalysis.skin_tone || ""} skin tone, ${bodyAnalysis.face_shape || ""} face`
+        : "average build";
+
+      const { data, error } = await supabase.functions.invoke("generate-model-avatar", {
+        body: {
+          modelDescription: desc,
+          userId: user.id,
+          occasion: selectedOccasion,
+          facePhotoUrl: styleProfile.model_image_url,
+        },
+      });
+      if (!error && data?.imageUrl) {
+        setFullSizeModelUrl(data.imageUrl);
+      }
+    } catch (err) {
+      console.error("Full-size model error:", err);
+    } finally {
+      setGeneratingModel(false);
+    }
+  };
+
+  const handleSurpriseMe = async () => {
+    if (allWardrobeItems.length < 2) {
+      toast.error("Add at least 2 items to your wardrobe first!");
+      return;
+    }
+    setSurprising(true);
+    try {
+      generateFullSizeModel();
+
+      let sp = null;
+      if (user) {
+        const { data } = await supabase.from("style_profiles").select("*").eq("user_id", user.id).maybeSingle();
+        sp = data;
+      }
+
+      const { data, error } = await supabase.functions.invoke("style-me", {
+        body: {
+          wardrobeItems: allWardrobeItems,
+          occasion: "Surprise Me",
+          timeOfDay: "Any",
+          weather: "Any",
+          styleProfile: sp,
+          surpriseMe: true,
+        },
+      });
+
+      if (error) {
+        const msg = data?.error || (error as any)?.message || "Failed to generate outfits";
+        toast.error(msg);
+        return;
+      }
+      if (data?.error) { toast.error(data.error); return; }
+
+      if (data?.outfits?.length) {
+        setOutfitSuggestions(data.outfits);
+        setShowResults(true);
+      } else {
+        toast.error("No outfits generated. Try adding more items.");
+      }
+    } catch (err) {
+      console.error("Surprise me error:", err);
+      toast.error("Failed to generate outfits. Please try again.");
+    } finally {
+      setSurprising(false);
     }
   };
 
@@ -202,7 +264,7 @@ const HomeScreen = () => {
   const getItemById = (id?: string) => allWardrobeItems.find(i => i.id === id);
   const currentOccasion = occasions.find(o => o.label === selectedOccasion) || occasions[0];
   const CurrentOccIcon = currentOccasion.icon;
-  const modelImageUrl = styleProfile?.model_image_url || profile?.avatar_url;
+  const displayModelUrl = fullSizeModelUrl || styleProfile?.model_image_url || profile?.avatar_url;
 
   return (
     <div className="min-h-screen pb-24 px-5 pt-14">
@@ -329,24 +391,8 @@ const HomeScreen = () => {
               </div>
             </div>
 
-            {/* Rate Your Outfit */}
-            <div className="glass-card p-4">
-              <div className="flex items-center gap-3">
-                <div className="w-10 h-10 rounded-full bg-secondary flex items-center justify-center">
-                  <Camera size={18} className="text-muted-foreground" />
-                </div>
-                <div className="flex-1">
-                  <h3 className="text-sm font-semibold text-foreground">Rate Your Outfit</h3>
-                  <p className="text-xs text-muted-foreground">Snap a photo and get AI feedback</p>
-                </div>
-                <button onClick={() => navigate("/camera")} className="px-4 py-2 rounded-full gradient-accent text-accent-foreground text-xs font-medium shadow-soft active:scale-95 transition-transform">
-                  <Camera size={14} className="inline mr-1" /> Rate
-                </button>
-              </div>
-            </div>
-
             {/* Style Me Button */}
-            <button onClick={handleStyleMe} disabled={styling} className="w-full py-4 rounded-2xl gradient-accent text-accent-foreground font-semibold text-base shadow-soft active:scale-[0.98] transition-transform flex items-center justify-center gap-2 disabled:opacity-60">
+            <button onClick={handleStyleMe} disabled={styling || surprising} className="w-full py-4 rounded-2xl gradient-accent text-accent-foreground font-semibold text-base shadow-soft active:scale-[0.98] transition-transform flex items-center justify-center gap-2 disabled:opacity-60">
               {styling ? (
                 <>
                   <motion.div animate={{ rotate: 360 }} transition={{ repeat: Infinity, duration: 1.5, ease: "linear" }}>
@@ -358,32 +404,56 @@ const HomeScreen = () => {
                 <><Sparkles size={20} /> Style Me</>
               )}
             </button>
+
+            {/* Surprise Me Button */}
+            <button onClick={handleSurpriseMe} disabled={styling || surprising} className="w-full py-4 rounded-2xl bg-foreground text-background font-semibold text-base shadow-soft active:scale-[0.98] transition-transform flex items-center justify-center gap-2 disabled:opacity-60">
+              {surprising ? (
+                <>
+                  <motion.div animate={{ rotate: 360 }} transition={{ repeat: Infinity, duration: 1.5, ease: "linear" }}>
+                    <Shuffle size={20} />
+                  </motion.div>
+                  Surprising...
+                </>
+              ) : (
+                <><Shuffle size={20} /> Surprise Me</>
+              )}
+            </button>
+
+            {/* Check Your Drip Score */}
+            <div className="glass-card p-4">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-full bg-secondary flex items-center justify-center">
+                  <Camera size={18} className="text-muted-foreground" />
+                </div>
+                <div className="flex-1">
+                  <h3 className="text-sm font-semibold text-foreground">Check Your Drip Score</h3>
+                  <p className="text-xs text-muted-foreground">Snap a photo and get AI feedback</p>
+                </div>
+                <button onClick={() => navigate("/camera")} className="px-4 py-2 rounded-full gradient-accent text-accent-foreground text-xs font-medium shadow-soft active:scale-95 transition-transform">
+                  <Camera size={14} className="inline mr-1" /> Check
+                </button>
+              </div>
+            </div>
           </div>
 
-          {/* RIGHT PANEL: AI Model with 3D tilt */}
+          {/* RIGHT PANEL: AI Model (no hover effect) */}
           <div className="lg:w-[340px] flex-shrink-0 order-1 lg:order-2">
-            <div
-              className="sticky top-20"
-              onMouseMove={handleModelMouseMove}
-              onMouseLeave={handleModelMouseLeave}
-            >
-              <motion.div
-                style={{
-                  rotateX,
-                  rotateY,
-                  transformPerspective: 800,
-                }}
-                transition={{ type: "spring", stiffness: 200, damping: 30 }}
-                className="relative rounded-3xl overflow-hidden shadow-elevated bg-secondary"
-              >
-                {modelImageUrl ? (
+            <div className="sticky top-20">
+              <div className="relative rounded-3xl overflow-hidden shadow-elevated bg-secondary">
+                {displayModelUrl ? (
                   <div className="relative">
+                    {generatingModel && (
+                      <div className="absolute inset-0 z-10 flex items-center justify-center bg-background/60 backdrop-blur-sm">
+                        <motion.div animate={{ rotate: 360 }} transition={{ repeat: Infinity, duration: 1.5, ease: "linear" }}>
+                          <Sparkles size={32} className="text-primary" />
+                        </motion.div>
+                      </div>
+                    )}
                     <img
-                      src={modelImageUrl}
+                      src={displayModelUrl}
                       alt="Your AI Model"
                       className="w-full h-[280px] lg:h-[520px] object-cover object-top"
                     />
-                    {/* Gradient overlay at bottom */}
                     <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-card via-card/60 to-transparent pt-16 pb-4 px-4">
                       <div className="flex items-center justify-between">
                         <div>
@@ -405,7 +475,7 @@ const HomeScreen = () => {
                     </div>
                   </div>
                 )}
-              </motion.div>
+              </div>
             </div>
           </div>
         </motion.div>
