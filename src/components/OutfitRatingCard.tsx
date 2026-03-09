@@ -163,7 +163,7 @@ const OutfitRatingCard = ({ image, result, wardrobeItems = [] }: Props) => {
               initial={{ opacity: 0, scale: 0.5, rotate: -12 }}
               animate={{ opacity: 1, scale: 1, rotate: -6 }}
               transition={{ delay: 0.4, type: "spring", stiffness: 200 }}
-              className="absolute top-16 right-4 z-10"
+              className="absolute bottom-24 right-4 z-10"
             >
               <div className="bg-accent/90 backdrop-blur-sm px-4 py-2 rounded-xl shadow-lg transform">
                 <span className="text-base font-display font-bold text-accent-foreground tracking-wide">
