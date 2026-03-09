@@ -355,13 +355,13 @@ const WardrobeScreen = () => {
                   </div>
                   <button
                     onClick={() => openEdit(item)}
-                    className="absolute top-2 left-2 w-7 h-7 rounded-full bg-foreground/50 text-primary-foreground flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity backdrop-blur-sm"
+                    className="absolute top-2 left-2 w-7 h-7 rounded-full bg-foreground/50 text-primary-foreground flex items-center justify-center opacity-100 sm:opacity-0 sm:group-hover:opacity-100 transition-opacity backdrop-blur-sm"
                   >
                     <Pencil size={13} />
                   </button>
                   <button
                     onClick={() => deleteItem(item.id)}
-                    className="absolute top-2 right-2 w-7 h-7 rounded-full bg-foreground/50 text-primary-foreground flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity backdrop-blur-sm"
+                    className="absolute top-2 right-2 w-7 h-7 rounded-full bg-foreground/50 text-primary-foreground flex items-center justify-center opacity-100 sm:opacity-0 sm:group-hover:opacity-100 transition-opacity backdrop-blur-sm"
                   >
                     <Trash2 size={13} />
                   </button>
@@ -570,7 +570,7 @@ const WardrobeScreen = () => {
                 exit={{ opacity: 0, scale: 0.95 }}
                 transition={{ type: "spring", damping: 25, stiffness: 300 }}
                 onClick={(e) => e.stopPropagation()}
-                className="w-full max-w-md bg-card rounded-3xl p-6 space-y-4"
+                className="w-full max-w-md bg-card rounded-3xl p-6 space-y-4 max-h-[80vh] overflow-y-auto pb-6"
               >
                 <div className="flex items-center justify-between">
                   <h3 className="font-semibold text-foreground text-lg">Edit Item</h3>
