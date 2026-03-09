@@ -193,8 +193,8 @@ const OutfitRatingCard = ({ image, result, wardrobeItems = [] }: Props) => {
             </div>
             <div className="flex items-center justify-between mt-3">
               <span className="px-3 py-1 rounded-full bg-secondary text-xs font-medium text-secondary-foreground">{result.occasion}</span>
-              <button type="button" onClick={handleShare} className="w-10 h-10 rounded-full bg-secondary flex items-center justify-center active:scale-95 transition-transform">
-                <Share2 size={18} className="text-foreground" />
+              <button type="button" onClick={handleShare} disabled={sharing} className="w-10 h-10 rounded-full bg-secondary flex items-center justify-center active:scale-95 transition-transform disabled:opacity-50">
+                {sharing ? <Loader2 size={18} className="animate-spin text-foreground" /> : <Share2 size={18} className="text-foreground" />}
               </button>
             </div>
           </div>
