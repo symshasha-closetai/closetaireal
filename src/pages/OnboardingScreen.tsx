@@ -86,7 +86,10 @@ const useOptionImage = (category: string, label: string) => {
           body: { category, label },
         });
         if (!error && data?.imageUrl && !cancelled) setImageUrl(data.imageUrl);
-      } catch {}
+        // Silently ignore 402/429 — just show no thumbnail
+      } catch {
+        // Silently fail — UI shows emoji/text fallback
+      }
       if (!cancelled) setLoading(false);
     };
     loadImage();
