@@ -6,6 +6,7 @@ import { useAuth } from "@/hooks/useAuth";
 import { toast } from "sonner";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useOptionImage } from "@/hooks/useOptionImage";
+import { compressImage } from "@/lib/imageCompression";
 
 const bodyTypes = [
   { label: "Hourglass", emoji: "⏳" },
