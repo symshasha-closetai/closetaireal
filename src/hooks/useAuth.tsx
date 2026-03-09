@@ -48,8 +48,18 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       .from("profiles")
       .select("name, avatar_url")
       .eq("user_id", userId)
-      .single();
-    setProfile(data);
+      .maybeSingle();
+
+    if (!data) {
+      const { data: newProfile } = await supabase
+        .from("profiles")
+        .insert({ user_id: userId, name: null })
+        .select("name, avatar_url")
+        .single();
+      setProfile(newProfile);
+    } else {
+      setProfile(data);
+    }
   }, []);
 
   const fetchStyleProfile = useCallback(async (userId: string) => {
