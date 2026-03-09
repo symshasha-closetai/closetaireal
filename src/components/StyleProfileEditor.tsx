@@ -182,10 +182,21 @@ const StyleProfileEditor = () => {
         </h3>
         {modelImageUrl ? (
           <div className="w-full h-48 rounded-xl overflow-hidden bg-secondary">
-            <img src={modelImageUrl} alt="AI Model" className="w-full h-full object-cover object-top" />
+            <img
+              src={modelImageUrl}
+              alt="AI Model"
+              className="w-full h-full object-cover object-top"
+              onError={(e) => {
+                (e.target as HTMLImageElement).style.display = "none";
+                (e.target as HTMLImageElement).parentElement!.innerHTML = '<div class="w-full h-full flex items-center justify-center"><p class="text-xs text-muted-foreground">Image failed to load</p></div>';
+              }}
+            />
           </div>
         ) : (
-          <div className="w-full h-32 rounded-xl bg-secondary flex items-center justify-center">
+          <div className="w-full h-32 rounded-xl bg-secondary flex flex-col items-center justify-center gap-2">
+            <div className="w-16 h-16 rounded-full bg-muted flex items-center justify-center">
+              <User size={28} className="text-muted-foreground" />
+            </div>
             <p className="text-xs text-muted-foreground">No model generated yet</p>
           </div>
         )}
