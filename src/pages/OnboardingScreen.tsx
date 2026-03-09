@@ -6,6 +6,7 @@ import { useAuth } from "@/hooks/useAuth";
 import { useNavigate } from "react-router-dom";
 import { toast } from "sonner";
 import { Skeleton } from "@/components/ui/skeleton";
+import { useOptionImage } from "@/hooks/useOptionImage";
 
 const bodyTypes = [
   { label: "Hourglass", desc: "Balanced bust & hips, defined waist", emoji: "⏳" },
@@ -67,37 +68,7 @@ type AnalysisResult = {
   model_description?: string;
 };
 
-const useOptionImage = (category: string, label: string) => {
-  const [imageUrl, setImageUrl] = useState<string | null>(null);
-  const [loading, setLoading] = useState(false);
-
-  useEffect(() => {
-    let cancelled = false;
-    const loadImage = async () => {
-      const cachePath = `option-images/${category}/${label.toLowerCase().replace(/\s+/g, "-")}.png`;
-      const { data: urlData } = supabase.storage.from("wardrobe").getPublicUrl(cachePath);
-      try {
-        const res = await fetch(urlData.publicUrl, { method: "HEAD" });
-        if (res.ok) { if (!cancelled) setImageUrl(urlData.publicUrl); return; }
-      } catch {}
-      setLoading(true);
-      try {
-        const { data, error } = await supabase.functions.invoke("generate-option-images", {
-          body: { category, label },
-        });
-        if (!error && data?.imageUrl && !cancelled) setImageUrl(data.imageUrl);
-        // Silently ignore 402/429 — just show no thumbnail
-      } catch {
-        // Silently fail — UI shows emoji/text fallback
-      }
-      if (!cancelled) setLoading(false);
-    };
-    loadImage();
-    return () => { cancelled = true; };
-  }, [category, label]);
-
-  return { imageUrl, loading };
-};
+// useOptionImage is now imported from shared hook
 
 const OnboardingOptionImage = ({ category, label }: { category: string; label: string }) => {
   const { imageUrl, loading } = useOptionImage(category, label);
