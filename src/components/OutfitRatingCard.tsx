@@ -60,13 +60,36 @@ const OutfitRatingCard = ({ image, result, wardrobeItems = [] }: Props) => {
   const [showShareCard, setShowShareCard] = useState(false);
   const shareRef = useRef<HTMLDivElement>(null);
 
+  // Convert blob/object URL to base64 for html2canvas
+  const imageToBase64 = useCallback(async (url: string): Promise<string> => {
+    if (url.startsWith("data:")) return url;
+    try {
+      const res = await fetch(url);
+      const blob = await res.blob();
+      return new Promise((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onloadend = () => resolve(reader.result as string);
+        reader.onerror = reject;
+        reader.readAsDataURL(blob);
+      });
+    } catch {
+      return url;
+    }
+  }, []);
+
+  const [shareImageBase64, setShareImageBase64] = useState<string | null>(null);
+
   const handleShare = useCallback(async () => {
     if (sharing) return;
     setSharing(true);
+
+    // Convert image to base64 first
+    const base64 = await imageToBase64(image);
+    setShareImageBase64(base64);
     setShowShareCard(true);
 
     // Wait for the hidden share card to render
-    await new Promise(r => setTimeout(r, 300));
+    await new Promise(r => setTimeout(r, 500));
 
     try {
       if (!shareRef.current) throw new Error("Share card not ready");
@@ -111,7 +134,7 @@ const OutfitRatingCard = ({ image, result, wardrobeItems = [] }: Props) => {
       setShowShareCard(false);
       setSharing(false);
     }
-  }, [sharing, result, image]);
+  }, [sharing, result, image, imageToBase64]);
 
   const toggleTooltip = (key: string) => {
     setActiveTooltip(prev => prev === key ? null : key);
@@ -163,7 +186,7 @@ const OutfitRatingCard = ({ image, result, wardrobeItems = [] }: Props) => {
               initial={{ opacity: 0, scale: 0.5, rotate: -12 }}
               animate={{ opacity: 1, scale: 1, rotate: -6 }}
               transition={{ delay: 0.4, type: "spring", stiffness: 200 }}
-              className="absolute top-16 right-4 z-10"
+              className="absolute bottom-24 right-4 z-10"
             >
               <div className="bg-accent/90 backdrop-blur-sm px-4 py-2 rounded-xl shadow-lg transform">
                 <span className="text-base font-display font-bold text-accent-foreground tracking-wide">
@@ -354,7 +377,7 @@ const OutfitRatingCard = ({ image, result, wardrobeItems = [] }: Props) => {
         >
           {/* Photo with overlay */}
           <div style={{ position: "relative" }}>
-            <img src={image} alt="Outfit" style={{ width: 390, height: 520, objectFit: "cover", display: "block" }} crossOrigin="anonymous" />
+            <img src={shareImageBase64 || image} alt="Outfit" style={{ width: 390, height: 520, objectFit: "cover", display: "block" }} crossOrigin="anonymous" />
             
             {/* Brand top-left */}
             <div style={{ position: "absolute", top: 16, left: 16 }}>
@@ -370,7 +393,7 @@ const OutfitRatingCard = ({ image, result, wardrobeItems = [] }: Props) => {
             {/* Killer Tag */}
             {result.killer_tag && (
               <div style={{
-                position: "absolute", top: 60, right: 16,
+                position: "absolute", bottom: 120, right: 16,
                 background: "rgba(232,121,249,0.9)", backdropFilter: "blur(8px)",
                 padding: "8px 16px", borderRadius: 14, transform: "rotate(-6deg)",
               }}>
@@ -403,7 +426,7 @@ const OutfitRatingCard = ({ image, result, wardrobeItems = [] }: Props) => {
                 </div>
               </div>
               {result.occasion && (
-                <div style={{ marginTop: 10 }}>
+                <div style={{ marginTop: 10, textAlign: "center" }}>
                   <span style={{ fontSize: 11, fontWeight: 500, color: "rgba(255,255,255,0.7)", background: "rgba(255,255,255,0.1)", padding: "4px 12px", borderRadius: 20 }}>
                     {result.occasion}
                   </span>
