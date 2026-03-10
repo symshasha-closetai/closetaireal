@@ -1,0 +1,1 @@
+ALTER TABLE public.style_profiles ADD COLUMN IF NOT EXISTS gender text;
