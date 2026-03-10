@@ -2,7 +2,7 @@ import { useNavigate } from "react-router-dom";
 import { useAuth } from "../hooks/useAuth";
 import { User, Sun, Moon } from "lucide-react";
 import { useTheme } from "next-themes";
-import logo from "@/assets/closetai-logo.png";
+
 
 const AppHeader = () => {
   const navigate = useNavigate();
