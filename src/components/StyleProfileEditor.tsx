@@ -40,8 +40,8 @@ const styleOptions = [
   "Casual", "Formal", "Streetwear", "Minimalist", "Bohemian", "Classic", "Sporty", "Gym",
 ];
 
-const OptionImageThumbnail = ({ category, label, onPreview }: { category: string; label: string; onPreview?: (url: string) => void }) => {
-  const { imageUrl, loading } = useOptionImage(category, label);
+const OptionImageThumbnail = ({ category, label, gender, onPreview }: { category: string; label: string; gender?: string | null; onPreview?: (url: string) => void }) => {
+  const { imageUrl, loading } = useOptionImage(category, label, gender);
   if (loading) return <Skeleton className="w-10 h-10 rounded-lg" />;
   if (!imageUrl) return null;
   return (
