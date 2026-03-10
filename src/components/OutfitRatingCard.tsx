@@ -404,49 +404,64 @@ const OutfitRatingCard = ({ image, imageBase64, result, wardrobeItems = [] }: Pr
             top: 0,
             width: 390,
             zIndex: -1,
-            background: "linear-gradient(180deg, #1a1a2e 0%, #16213e 50%, #0f3460 100%)",
+            background: "linear-gradient(135deg, #0f0c29 0%, #302b63 50%, #24243e 100%)",
             borderRadius: 24,
             overflow: "hidden",
             fontFamily: "'Inter', 'Montserrat', sans-serif",
           }}
         >
+          {/* Rose-gold accent overlay */}
+          <div style={{
+            position: "absolute", inset: 0,
+            background: "linear-gradient(180deg, rgba(232,169,131,0.08) 0%, transparent 40%, rgba(232,169,131,0.05) 100%)",
+            pointerEvents: "none", zIndex: 1,
+          }} />
+
           {/* Photo with overlay */}
-          <div style={{ position: "relative" }}>
+          <div style={{ position: "relative", zIndex: 2 }}>
             <img src={imageBase64 || image} alt="Outfit" style={{ width: 390, height: 520, objectFit: "cover", display: "block" }} crossOrigin="anonymous" />
             
             {/* Brand top-left */}
             <div style={{ position: "absolute", top: 10, left: 16 }}>
               <span style={{
-                fontSize: 12, fontWeight: 700, letterSpacing: 2, color: "rgba(255,255,255,0.9)",
-                background: "rgba(0,0,0,0.35)", backdropFilter: "blur(8px)",
-                padding: "5px 12px", borderRadius: 20,
+                fontSize: 11, fontWeight: 800, letterSpacing: 3, color: "rgba(255,255,255,0.95)",
+                background: "linear-gradient(135deg, rgba(0,0,0,0.5), rgba(48,43,99,0.6))",
+                backdropFilter: "blur(12px)",
+                padding: "6px 14px", borderRadius: 20,
+                textTransform: "uppercase",
               }}>
                 ClosetAI
               </span>
             </div>
 
-            {/* Bottom gradient with scores + killer tag between them */}
+            {/* Bottom gradient with scores + killer tag */}
             <div style={{
               position: "absolute", bottom: 0, left: 0, right: 0,
-              background: "linear-gradient(to top, #1a1a2e 0%, rgba(26,26,46,0.85) 60%, transparent 100%)",
-              padding: "60px 20px 16px",
+              background: "linear-gradient(to top, #0f0c29 0%, rgba(15,12,41,0.92) 50%, transparent 100%)",
+              padding: "70px 20px 18px",
             }}>
               <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-end" }}>
                 <div>
                   <div style={{ display: "flex", alignItems: "baseline", gap: 4 }}>
-                    <span style={{ fontSize: 36, fontWeight: 800, color: "#fff" }}>{result.drip_score}</span>
-                    <span style={{ fontSize: 14, color: "rgba(255,255,255,0.5)", fontWeight: 500 }}>/10</span>
+                    <span style={{
+                      fontSize: 42, fontWeight: 800, 
+                      background: "linear-gradient(135deg, #e8a983, #f5d5c8, #e8a983)",
+                      WebkitBackgroundClip: "text", WebkitTextFillColor: "transparent",
+                      fontFamily: "'Playfair Display', Georgia, serif",
+                    }}>{result.drip_score}</span>
+                    <span style={{ fontSize: 14, color: "rgba(255,255,255,0.4)", fontWeight: 500 }}>/10</span>
                   </div>
-                  <p style={{ fontSize: 10, fontWeight: 600, color: "rgba(255,255,255,0.5)", textTransform: "uppercase", letterSpacing: 2, marginTop: 2 }}>Drip Score</p>
+                  <p style={{ fontSize: 9, fontWeight: 700, color: "rgba(232,169,131,0.7)", textTransform: "uppercase", letterSpacing: 3, marginTop: 2 }}>Drip Score</p>
                 </div>
 
-                {/* Killer Tag centered */}
                 {result.killer_tag && (
                   <div style={{
-                    background: "rgba(232,121,249,0.9)", backdropFilter: "blur(8px)",
-                    padding: "6px 14px", borderRadius: 14,
+                    background: "linear-gradient(135deg, rgba(232,121,249,0.85), rgba(168,85,247,0.85))",
+                    backdropFilter: "blur(12px)",
+                    padding: "7px 16px", borderRadius: 14,
+                    boxShadow: "0 4px 20px rgba(168,85,247,0.3)",
                   }}>
-                    <span style={{ fontSize: 12, fontWeight: 700, color: "#fff", letterSpacing: 1, whiteSpace: "nowrap" }}>
+                    <span style={{ fontSize: 11, fontWeight: 700, color: "#fff", letterSpacing: 1.5, whiteSpace: "nowrap" }}>
                       {result.killer_tag} 🔥
                     </span>
                   </div>
@@ -454,15 +469,20 @@ const OutfitRatingCard = ({ image, imageBase64, result, wardrobeItems = [] }: Pr
 
                 <div style={{ textAlign: "right" }}>
                   <div style={{ display: "flex", alignItems: "baseline", gap: 4, justifyContent: "flex-end" }}>
-                    <span style={{ fontSize: 36, fontWeight: 800, color: "#fff" }}>{result.confidence_rating}</span>
-                    <span style={{ fontSize: 14, color: "rgba(255,255,255,0.5)", fontWeight: 500 }}>/10</span>
+                    <span style={{
+                      fontSize: 42, fontWeight: 800,
+                      background: "linear-gradient(135deg, #c4b5fd, #e0d4ff, #c4b5fd)",
+                      WebkitBackgroundClip: "text", WebkitTextFillColor: "transparent",
+                      fontFamily: "'Playfair Display', Georgia, serif",
+                    }}>{result.confidence_rating}</span>
+                    <span style={{ fontSize: 14, color: "rgba(255,255,255,0.4)", fontWeight: 500 }}>/10</span>
                   </div>
-                  <p style={{ fontSize: 10, fontWeight: 600, color: "rgba(255,255,255,0.5)", textTransform: "uppercase", letterSpacing: 2, marginTop: 2 }}>Confidence</p>
+                  <p style={{ fontSize: 9, fontWeight: 700, color: "rgba(196,181,253,0.7)", textTransform: "uppercase", letterSpacing: 3, marginTop: 2 }}>Confidence</p>
                 </div>
               </div>
               {result.occasion && (
-                <div style={{ marginTop: 10, textAlign: "center" }}>
-                  <span style={{ fontSize: 11, fontWeight: 500, color: "rgba(255,255,255,0.7)", background: "rgba(255,255,255,0.1)", padding: "4px 12px", borderRadius: 20 }}>
+                <div style={{ marginTop: 12, textAlign: "center" }}>
+                  <span style={{ fontSize: 10, fontWeight: 600, color: "rgba(255,255,255,0.6)", background: "rgba(255,255,255,0.08)", padding: "5px 14px", borderRadius: 20, letterSpacing: 1 }}>
                     {result.occasion}
                   </span>
                 </div>
@@ -470,44 +490,64 @@ const OutfitRatingCard = ({ image, imageBase64, result, wardrobeItems = [] }: Pr
             </div>
           </div>
 
-          {/* Sub-scores */}
-          <div style={{ display: "flex", justifyContent: "space-around", padding: "20px 16px 12px", textAlign: "center" }}>
+          {/* Gold separator */}
+          <div style={{ height: 1, background: "linear-gradient(90deg, transparent, rgba(232,169,131,0.3), rgba(196,181,253,0.3), transparent)", margin: "0 24px", position: "relative", zIndex: 2 }} />
+
+          {/* Sub-scores with glow */}
+          <div style={{
+            display: "flex", justifyContent: "space-around", padding: "20px 16px 14px", textAlign: "center",
+            background: "rgba(255,255,255,0.03)", margin: "0 16px", borderRadius: 16, marginTop: 12,
+            position: "relative", zIndex: 2,
+          }}>
             {[
-              { label: "Color", score: result.color_score, color: "#86efac" },
-              { label: "Style", score: result.style_score, color: "#fbbf24" },
-              { label: "Fit", score: result.fit_score, color: "#f9a8d4" },
+              { label: "Color", score: result.color_score, color: "#86efac", glow: "rgba(134,239,172,0.2)" },
+              { label: "Style", score: result.style_score, color: "#fbbf24", glow: "rgba(251,191,36,0.2)" },
+              { label: "Fit", score: result.fit_score, color: "#f9a8d4", glow: "rgba(249,168,212,0.2)" },
             ].map(s => (
               <div key={s.label} style={{ textAlign: "center" }}>
                 <div style={{
-                  width: 56, height: 56, borderRadius: "50%",
-                  border: `3px solid ${s.color}`, display: "flex", alignItems: "center", justifyContent: "center",
+                  width: 60, height: 60, borderRadius: "50%",
+                  border: `3px solid ${s.color}`,
+                  boxShadow: `0 0 16px ${s.glow}, inset 0 0 8px ${s.glow}`,
+                  display: "flex", alignItems: "center", justifyContent: "center",
                   margin: "0 auto",
                 }}>
-                  <span style={{ fontSize: 18, fontWeight: 700, color: "#fff" }}>
+                  <span style={{ fontSize: 20, fontWeight: 700, color: "#fff", fontFamily: "'Playfair Display', Georgia, serif" }}>
                     {Number.isInteger(s.score) ? s.score : s.score.toFixed(1)}
                   </span>
                 </div>
-                <span style={{ fontSize: 10, color: "rgba(255,255,255,0.6)", fontWeight: 500, marginTop: 6, display: "block" }}>{s.label}</span>
+                <span style={{ fontSize: 9, color: "rgba(255,255,255,0.5)", fontWeight: 600, marginTop: 8, display: "block", textTransform: "uppercase", letterSpacing: 2 }}>{s.label}</span>
               </div>
             ))}
           </div>
 
-          {/* Divider */}
-          <div style={{ height: 1, background: "rgba(255,255,255,0.1)", margin: "0 20px" }} />
+          {/* Gold separator */}
+          <div style={{ height: 1, background: "linear-gradient(90deg, transparent, rgba(232,169,131,0.25), transparent)", margin: "12px 24px 0", position: "relative", zIndex: 2 }} />
 
           {/* Praise line */}
           {result.praise_line && (
-            <div style={{ padding: "12px 20px 8px", textAlign: "center" }}>
-              <p style={{ fontSize: 15, fontWeight: 600, color: "#e0e7ff", fontStyle: "italic", lineHeight: 1.5, textAlign: "center" }}>
-                🔥 "{result.praise_line}" ✨
+            <div style={{ padding: "14px 24px 8px", textAlign: "center", position: "relative", zIndex: 2 }}>
+              <p style={{
+                fontSize: 17, fontWeight: 600, lineHeight: 1.5, textAlign: "center",
+                fontFamily: "'Playfair Display', Georgia, serif",
+                fontStyle: "italic",
+                background: "linear-gradient(135deg, #e8a983, #f5d5c8)",
+                WebkitBackgroundClip: "text", WebkitTextFillColor: "transparent",
+              }}>
+                ✨ "{result.praise_line}" ✨
               </p>
             </div>
           )}
 
           {/* CTA */}
-          <div style={{ padding: "8px 20px 16px", textAlign: "center" }}>
-            <p style={{ fontSize: 11, color: "rgba(255,255,255,0.4)", letterSpacing: 0.5, textAlign: "center" }}>
-              Check your drip score → <span style={{ fontWeight: 600, color: "rgba(255,255,255,0.6)" }}>closetaireal.lovable.app</span>
+          <div style={{ padding: "8px 20px 18px", textAlign: "center", position: "relative", zIndex: 2 }}>
+            <p style={{ fontSize: 10, color: "rgba(255,255,255,0.35)", letterSpacing: 1, textAlign: "center", textTransform: "uppercase" }}>
+              Check your drip score →{" "}
+              <span style={{
+                fontWeight: 700, letterSpacing: 1.5,
+                background: "linear-gradient(135deg, rgba(232,169,131,0.7), rgba(196,181,253,0.7))",
+                WebkitBackgroundClip: "text", WebkitTextFillColor: "transparent",
+              }}>closetaireal.lovable.app</span>
             </p>
           </div>
         </div>
