@@ -3,7 +3,7 @@ import { supabase } from "@/integrations/supabase/client";
 
 const CACHE_TTL = 7 * 24 * 60 * 60 * 1000; // 7 days
 
-export const useOptionImage = (category: string, label: string) => {
+export const useOptionImage = (category: string, label: string, gender?: string | null) => {
   const [imageUrl, setImageUrl] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
 
@@ -11,8 +11,8 @@ export const useOptionImage = (category: string, label: string) => {
     let cancelled = false;
 
     const loadImage = async () => {
-      // 1. Check localStorage cache
-      const cacheKey = `option-img-${category}-${label}`;
+      const genderSuffix = gender ? `-${gender}` : "";
+      const cacheKey = `option-img-${category}-${label}${genderSuffix}`;
       try {
         const cached = localStorage.getItem(cacheKey);
         if (cached) {
@@ -24,8 +24,7 @@ export const useOptionImage = (category: string, label: string) => {
         }
       } catch {}
 
-      // 2. Check cloud storage via HEAD
-      const cachePath = `option-images/${category}/${label.toLowerCase().replace(/\s+/g, "-")}.png`;
+      const cachePath = `option-images/${category}/${label.toLowerCase().replace(/\s+/g, "-")}${genderSuffix}.png`;
       const { data: urlData } = supabase.storage.from("wardrobe").getPublicUrl(cachePath);
 
       try {
@@ -39,11 +38,10 @@ export const useOptionImage = (category: string, label: string) => {
         }
       } catch {}
 
-      // 3. Generate via edge function
       setLoading(true);
       try {
         const { data, error } = await supabase.functions.invoke("generate-option-images", {
-          body: { category, label },
+          body: { category, label, gender: gender || null },
         });
         if (!error && data?.imageUrl && !cancelled) {
           setImageUrl(data.imageUrl);
@@ -55,7 +53,7 @@ export const useOptionImage = (category: string, label: string) => {
 
     loadImage();
     return () => { cancelled = true; };
-  }, [category, label]);
+  }, [category, label, gender]);
 
   return { imageUrl, loading };
 };
