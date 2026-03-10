@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect } from "react";
+import { useState, useRef, useEffect, useCallback } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { Plus, Trash2, X, Loader2, Camera, Upload, Sparkles, Pencil, Save } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
@@ -24,6 +24,12 @@ type DetectedItem = {
   quality: string | null;
 };
 
+type BackgroundJob = {
+  totalItems: number;
+  completedItems: number;
+  active: boolean;
+};
+
 const categories = ["All", "Tops", "Bottoms", "Shoes", "Dresses", "Accessories"];
 
 const WardrobeScreen = () => {
@@ -45,6 +51,12 @@ const WardrobeScreen = () => {
   const [editingItem, setEditingItem] = useState<ClothingItem | null>(null);
   const [editForm, setEditForm] = useState<{ name: string; type: string; color: string; material: string }>({ name: "", type: "", color: "", material: "" });
   const [savingEdit, setSavingEdit] = useState(false);
+
+  // Background generation state (persists outside modal)
+  const [bgJob, setBgJob] = useState<BackgroundJob>({ totalItems: 0, completedItems: 0, active: false });
+  const bgQueueRef = useRef<Array<{ items: DetectedItem[]; selected: number[]; file: File }>>([]);
+  const bgProcessingRef = useRef(false);
+
   useEffect(() => {
     if (user) fetchItems();
   }, [user]);
@@ -126,85 +138,105 @@ const WardrobeScreen = () => {
     }
   };
 
-  const [generatingImages, setGeneratingImages] = useState(false);
-  const [genProgress, setGenProgress] = useState(0);
+  // Process background queue
+  const processQueue = useCallback(async () => {
+    if (bgProcessingRef.current || bgQueueRef.current.length === 0 || !user) return;
+    bgProcessingRef.current = true;
+
+    while (bgQueueRef.current.length > 0) {
+      const job = bgQueueRef.current[0];
+      const totalInJob = job.selected.length;
+
+      try {
+        const { base64, blob: compressedBlob } = await compressImage(job.file);
+
+        for (let i = 0; i < totalInJob; i++) {
+          const idx = job.selected[i];
+          const item = job.items[idx];
+
+          let imageUrl: string | null = null;
+          try {
+            const { data: genData, error: genError } = await supabase.functions.invoke("generate-clothing-image", {
+              body: {
+                imageBase64: base64,
+                itemName: item.name,
+                itemType: item.type,
+                itemColor: item.color,
+                itemMaterial: item.material,
+                userId: user.id,
+                bodyType: styleProfile?.body_type || null,
+              },
+            });
+
+            if (!genError && genData?.imageUrl) {
+              imageUrl = genData.imageUrl;
+            }
+          } catch (genErr) {
+            console.error("Image generation failed for item:", item.name, genErr);
+          }
+
+          if (!imageUrl) {
+            const path = `${user.id}/${Date.now()}-${i}.jpg`;
+            await supabase.storage.from("wardrobe").upload(path, compressedBlob, { contentType: "image/jpeg" });
+            const { data: { publicUrl } } = supabase.storage.from("wardrobe").getPublicUrl(path);
+            imageUrl = publicUrl;
+          }
+
+          const { data: insertData, error: insertError } = await supabase
+            .from("wardrobe")
+            .insert({
+              user_id: user.id,
+              image_url: imageUrl,
+              type: item.type,
+              name: item.name,
+              color: item.color,
+              material: item.material,
+              quality: item.quality,
+            } as any)
+            .select("id, image_url, type, color, material, name")
+            .single();
+
+          if (!insertError && insertData) {
+            setItems((prev) => [insertData, ...prev]);
+          }
+
+          setBgJob(prev => ({ ...prev, completedItems: prev.completedItems + 1 }));
+        }
+      } catch (err) {
+        console.error("Background generation error:", err);
+        toast.error("Some items failed to save");
+      }
+
+      bgQueueRef.current.shift();
+    }
+
+    setBgJob({ totalItems: 0, completedItems: 0, active: false });
+    bgProcessingRef.current = false;
+    toast.success("All items added to wardrobe!");
+  }, [user, styleProfile]);
 
   const handleSaveDetected = async () => {
     if (!user || !uploadedFile || selectedDetected.length === 0) return;
-    setUploading(true);
-    setGeneratingImages(true);
-    setGenProgress(0);
 
-    try {
-      const { base64, blob: compressedBlob } = await compressImage(uploadedFile);
-      const totalItems = selectedDetected.length;
-      const savedItems: ClothingItem[] = [];
+    // Capture data before closing modal
+    const itemsToSave = [...detectedItems];
+    const selectedToSave = [...selectedDetected];
+    const fileToSave = uploadedFile;
 
-      for (let i = 0; i < totalItems; i++) {
-        const idx = selectedDetected[i];
-        const item = detectedItems[idx];
-        setGenProgress(Math.round(((i) / totalItems) * 100));
+    // Queue the job
+    bgQueueRef.current.push({ items: itemsToSave, selected: selectedToSave, file: fileToSave });
+    setBgJob(prev => ({
+      totalItems: prev.totalItems + selectedToSave.length,
+      completedItems: prev.completedItems,
+      active: true,
+    }));
 
-        // Generate clean product image via AI
-        let imageUrl: string | null = null;
-        try {
-          const { data: genData, error: genError } = await supabase.functions.invoke("generate-clothing-image", {
-            body: {
-              imageBase64: base64,
-              itemName: item.name,
-              itemType: item.type,
-              itemColor: item.color,
-              itemMaterial: item.material,
-              userId: user.id,
-              bodyType: styleProfile?.body_type || null,
-            },
-          });
+    // Close modal immediately
+    resetModal();
+    toast.info(`Generating images for ${selectedToSave.length} item(s)...`, { duration: 3000 });
 
-          if (!genError && genData?.imageUrl) {
-            imageUrl = genData.imageUrl;
-          }
-        } catch (genErr) {
-          console.error("Image generation failed for item:", item.name, genErr);
-          // Silently continue — will fall back to original photo upload
-        }
-
-        // Fallback: upload original photo if generation failed
-        if (!imageUrl) {
-          const path = `${user.id}/${Date.now()}-${i}.jpg`;
-          await supabase.storage.from("wardrobe").upload(path, compressedBlob, { contentType: "image/jpeg" });
-          const { data: { publicUrl } } = supabase.storage.from("wardrobe").getPublicUrl(path);
-          imageUrl = publicUrl;
-        }
-
-        const { data: insertData, error: insertError } = await supabase
-          .from("wardrobe")
-          .insert({
-            user_id: user.id,
-            image_url: imageUrl,
-            type: item.type,
-            name: item.name,
-            color: item.color,
-            material: item.material,
-            quality: item.quality,
-          } as any)
-          .select("id, image_url, type, color, material, name")
-          .single();
-
-        if (!insertError && insertData) savedItems.push(insertData);
-      }
-
-      setGenProgress(100);
-      setItems((prev) => [...savedItems, ...prev]);
-      toast.success(`${savedItems.length} item(s) added to wardrobe!`);
-      resetModal();
-    } catch (err) {
-      console.error(err);
-      toast.error("Failed to save items");
-    } finally {
-      setUploading(false);
-      setGeneratingImages(false);
-      setGenProgress(0);
-    }
+    // Start processing
+    processQueue();
   };
 
   const handleManualSave = async () => {
@@ -286,6 +318,7 @@ const WardrobeScreen = () => {
     }
     setSavingEdit(false);
   };
+
   const updateDetectedItem = (idx: number, field: keyof DetectedItem, value: string) => {
     setDetectedItems(prev => prev.map((item, i) => i === idx ? { ...item, [field]: value } : item));
   };
@@ -308,6 +341,33 @@ const WardrobeScreen = () => {
             <Plus size={20} className="text-accent-foreground" />
           </button>
         </motion.div>
+
+        {/* Background generation indicator */}
+        <AnimatePresence>
+          {bgJob.active && (
+            <motion.div
+              initial={{ opacity: 0, y: -10 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -10 }}
+              className="rounded-xl bg-card border border-border/30 p-3"
+            >
+              <div className="flex items-center gap-2 mb-2">
+                <Loader2 size={14} className="animate-spin text-accent" />
+                <span className="text-xs font-medium text-foreground">
+                  Generating images... {bgJob.completedItems}/{bgJob.totalItems}
+                </span>
+              </div>
+              <div className="h-1.5 rounded-full bg-border/30 overflow-hidden">
+                <motion.div
+                  className="h-full rounded-full gradient-accent"
+                  initial={{ width: 0 }}
+                  animate={{ width: `${bgJob.totalItems > 0 ? (bgJob.completedItems / bgJob.totalItems) * 100 : 0}%` }}
+                  transition={{ duration: 0.3 }}
+                />
+              </div>
+            </motion.div>
+          )}
+        </AnimatePresence>
 
         {/* Categories */}
         <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.1 }} className="flex gap-2 overflow-x-auto pb-1 no-scrollbar">
@@ -401,6 +461,14 @@ const WardrobeScreen = () => {
                     <X size={20} className="text-muted-foreground" />
                   </button>
                 </div>
+
+                {/* Show indicator if background generation is active */}
+                {bgJob.active && (
+                  <div className="rounded-xl bg-secondary/50 p-3 flex items-center gap-2">
+                    <Loader2 size={14} className="animate-spin text-accent" />
+                    <span className="text-xs text-muted-foreground">Still generating previous items... ({bgJob.completedItems}/{bgJob.totalItems})</span>
+                  </div>
+                )}
 
                 {addMode === "choose" && (
                   <>
@@ -506,23 +574,12 @@ const WardrobeScreen = () => {
                             );
                           })}
                         </div>
-                        {generatingImages && (
-                          <div className="w-full py-3 rounded-xl bg-secondary text-center">
-                            <span className="flex items-center justify-center gap-2 text-sm font-medium text-foreground">
-                              <Loader2 size={16} className="animate-spin" />
-                              Generating clean images... {genProgress}%
-                            </span>
-                            <div className="mt-2 mx-4 h-1.5 rounded-full bg-border overflow-hidden">
-                              <div className="h-full rounded-full gradient-accent transition-all duration-300" style={{ width: `${genProgress}%` }} />
-                            </div>
-                          </div>
-                        )}
                         <button
                           onClick={handleSaveDetected}
-                          disabled={uploading || selectedDetected.length === 0}
+                          disabled={selectedDetected.length === 0}
                           className="w-full py-3.5 rounded-xl gradient-accent text-accent-foreground font-medium text-sm shadow-soft active:scale-[0.98] transition-transform disabled:opacity-60"
                         >
-                          {uploading && !generatingImages ? "Saving..." : `Add ${selectedDetected.length} Item(s)`}
+                          Add {selectedDetected.length} Item(s)
                         </button>
                       </>
                     )}
