@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback, useRef } from "react";
-import { motion } from "framer-motion";
-import { Camera, Sparkles, RefreshCw, User, Loader2 } from "lucide-react";
+import { motion, AnimatePresence } from "framer-motion";
+import { Camera, Sparkles, RefreshCw, User, Loader2, X } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { toast } from "sonner";
@@ -40,11 +40,15 @@ const styleOptions = [
   "Casual", "Formal", "Streetwear", "Minimalist", "Bohemian", "Classic", "Sporty",
 ];
 
-const OptionImageThumbnail = ({ category, label }: { category: string; label: string }) => {
+const OptionImageThumbnail = ({ category, label, onPreview }: { category: string; label: string; onPreview?: (url: string) => void }) => {
   const { imageUrl, loading } = useOptionImage(category, label);
   if (loading) return <Skeleton className="w-10 h-10 rounded-lg" />;
   if (!imageUrl) return null;
-  return <img src={imageUrl} alt={label} className="w-10 h-10 rounded-lg object-cover" loading="lazy" />;
+  return (
+    <button type="button" onClick={(e) => { e.stopPropagation(); onPreview?.(imageUrl); }} className="focus:outline-none">
+      <img src={imageUrl} alt={label} className="w-10 h-10 rounded-lg object-cover" loading="lazy" />
+    </button>
+  );
 };
 
 const StyleProfileEditor = () => {
@@ -60,6 +64,7 @@ const StyleProfileEditor = () => {
   const [saving, setSaving] = useState(false);
   const [regenerating, setRegenerating] = useState(false);
   const [reanalyzing, setReanalyzing] = useState(false);
+  const [previewImage, setPreviewImage] = useState<string | null>(null);
 
   const faceRef = useRef<HTMLInputElement>(null);
   const bodyRef = useRef<HTMLInputElement>(null);
@@ -173,13 +178,46 @@ const StyleProfileEditor = () => {
 
   return (
     <div className="space-y-4">
+      {/* Fullscreen Image Preview */}
+      <AnimatePresence>
+        {previewImage && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 z-50 bg-black/85 flex items-center justify-center p-4"
+            onClick={() => setPreviewImage(null)}
+          >
+            <button
+              onClick={() => setPreviewImage(null)}
+              className="absolute top-4 right-4 z-50 w-10 h-10 rounded-full bg-foreground/20 backdrop-blur-sm flex items-center justify-center active:scale-95 transition-transform"
+            >
+              <X size={20} className="text-white" />
+            </button>
+            <motion.img
+              initial={{ scale: 0.8, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              exit={{ scale: 0.8, opacity: 0 }}
+              src={previewImage}
+              alt="Preview"
+              className="max-w-[90vw] max-h-[85vh] rounded-2xl object-contain shadow-2xl"
+              onClick={(e) => e.stopPropagation()}
+            />
+          </motion.div>
+        )}
+      </AnimatePresence>
+
       {/* AI Model Preview */}
       <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} className="glass-card-elevated p-4 space-y-3">
         <h3 className="text-sm font-semibold text-foreground flex items-center gap-2">
           <Sparkles size={16} className="text-primary" /> AI Model
         </h3>
         {modelImageUrl ? (
-          <div className="w-full h-48 rounded-xl overflow-hidden bg-secondary">
+          <button
+            type="button"
+            onClick={() => setPreviewImage(modelImageUrl)}
+            className="w-full h-48 rounded-xl overflow-hidden bg-secondary focus:outline-none active:scale-[0.98] transition-transform"
+          >
             <img
               src={modelImageUrl}
               alt="AI Model"
@@ -189,7 +227,7 @@ const StyleProfileEditor = () => {
                 (e.target as HTMLImageElement).parentElement!.innerHTML = '<div class="w-full h-full flex items-center justify-center"><p class="text-xs text-muted-foreground">Image failed to load</p></div>';
               }}
             />
-          </div>
+          </button>
         ) : (
           <div className="w-full h-32 rounded-xl bg-secondary flex flex-col items-center justify-center gap-2">
             <div className="w-16 h-16 rounded-full bg-muted flex items-center justify-center">
@@ -254,7 +292,7 @@ const StyleProfileEditor = () => {
               className={`flex items-center gap-2 p-2.5 rounded-xl border-2 transition-all text-left ${
                 bodyType === t.label ? "border-primary bg-primary/10" : "border-border bg-secondary/50"
               }`}>
-              <OptionImageThumbnail category="body_type" label={t.label} />
+              <OptionImageThumbnail category="body_type" label={t.label} onPreview={setPreviewImage} />
               <div>
                 <span className="text-xs font-semibold text-foreground block">{t.label}</span>
                 <span className="text-lg">{t.emoji}</span>
@@ -288,7 +326,7 @@ const StyleProfileEditor = () => {
               className={`flex flex-col items-center gap-1.5 py-2 rounded-xl border-2 text-xs font-medium transition-all ${
                 faceShape === s ? "border-primary bg-primary/10 text-foreground" : "border-border bg-secondary/50 text-muted-foreground"
               }`}>
-              <OptionImageThumbnail category="face_shape" label={s} />
+              <OptionImageThumbnail category="face_shape" label={s} onPreview={setPreviewImage} />
               {s}
             </button>
           ))}
@@ -304,7 +342,7 @@ const StyleProfileEditor = () => {
               className={`flex items-center gap-2 p-2.5 rounded-xl border-2 text-xs font-medium transition-all ${
                 selectedStyles.includes(s) ? "border-primary bg-primary/10 text-foreground" : "border-border bg-secondary/50 text-muted-foreground"
               }`}>
-              <OptionImageThumbnail category="style" label={s} />
+              <OptionImageThumbnail category="style" label={s} onPreview={setPreviewImage} />
               {s}
             </button>
           ))}
