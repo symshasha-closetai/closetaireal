@@ -21,6 +21,7 @@ type DetectedItem = {
   type: string;
   color: string | null;
   material: string | null;
+  quality: string | null;
 };
 
 const categories = ["All", "Tops", "Bottoms", "Shoes", "Dresses", "Accessories"];
