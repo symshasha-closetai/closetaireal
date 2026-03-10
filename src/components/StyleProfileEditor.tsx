@@ -139,7 +139,7 @@ const StyleProfileEditor = () => {
     }
   };
 
-
+  const handleReuploadPhotos = async (faceFile: File | null, bodyFile: File | null) => {
     if (!user || (!faceFile && !bodyFile)) return;
     setReanalyzing(true);
 
