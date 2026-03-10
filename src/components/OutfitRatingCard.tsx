@@ -132,8 +132,26 @@ const OutfitRatingCard = ({ image, imageBase64, result, wardrobeItems = [] }: Pr
     setActiveTooltip(prev => prev === key ? null : key);
   };
 
+  const getCacheKey = (prompt: string) => `suggestion_img_${btoa(prompt).slice(0, 40)}`;
+  const CACHE_TTL = 7 * 24 * 60 * 60 * 1000; // 7 days
+
   const generateSuggestionImage = async (idx: number, prompt: string) => {
     if (suggestionImages[idx] !== undefined || loadingImages[idx]) return;
+
+    // Check localStorage cache first
+    const cacheKey = getCacheKey(prompt);
+    try {
+      const cached = localStorage.getItem(cacheKey);
+      if (cached) {
+        const { url, ts } = JSON.parse(cached);
+        if (Date.now() - ts < CACHE_TTL && url) {
+          setSuggestionImages(prev => ({ ...prev, [idx]: url }));
+          return;
+        }
+        localStorage.removeItem(cacheKey);
+      }
+    } catch { /* ignore parse errors */ }
+
     setLoadingImages(prev => ({ ...prev, [idx]: true }));
     try {
       const { data, error } = await supabase.functions.invoke("generate-suggestion-image", {
@@ -141,6 +159,7 @@ const OutfitRatingCard = ({ image, imageBase64, result, wardrobeItems = [] }: Pr
       });
       if (!error && data?.imageBase64) {
         setSuggestionImages(prev => ({ ...prev, [idx]: data.imageBase64 }));
+        try { localStorage.setItem(cacheKey, JSON.stringify({ url: data.imageBase64, ts: Date.now() })); } catch { /* quota */ }
       } else {
         setSuggestionImages(prev => ({ ...prev, [idx]: null }));
       }
