@@ -270,19 +270,19 @@ const HomeScreen = () => {
     <div className="min-h-screen pb-24 px-5 pt-8">
       <input type="file" accept="image/*" capture="user" className="hidden" />
 
-      <motion.div variants={container} initial="hidden" animate="show" className="max-w-5xl mx-auto space-y-5">
-        <motion.div variants={item}><AppHeader /></motion.div>
+      <div className="max-w-5xl mx-auto space-y-5">
+        <div><AppHeader /></div>
 
         {/* Greeting */}
-        <motion.div variants={item}>
+        <div>
           <h1 className="font-display text-2xl font-semibold text-foreground">
             {greeting}, {displayName}!
           </h1>
           <p className="text-sm text-muted-foreground mt-0.5">Let's find your perfect outfit today</p>
-        </motion.div>
+        </div>
 
         {/* Split Layout: Controls Left, Model Right */}
-        <motion.div variants={item} className="flex flex-col lg:flex-row gap-5">
+        <div className="flex flex-col lg:flex-row gap-5">
           {/* LEFT PANEL: Controls */}
           <div className="flex-1 space-y-4 order-2 lg:order-1">
             {/* My Wardrobe Card */}
