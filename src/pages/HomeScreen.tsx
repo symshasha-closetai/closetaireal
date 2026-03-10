@@ -452,7 +452,7 @@ const HomeScreen = () => {
                     <img
                       src={displayModelUrl}
                       alt="Your AI Model"
-                      className="w-full h-[280px] lg:h-[520px] object-cover object-top"
+                      className="w-full h-[280px] lg:h-[600px] object-contain object-top"
                     />
                     <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-card via-card/60 to-transparent pt-16 pb-4 px-4">
                       <div className="flex items-center justify-between">
