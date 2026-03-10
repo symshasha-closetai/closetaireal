@@ -119,7 +119,27 @@ const StyleProfileEditor = () => {
     }
   };
 
-  const handleReuploadPhotos = async (faceFile: File | null, bodyFile: File | null) => {
+  const handleRefreshIllustrations = async () => {
+    setRefreshingIllustrations(true);
+    try {
+      await supabase.functions.invoke("clear-option-cache");
+      // Clear localStorage cache
+      const keysToRemove: string[] = [];
+      for (let i = 0; i < localStorage.length; i++) {
+        const key = localStorage.key(i);
+        if (key?.startsWith("option-img-")) keysToRemove.push(key);
+      }
+      keysToRemove.forEach(k => localStorage.removeItem(k));
+      toast.success("Illustrations cleared! They will regenerate on next visit.");
+      window.location.reload();
+    } catch {
+      toast.error("Failed to refresh illustrations");
+    } finally {
+      setRefreshingIllustrations(false);
+    }
+  };
+
+
     if (!user || (!faceFile && !bodyFile)) return;
     setReanalyzing(true);
 
