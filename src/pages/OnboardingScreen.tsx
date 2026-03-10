@@ -474,7 +474,7 @@ const OnboardingScreen = () => {
                           : "border-border bg-secondary/50"
                       }`}
                     >
-                      <OnboardingOptionImage category="body_type" label={t.label} />
+                      <OnboardingOptionImage category="body_type" label={t.label} gender={gender} />
                       <div>
                         <span className="text-xs font-semibold text-foreground block">{t.label}</span>
                         <span className="text-[10px] text-muted-foreground leading-tight">{t.desc}</span>
