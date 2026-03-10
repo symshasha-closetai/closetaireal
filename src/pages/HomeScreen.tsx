@@ -267,7 +267,7 @@ const HomeScreen = () => {
   const displayModelUrl = fullSizeModelUrl || styleProfile?.model_image_url || profile?.avatar_url;
 
   return (
-    <div className="min-h-screen pb-24 px-5 pt-14">
+    <div className="min-h-screen pb-24 px-5 pt-8">
       <input type="file" accept="image/*" capture="user" className="hidden" />
 
       <motion.div variants={container} initial="hidden" animate="show" className="max-w-5xl mx-auto space-y-5">
@@ -452,7 +452,7 @@ const HomeScreen = () => {
                     <img
                       src={displayModelUrl}
                       alt="Your AI Model"
-                      className="w-full h-[280px] lg:h-[520px] object-cover object-top"
+                      className="w-full h-[280px] lg:h-[600px] object-contain object-top"
                     />
                     <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-card via-card/60 to-transparent pt-16 pb-4 px-4">
                       <div className="flex items-center justify-between">
@@ -467,7 +467,7 @@ const HomeScreen = () => {
                     </div>
                   </div>
                 ) : (
-                  <div className="w-full h-[280px] lg:h-[520px] flex items-center justify-center">
+                  <div className="w-full h-[280px] lg:h-[600px] flex items-center justify-center">
                     <div className="text-center space-y-3">
                       <CurrentOccIcon size={48} className="text-muted-foreground mx-auto" />
                       <p className="text-sm text-muted-foreground">{selectedOccasion}</p>

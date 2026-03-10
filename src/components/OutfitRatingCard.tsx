@@ -359,7 +359,7 @@ const OutfitRatingCard = ({ image, imageBase64, result, wardrobeItems = [] }: Pr
             <img src={imageBase64 || image} alt="Outfit" style={{ width: 390, height: 520, objectFit: "cover", display: "block" }} crossOrigin="anonymous" />
             
             {/* Brand top-left */}
-            <div style={{ position: "absolute", top: 16, left: 16 }}>
+            <div style={{ position: "absolute", top: 10, left: 16 }}>
               <span style={{
                 fontSize: 12, fontWeight: 700, letterSpacing: 2, color: "rgba(255,255,255,0.9)",
                 background: "rgba(0,0,0,0.35)", backdropFilter: "blur(8px)",
@@ -415,7 +415,7 @@ const OutfitRatingCard = ({ image, imageBase64, result, wardrobeItems = [] }: Pr
           </div>
 
           {/* Sub-scores */}
-          <div style={{ display: "flex", justifyContent: "space-around", padding: "20px 16px 12px" }}>
+          <div style={{ display: "flex", justifyContent: "space-around", padding: "20px 16px 12px", textAlign: "center" }}>
             {[
               { label: "Color", score: result.color_score, color: "#86efac" },
               { label: "Style", score: result.style_score, color: "#fbbf24" },
@@ -441,16 +441,16 @@ const OutfitRatingCard = ({ image, imageBase64, result, wardrobeItems = [] }: Pr
 
           {/* Praise line */}
           {result.praise_line && (
-            <div style={{ padding: "16px 20px 8px", textAlign: "center" }}>
-              <p style={{ fontSize: 15, fontWeight: 600, color: "#e0e7ff", fontStyle: "italic", lineHeight: 1.5 }}>
+            <div style={{ padding: "12px 20px 8px", textAlign: "center" }}>
+              <p style={{ fontSize: 15, fontWeight: 600, color: "#e0e7ff", fontStyle: "italic", lineHeight: 1.5, textAlign: "center" }}>
                 🔥 "{result.praise_line}" ✨
               </p>
             </div>
           )}
 
           {/* CTA */}
-          <div style={{ padding: "8px 20px 20px", textAlign: "center" }}>
-            <p style={{ fontSize: 11, color: "rgba(255,255,255,0.4)", letterSpacing: 0.5 }}>
+          <div style={{ padding: "8px 20px 16px", textAlign: "center" }}>
+            <p style={{ fontSize: 11, color: "rgba(255,255,255,0.4)", letterSpacing: 0.5, textAlign: "center" }}>
               Check your drip score → <span style={{ fontWeight: 600, color: "rgba(255,255,255,0.6)" }}>closetaireal.lovable.app</span>
             </p>
           </div>

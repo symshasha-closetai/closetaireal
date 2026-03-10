@@ -2,7 +2,7 @@ import { useNavigate } from "react-router-dom";
 import { useAuth } from "../hooks/useAuth";
 import { User, Sun, Moon } from "lucide-react";
 import { useTheme } from "next-themes";
-import logo from "@/assets/closetai-logo.png";
+
 
 const AppHeader = () => {
   const navigate = useNavigate();
@@ -22,10 +22,7 @@ const AppHeader = () => {
           <Moon size={16} className="text-muted-foreground" />
         )}
       </button>
-      <div className="flex items-center gap-2">
-        <img src={logo} alt="ClosetAI" className="w-8 h-8 rounded-lg object-contain dark:brightness-0 dark:invert" />
-        <h1 className="font-display text-lg font-semibold text-foreground">ClosetAI</h1>
-      </div>
+      <h1 className="font-display text-lg font-semibold text-foreground">ClosetAI</h1>
       <button
         onClick={() => navigate("/profile")}
         className="w-9 h-9 rounded-full bg-secondary border border-border overflow-hidden flex items-center justify-center"
