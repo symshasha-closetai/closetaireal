@@ -10,6 +10,7 @@ type StyleProfile = {
   skin_tone: string | null;
   face_shape: string | null;
   style_type: string | null;
+  gender: string | null;
   ai_body_analysis: any | null;
   ai_face_analysis: any | null;
 };
