@@ -4,8 +4,8 @@ import { motion } from "framer-motion";
 
 const tabs = [
   { path: "/", icon: Home, label: "Home" },
-  { path: "/wardrobe", icon: ShirtIcon, label: "Wardrobe" },
   { path: "/camera", icon: Camera, label: "Camera" },
+  { path: "/wardrobe", icon: ShirtIcon, label: "Wardrobe" },
   { path: "/profile", icon: User, label: "Profile" },
 ];
 
