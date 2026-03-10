@@ -68,7 +68,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const fetchStyleProfile = useCallback(async (userId: string) => {
     const { data } = await supabase
       .from("style_profiles")
-      .select("model_image_url, body_type, skin_tone, face_shape, style_type, ai_body_analysis, ai_face_analysis")
+      .select("model_image_url, body_type, skin_tone, face_shape, style_type, gender, ai_body_analysis, ai_face_analysis")
       .eq("user_id", userId)
       .maybeSingle();
     setStyleProfile(data);

@@ -9,7 +9,7 @@ serve(async (req) => {
   if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
 
   try {
-    const { imageBase64, wardrobeItems } = await req.json();
+    const { imageBase64, wardrobeItems, styleProfile } = await req.json();
     if (!imageBase64) return new Response(JSON.stringify({ error: "No image provided" }), { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } });
 
     const apiKey = Deno.env.get("LOVABLE_API_KEY");
@@ -19,18 +19,35 @@ serve(async (req) => {
       ? `User's wardrobe contains: ${wardrobeItems.map((i: any) => `${i.name || i.type} (id: ${i.id}, ${i.type}, ${i.color || "unknown"} color)`).join(", ")}`
       : "No wardrobe data available";
 
-    const systemPrompt = `You are an expert fashion stylist and outfit rater who speaks Gen Z language fluently. Analyze the outfit in the photo and provide detailed scoring, improvement suggestions, and a killer Gen Z vibe tag. Consider color harmony, style cohesion, fit, and occasion appropriateness. ${wardrobeDesc}
+    // Build personalized profile context
+    let profileContext = "";
+    if (styleProfile) {
+      const parts = [];
+      if (styleProfile.gender) parts.push(`Gender: ${styleProfile.gender}`);
+      if (styleProfile.body_type) parts.push(`Body type: ${styleProfile.body_type}`);
+      if (styleProfile.skin_tone) parts.push(`Skin tone: ${styleProfile.skin_tone}`);
+      if (styleProfile.face_shape) parts.push(`Face shape: ${styleProfile.face_shape}`);
+      if (styleProfile.style_type) parts.push(`Preferred styles: ${styleProfile.style_type}`);
+      if (parts.length > 0) profileContext = `\n\nUser's profile: ${parts.join(", ")}`;
+      if (styleProfile.ai_body_analysis) profileContext += `\nDetailed body analysis: ${JSON.stringify(styleProfile.ai_body_analysis)}`;
+      if (styleProfile.ai_face_analysis) profileContext += `\nDetailed face analysis: ${JSON.stringify(styleProfile.ai_face_analysis)}`;
+    }
+
+    const systemPrompt = `You are an expert fashion stylist and outfit rater who speaks Gen Z language fluently. Analyze the outfit in the photo and provide detailed scoring, improvement suggestions, and a killer Gen Z vibe tag. Consider color harmony, style cohesion, fit, and occasion appropriateness. ${wardrobeDesc}${profileContext}
 
 Return ONLY valid JSON (no markdown) with this exact structure:
-{"drip_score":number,"confidence_rating":number,"killer_tag":"string","color_score":number,"color_reason":"string","style_score":number,"style_reason":"string","fit_score":number,"fit_reason":"string","occasion":"string","advice":"string","praise_line":"string","wardrobe_suggestions":[{"item_name":"string","category":"string","reason":"string","wardrobe_item_id":"string or null"}],"shopping_suggestions":[{"item_name":"string","category":"string","reason":"string","image_prompt":"string"}]}
+{"drip_score":number,"drip_reason":"string","confidence_rating":number,"confidence_reason":"string","killer_tag":"string","color_score":number,"color_reason":"string","style_score":number,"style_reason":"string","fit_score":number,"fit_reason":"string","occasion":"string","advice":"string","praise_line":"string","wardrobe_suggestions":[{"item_name":"string","category":"string","reason":"string","wardrobe_item_id":"string or null"}],"shopping_suggestions":[{"item_name":"string","category":"string","reason":"string","image_prompt":"string"}]}
 
 IMPORTANT RULES:
 - drip_score: Overall drip/outfit score as a decimal (e.g. 8.5, 7.6, 9.2). Range 0-10.
+- drip_reason: A 2-3 sentence explanation of WHY this drip score was given. Reference specific elements like color combinations, style coherence, accessories, and how the outfit works as a whole. Be specific, not generic.
 - confidence_rating: How confident/powerful the person looks in this outfit, as a decimal (e.g. 8.5, 9.0). Range 0-10.
+- confidence_reason: A 2-3 sentence explanation of WHY this confidence rating was given. Reference posture, outfit boldness, how well the outfit suits them, and the overall energy/vibe projected. Be specific.
 - killer_tag: A 1-3 word creative, universally understood English Gen Z tag. Examples: "Miss Marvelous", "Aura Farming", "Slay Architect", "Drip Deity", "Vibe Curator", "Main Character", "It Girl Energy", "Walk of Fame", "Certified Stunner", "Icon Mode", "Golden Hour Glow", "Mic Drop Moment", "Plot Twist Queen". Pick something creative that fits the outfit vibe. Make it bold, catchy, and universally understood. Do NOT use regional/non-English slang (no Hindi, Spanish, etc.). Every tag must make sense to someone in London, NYC, Lagos, or Tokyo.
 - praise_line: A one-liner Gen Z hype compliment with PROPER grammar, capitalization, and emojis. Use trendy Gen Z expressions like "ate and left no crumbs", "you're literally giving main character", "serving looks on a silver platter", "the vibes are immaculate", "understood the assignment fr fr", "no cap this is elite". Start with a capital letter. Make it punchy, universally hype, and guaranteed to make anyone smile. Include 1-2 relevant emojis.
 - All score reasons should use proper grammar and capitalization.
-- color_score, style_score, fit_score: integers 1-10.`;
+- color_score, style_score, fit_score: integers 1-10.
+- PERSONALIZED SUGGESTIONS: If user profile data is available, ALL suggestions (wardrobe and shopping) MUST reference the user's specific body type, skin tone, face shape, gender, and preferred styles. For example: "A V-neck olive cotton top to complement your warm skin tone and pear body type" instead of generic "A nice top". Reference current 2025-2026 fashion trends. Shopping suggestions should be hyper-specific with brand-style descriptions.`;
 
     const response = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
       method: "POST",
@@ -45,7 +62,7 @@ IMPORTANT RULES:
           {
             role: "user",
             content: [
-              { type: "text", text: "Rate this outfit — give a drip score, confidence rating, killer tag, and suggest improvements. If the user has wardrobe items, suggest swaps from their wardrobe too. Return JSON only." },
+              { type: "text", text: "Rate this outfit — give a drip score with reasoning, confidence rating with reasoning, killer tag, and suggest improvements. If the user has wardrobe items, suggest swaps from their wardrobe too. Make all suggestions personalized to their body/style profile. Return JSON only." },
               { type: "image_url", image_url: { url: `data:image/jpeg;base64,${imageBase64}` } },
             ],
           },

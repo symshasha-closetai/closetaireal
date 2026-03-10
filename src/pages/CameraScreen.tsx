@@ -9,7 +9,9 @@ import { toast } from "sonner";
 
 export type RatingResult = {
   drip_score: number;
+  drip_reason?: string;
   confidence_rating: number;
+  confidence_reason?: string;
   killer_tag?: string;
   color_score: number;
   color_reason?: string;
@@ -25,7 +27,7 @@ export type RatingResult = {
 };
 
 const CameraScreen = () => {
-  const { user } = useAuth();
+  const { user, styleProfile } = useAuth();
   const [image, setImage] = useState<string | null>(null);
   const [imageBase64, setImageBase64] = useState<string | null>(null);
   const [analyzing, setAnalyzing] = useState(false);
@@ -79,7 +81,7 @@ const CameraScreen = () => {
       }
 
       const { data, error } = await supabase.functions.invoke("rate-outfit", {
-        body: { imageBase64, wardrobeItems: fetchedWardrobe },
+        body: { imageBase64, wardrobeItems: fetchedWardrobe, styleProfile: styleProfile || undefined },
       });
 
       if (abortControllerRef.current?.signal.aborted) return;

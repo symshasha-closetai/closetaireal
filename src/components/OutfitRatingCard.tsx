@@ -1,6 +1,6 @@
 import { useState, useRef, useCallback } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { Share2, ShoppingBag, Shirt, Footprints, Watch, Gem, Loader2, X, Info } from "lucide-react";
+import { Share2, ShoppingBag, Shirt, Footprints, Watch, Gem, Loader2, X, Info, Download } from "lucide-react";
 import ScoreRing from "./ScoreRing";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
@@ -58,42 +58,40 @@ const OutfitRatingCard = ({ image, imageBase64, result, wardrobeItems = [] }: Pr
   const [suggestionImages, setSuggestionImages] = useState<Record<number, string | null>>({});
   const [loadingImages, setLoadingImages] = useState<Record<number, boolean>>({});
   const [sharing, setSharing] = useState(false);
+  const [downloading, setDownloading] = useState(false);
   const [showShareCard, setShowShareCard] = useState(false);
   const shareRef = useRef<HTMLDivElement>(null);
 
-  const handleShare = useCallback(async () => {
-    if (sharing) return;
-    setSharing(true);
+  const captureCard = useCallback(async (): Promise<Blob | null> => {
     setShowShareCard(true);
-
-    // Wait for the hidden share card to render
     await new Promise(r => setTimeout(r, 500));
-
     try {
       if (!shareRef.current) throw new Error("Share card not ready");
-
       const canvas = await html2canvas(shareRef.current, {
         useCORS: true,
         allowTaint: true,
         backgroundColor: null,
         scale: 2,
       });
-
       const blob = await new Promise<Blob | null>(resolve =>
         canvas.toBlob(resolve, "image/png", 1)
       );
+      return blob;
+    } finally {
+      setShowShareCard(false);
+    }
+  }, []);
 
+  const handleShare = useCallback(async () => {
+    if (sharing) return;
+    setSharing(true);
+    try {
+      const blob = await captureCard();
       if (!blob) throw new Error("Failed to create image");
-
       const file = new File([blob], "drip-check.png", { type: "image/png" });
-
       if (navigator.share && navigator.canShare?.({ files: [file] })) {
-        await navigator.share({
-          title: "My Drip Check",
-          files: [file],
-        });
+        await navigator.share({ title: "My Drip Check", files: [file] });
       } else {
-        // Fallback: download
         const url = URL.createObjectURL(blob);
         const a = document.createElement("a");
         a.href = url;
@@ -105,14 +103,33 @@ const OutfitRatingCard = ({ image, imageBase64, result, wardrobeItems = [] }: Pr
         toast.success("Image saved!");
       }
     } catch (e: any) {
-      if (e?.name !== "AbortError") {
-        toast.info("Couldn't share — try again");
-      }
+      if (e?.name !== "AbortError") toast.info("Couldn't share — try again");
     } finally {
-      setShowShareCard(false);
       setSharing(false);
     }
-  }, [sharing, result, image, imageBase64]);
+  }, [sharing, captureCard]);
+
+  const handleDownload = useCallback(async () => {
+    if (downloading) return;
+    setDownloading(true);
+    try {
+      const blob = await captureCard();
+      if (!blob) throw new Error("Failed to create image");
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = "drip-check.png";
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+      toast.success("Drip card saved to device! 📸");
+    } catch {
+      toast.info("Couldn't download — try again");
+    } finally {
+      setDownloading(false);
+    }
+  }, [downloading, captureCard]);
 
   const toggleTooltip = (key: string) => {
     setActiveTooltip(prev => prev === key ? null : key);
@@ -143,6 +160,12 @@ const OutfitRatingCard = ({ image, imageBase64, result, wardrobeItems = [] }: Pr
     { key: "fit", score: result.fit_score, label: "Fit", colorClass: "stroke-fashion-rose", reason: result.fit_reason },
   ];
 
+  // Main scores (drip + confidence) are now also tappable
+  const mainScores = [
+    { key: "drip", reason: result.drip_reason },
+    { key: "confidence", reason: result.confidence_reason },
+  ];
+
   return (
     <div className="space-y-4">
       {/* Main Shareable Card */}
@@ -161,13 +184,16 @@ const OutfitRatingCard = ({ image, imageBase64, result, wardrobeItems = [] }: Pr
           {/* Bottom gradient with Drip Score + Killer Tag + Confidence */}
           <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-card via-card/80 to-transparent pt-16 pb-4 px-4">
             <div className="flex items-end justify-between">
-              <div className="space-y-1.5">
-                <div className="flex items-baseline gap-1.5">
-                  <span className="text-3xl font-display font-bold text-foreground">{result.drip_score}</span>
-                  <span className="text-sm text-muted-foreground font-medium">/10</span>
+              {/* Drip Score — clickable */}
+              <button onClick={() => toggleTooltip("drip")} className="text-left focus:outline-none active:scale-95 transition-transform">
+                <div className="space-y-1.5">
+                  <div className="flex items-baseline gap-1.5">
+                    <span className="text-3xl font-display font-bold text-foreground">{result.drip_score}</span>
+                    <span className="text-sm text-muted-foreground font-medium">/10</span>
+                  </div>
+                  <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Drip Score</p>
                 </div>
-                <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Drip Score</p>
-              </div>
+              </button>
 
               {/* Killer Tag — centered between scores */}
               {result.killer_tag && (
@@ -185,25 +211,55 @@ const OutfitRatingCard = ({ image, imageBase64, result, wardrobeItems = [] }: Pr
                 </motion.div>
               )}
 
-              <div className="text-right space-y-1.5">
-                <div className="flex items-baseline gap-1.5 justify-end">
-                  <span className="text-3xl font-display font-bold text-foreground">{result.confidence_rating}</span>
-                  <span className="text-sm text-muted-foreground font-medium">/10</span>
+              {/* Confidence — clickable */}
+              <button onClick={() => toggleTooltip("confidence")} className="text-right focus:outline-none active:scale-95 transition-transform">
+                <div className="text-right space-y-1.5">
+                  <div className="flex items-baseline gap-1.5 justify-end">
+                    <span className="text-3xl font-display font-bold text-foreground">{result.confidence_rating}</span>
+                    <span className="text-sm text-muted-foreground font-medium">/10</span>
+                  </div>
+                  <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Confidence</p>
                 </div>
-                <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Confidence</p>
-              </div>
+              </button>
             </div>
             <div className="flex items-center justify-between mt-3">
               <span className="px-3 py-1 rounded-full bg-secondary text-xs font-medium text-secondary-foreground">{result.occasion}</span>
-              <button type="button" onClick={handleShare} disabled={sharing} className="w-10 h-10 rounded-full bg-secondary flex items-center justify-center active:scale-95 transition-transform disabled:opacity-50">
-                {sharing ? <Loader2 size={18} className="animate-spin text-foreground" /> : <Share2 size={18} className="text-foreground" />}
-              </button>
+              <div className="flex items-center gap-2">
+                <button type="button" onClick={handleDownload} disabled={downloading} className="w-10 h-10 rounded-full bg-secondary flex items-center justify-center active:scale-95 transition-transform disabled:opacity-50">
+                  {downloading ? <Loader2 size={18} className="animate-spin text-foreground" /> : <Download size={18} className="text-foreground" />}
+                </button>
+                <button type="button" onClick={handleShare} disabled={sharing} className="w-10 h-10 rounded-full bg-secondary flex items-center justify-center active:scale-95 transition-transform disabled:opacity-50">
+                  {sharing ? <Loader2 size={18} className="animate-spin text-foreground" /> : <Share2 size={18} className="text-foreground" />}
+                </button>
+              </div>
             </div>
           </div>
         </div>
 
         {/* Scores Section */}
         <div className="p-5 space-y-4">
+          {/* Drip/Confidence Tooltip */}
+          <AnimatePresence>
+            {(activeTooltip === "drip" || activeTooltip === "confidence") && (
+              <motion.div
+                initial={{ opacity: 0, y: -8 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: -8 }}
+                className="bg-foreground/80 backdrop-blur-md rounded-xl p-3 relative"
+              >
+                <button onClick={() => setActiveTooltip(null)} className="absolute top-2 right-2">
+                  <X size={12} className="text-background/60" />
+                </button>
+                <p className="text-xs font-semibold text-background capitalize mb-1">
+                  {activeTooltip === "drip" ? "Drip Score Logic" : "Confidence Rating Logic"}
+                </p>
+                <p className="text-xs text-background/80 leading-relaxed">
+                  {mainScores.find(s => s.key === activeTooltip)?.reason || "No detailed reasoning available."}
+                </p>
+              </motion.div>
+            )}
+          </AnimatePresence>
+
           {/* Praise Line */}
           {result.praise_line && (
             <motion.div initial={{ opacity: 0, scale: 0.9 }} animate={{ opacity: 1, scale: 1 }} transition={{ delay: 0.2 }}
@@ -235,9 +291,9 @@ const OutfitRatingCard = ({ image, imageBase64, result, wardrobeItems = [] }: Pr
             </motion.div>
           </div>
 
-          {/* Score Tooltip */}
+          {/* Score Tooltip (sub-scores) */}
           <AnimatePresence>
-            {activeTooltip && (
+            {activeTooltip && !["drip", "confidence"].includes(activeTooltip) && (
               <motion.div
                 initial={{ opacity: 0, y: -8 }}
                 animate={{ opacity: 1, y: 0 }}
