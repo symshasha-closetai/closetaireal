@@ -575,7 +575,7 @@ const OnboardingScreen = () => {
                         selected ? "border-primary bg-primary/10 shadow-soft" : "border-border bg-secondary/50"
                       }`}
                     >
-                      <OnboardingOptionImage category="style" label={s.label} />
+                      <OnboardingOptionImage category="style" label={s.label} gender={gender} />
                       <div className="flex-1 text-left">
                         <span className="text-sm font-semibold text-foreground block">{s.label}</span>
                         <span className="text-[10px] text-muted-foreground">{s.desc}</span>

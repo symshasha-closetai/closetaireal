@@ -467,7 +467,7 @@ const WardrobeScreen = () => {
                                     className="flex-1 text-sm font-medium text-foreground bg-transparent border-b border-border focus:border-primary outline-none px-1 py-0.5"
                                   />
                                 </div>
-                                <div className="grid grid-cols-3 gap-2 pl-7">
+                                <div className="grid grid-cols-2 gap-2 pl-7">
                                   <select
                                     value={item.type}
                                     onChange={(e) => updateDetectedItem(idx, "type", e.target.value)}
@@ -493,6 +493,14 @@ const WardrobeScreen = () => {
                                       <option key={m} value={m}>{m}</option>
                                     ))}
                                   </select>
+                                  <div className="text-xs text-muted-foreground flex items-center gap-1 px-2 py-1.5">
+                                    <span className="font-medium">Quality:</span>
+                                    <span className={`font-semibold ${
+                                      item.quality === "Premium" ? "text-green-500" : 
+                                      item.quality === "Mid-range" ? "text-blue-500" : 
+                                      item.quality === "Budget" ? "text-orange-500" : "text-muted-foreground"
+                                    }`}>{item.quality || "Unknown"}</span>
+                                  </div>
                                 </div>
                               </div>
                             );
