@@ -8,14 +8,6 @@ import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import ScoreRing from "../components/ScoreRing";
 
-const container = {
-  hidden: { opacity: 0 },
-  show: { opacity: 1, transition: { staggerChildren: 0.1 } },
-};
-const item = {
-  hidden: { opacity: 0, y: 16 },
-  show: { opacity: 1, y: 0, transition: { duration: 0.4, ease: "easeOut" as const } },
-};
 
 const occasions = [
   { label: "Casual", icon: Shirt, color: "bg-blue-100 text-blue-600" },
@@ -270,19 +262,19 @@ const HomeScreen = () => {
     <div className="min-h-screen pb-24 px-5 pt-8">
       <input type="file" accept="image/*" capture="user" className="hidden" />
 
-      <motion.div variants={container} initial="hidden" animate="show" className="max-w-5xl mx-auto space-y-5">
-        <motion.div variants={item}><AppHeader /></motion.div>
+      <div className="max-w-5xl mx-auto space-y-5">
+        <div><AppHeader /></div>
 
         {/* Greeting */}
-        <motion.div variants={item}>
+        <div>
           <h1 className="font-display text-2xl font-semibold text-foreground">
             {greeting}, {displayName}!
           </h1>
           <p className="text-sm text-muted-foreground mt-0.5">Let's find your perfect outfit today</p>
-        </motion.div>
+        </div>
 
         {/* Split Layout: Controls Left, Model Right */}
-        <motion.div variants={item} className="flex flex-col lg:flex-row gap-5">
+        <div className="flex flex-col lg:flex-row gap-5">
           {/* LEFT PANEL: Controls */}
           <div className="flex-1 space-y-4 order-2 lg:order-1">
             {/* My Wardrobe Card */}
@@ -437,7 +429,7 @@ const HomeScreen = () => {
           </div>
 
           {/* RIGHT PANEL: AI Model (no hover effect) */}
-          <div className="lg:w-[340px] flex-shrink-0 order-1 lg:order-2">
+          <div className="lg:w-[420px] flex-shrink-0 order-1 lg:order-2">
             <div className="sticky top-20">
               <div className="relative rounded-3xl overflow-hidden shadow-elevated bg-secondary">
                 {displayModelUrl ? (
@@ -478,8 +470,8 @@ const HomeScreen = () => {
               </div>
             </div>
           </div>
-        </motion.div>
-      </motion.div>
+        </div>
+      </div>
 
       {/* Style Me Results Sheet */}
       <AnimatePresence>

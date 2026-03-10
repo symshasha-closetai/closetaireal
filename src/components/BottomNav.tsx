@@ -27,7 +27,7 @@ const BottomNav = () => {
               {isActive && (
                 <motion.div
                   layoutId="activeTab"
-                  className="absolute inset-0 rounded-2xl gradient-accent opacity-10"
+                  className="absolute inset-0 rounded-2xl bg-primary/15"
                   transition={{ type: "spring", stiffness: 400, damping: 30 }}
                 />
               )}
