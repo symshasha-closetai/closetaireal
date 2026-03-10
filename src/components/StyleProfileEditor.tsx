@@ -326,7 +326,7 @@ const StyleProfileEditor = () => {
               className={`flex flex-col items-center gap-1.5 py-2 rounded-xl border-2 text-xs font-medium transition-all ${
                 faceShape === s ? "border-primary bg-primary/10 text-foreground" : "border-border bg-secondary/50 text-muted-foreground"
               }`}>
-              <OptionImageThumbnail category="face_shape" label={s} onPreview={setPreviewImage} />
+              <OptionImageThumbnail category="face_shape" label={s} gender={gender} onPreview={setPreviewImage} />
               {s}
             </button>
           ))}
