@@ -467,7 +467,7 @@ const HomeScreen = () => {
                     </div>
                   </div>
                 ) : (
-                  <div className="w-full h-[280px] lg:h-[520px] flex items-center justify-center">
+                  <div className="w-full h-[280px] lg:h-[600px] flex items-center justify-center">
                     <div className="text-center space-y-3">
                       <CurrentOccIcon size={48} className="text-muted-foreground mx-auto" />
                       <p className="text-sm text-muted-foreground">{selectedOccasion}</p>
