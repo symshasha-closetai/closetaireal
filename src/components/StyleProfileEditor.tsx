@@ -288,7 +288,21 @@ const StyleProfileEditor = () => {
         )}
       </motion.div>
 
-      {/* Gender */}
+      {/* Refresh Illustrations */}
+      <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.06 }}>
+        <button
+          onClick={handleRefreshIllustrations}
+          disabled={refreshingIllustrations}
+          className="w-full flex items-center justify-center gap-2 py-2.5 rounded-xl bg-secondary text-secondary-foreground text-xs font-medium active:scale-[0.98] transition-transform disabled:opacity-60"
+        >
+          {refreshingIllustrations ? (
+            <><Loader2 size={14} className="animate-spin" /> Clearing cache...</>
+          ) : (
+            <><RotateCcw size={14} /> Refresh All Illustrations</>
+          )}
+        </button>
+      </motion.div>
+
       <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.08 }} className="glass-card p-4 space-y-3">
         <h3 className="text-sm font-semibold text-foreground">Gender</h3>
         <div className="grid grid-cols-3 gap-2">
