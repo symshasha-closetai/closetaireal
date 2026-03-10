@@ -1,0 +1,1 @@
+ALTER TABLE public.wardrobe ADD COLUMN IF NOT EXISTS quality text;

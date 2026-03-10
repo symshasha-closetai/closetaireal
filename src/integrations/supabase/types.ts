@@ -191,6 +191,7 @@ export type Database = {
           image_url: string
           material: string | null
           name: string | null
+          quality: string | null
           season: string | null
           style: string | null
           type: string
@@ -203,6 +204,7 @@ export type Database = {
           image_url: string
           material?: string | null
           name?: string | null
+          quality?: string | null
           season?: string | null
           style?: string | null
           type: string
@@ -215,6 +217,7 @@ export type Database = {
           image_url?: string
           material?: string | null
           name?: string | null
+          quality?: string | null
           season?: string | null
           style?: string | null
           type?: string
