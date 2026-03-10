@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback, useRef } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { Camera, Sparkles, RefreshCw, User, Loader2, X } from "lucide-react";
+import { Camera, Sparkles, RefreshCw, User, Loader2, X, RotateCcw } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { toast } from "sonner";
@@ -37,11 +37,11 @@ const skinTones = [
 const faceShapes = ["Oval", "Round", "Square", "Heart", "Oblong", "Diamond"];
 
 const styleOptions = [
-  "Casual", "Formal", "Streetwear", "Minimalist", "Bohemian", "Classic", "Sporty",
+  "Casual", "Formal", "Streetwear", "Minimalist", "Bohemian", "Classic", "Sporty", "Gym",
 ];
 
-const OptionImageThumbnail = ({ category, label, onPreview }: { category: string; label: string; onPreview?: (url: string) => void }) => {
-  const { imageUrl, loading } = useOptionImage(category, label);
+const OptionImageThumbnail = ({ category, label, gender, onPreview }: { category: string; label: string; gender?: string | null; onPreview?: (url: string) => void }) => {
+  const { imageUrl, loading } = useOptionImage(category, label, gender);
   if (loading) return <Skeleton className="w-10 h-10 rounded-lg" />;
   if (!imageUrl) return null;
   return (
@@ -65,6 +65,7 @@ const StyleProfileEditor = () => {
   const [regenerating, setRegenerating] = useState(false);
   const [reanalyzing, setReanalyzing] = useState(false);
   const [previewImage, setPreviewImage] = useState<string | null>(null);
+  const [refreshingIllustrations, setRefreshingIllustrations] = useState(false);
 
   const faceRef = useRef<HTMLInputElement>(null);
   const bodyRef = useRef<HTMLInputElement>(null);
@@ -115,6 +116,26 @@ const StyleProfileEditor = () => {
     } finally {
       setSaving(false);
       setRegenerating(false);
+    }
+  };
+
+  const handleRefreshIllustrations = async () => {
+    setRefreshingIllustrations(true);
+    try {
+      await supabase.functions.invoke("clear-option-cache");
+      // Clear localStorage cache
+      const keysToRemove: string[] = [];
+      for (let i = 0; i < localStorage.length; i++) {
+        const key = localStorage.key(i);
+        if (key?.startsWith("option-img-")) keysToRemove.push(key);
+      }
+      keysToRemove.forEach(k => localStorage.removeItem(k));
+      toast.success("Illustrations cleared! They will regenerate on next visit.");
+      window.location.reload();
+    } catch {
+      toast.error("Failed to refresh illustrations");
+    } finally {
+      setRefreshingIllustrations(false);
     }
   };
 
@@ -267,7 +288,21 @@ const StyleProfileEditor = () => {
         )}
       </motion.div>
 
-      {/* Gender */}
+      {/* Refresh Illustrations */}
+      <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.06 }}>
+        <button
+          onClick={handleRefreshIllustrations}
+          disabled={refreshingIllustrations}
+          className="w-full flex items-center justify-center gap-2 py-2.5 rounded-xl bg-secondary text-secondary-foreground text-xs font-medium active:scale-[0.98] transition-transform disabled:opacity-60"
+        >
+          {refreshingIllustrations ? (
+            <><Loader2 size={14} className="animate-spin" /> Clearing cache...</>
+          ) : (
+            <><RotateCcw size={14} /> Refresh All Illustrations</>
+          )}
+        </button>
+      </motion.div>
+
       <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.08 }} className="glass-card p-4 space-y-3">
         <h3 className="text-sm font-semibold text-foreground">Gender</h3>
         <div className="grid grid-cols-3 gap-2">
@@ -292,7 +327,7 @@ const StyleProfileEditor = () => {
               className={`flex items-center gap-2 p-2.5 rounded-xl border-2 transition-all text-left ${
                 bodyType === t.label ? "border-primary bg-primary/10" : "border-border bg-secondary/50"
               }`}>
-              <OptionImageThumbnail category="body_type" label={t.label} onPreview={setPreviewImage} />
+              <OptionImageThumbnail category="body_type" label={t.label} gender={gender} onPreview={setPreviewImage} />
               <div>
                 <span className="text-xs font-semibold text-foreground block">{t.label}</span>
                 <span className="text-lg">{t.emoji}</span>
@@ -326,7 +361,7 @@ const StyleProfileEditor = () => {
               className={`flex flex-col items-center gap-1.5 py-2 rounded-xl border-2 text-xs font-medium transition-all ${
                 faceShape === s ? "border-primary bg-primary/10 text-foreground" : "border-border bg-secondary/50 text-muted-foreground"
               }`}>
-              <OptionImageThumbnail category="face_shape" label={s} onPreview={setPreviewImage} />
+              <OptionImageThumbnail category="face_shape" label={s} gender={gender} onPreview={setPreviewImage} />
               {s}
             </button>
           ))}
@@ -342,7 +377,7 @@ const StyleProfileEditor = () => {
               className={`flex items-center gap-2 p-2.5 rounded-xl border-2 text-xs font-medium transition-all ${
                 selectedStyles.includes(s) ? "border-primary bg-primary/10 text-foreground" : "border-border bg-secondary/50 text-muted-foreground"
               }`}>
-              <OptionImageThumbnail category="style" label={s} onPreview={setPreviewImage} />
+              <OptionImageThumbnail category="style" label={s} gender={gender} onPreview={setPreviewImage} />
               {s}
             </button>
           ))}

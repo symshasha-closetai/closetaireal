@@ -26,3 +26,6 @@ verify_jwt = false
 
 [functions.style-me]
 verify_jwt = false
+
+[functions.clear-option-cache]
+verify_jwt = false

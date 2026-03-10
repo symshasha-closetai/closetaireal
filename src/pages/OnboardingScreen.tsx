@@ -51,6 +51,7 @@ const styleOptions = [
   { label: "Bohemian", desc: "Free-spirited & artsy" },
   { label: "Classic", desc: "Timeless & elegant" },
   { label: "Sporty", desc: "Active & athletic" },
+  { label: "Gym", desc: "Workout & fitness" },
 ];
 
 type AnalysisResult = {
@@ -74,8 +75,8 @@ type AnalysisResult = {
   model_description?: string;
 };
 
-const OnboardingOptionImage = ({ category, label }: { category: string; label: string }) => {
-  const { imageUrl, loading } = useOptionImage(category, label);
+const OnboardingOptionImage = ({ category, label, gender }: { category: string; label: string; gender?: string | null }) => {
+  const { imageUrl, loading } = useOptionImage(category, label, gender);
   if (loading) return <Skeleton className="w-10 h-10 rounded-lg" />;
   if (!imageUrl) return null;
   return <img src={imageUrl} alt={label} className="w-10 h-10 rounded-lg object-cover" loading="lazy" />;
@@ -473,7 +474,7 @@ const OnboardingScreen = () => {
                           : "border-border bg-secondary/50"
                       }`}
                     >
-                      <OnboardingOptionImage category="body_type" label={t.label} />
+                      <OnboardingOptionImage category="body_type" label={t.label} gender={gender} />
                       <div>
                         <span className="text-xs font-semibold text-foreground block">{t.label}</span>
                         <span className="text-[10px] text-muted-foreground leading-tight">{t.desc}</span>
@@ -574,7 +575,7 @@ const OnboardingScreen = () => {
                         selected ? "border-primary bg-primary/10 shadow-soft" : "border-border bg-secondary/50"
                       }`}
                     >
-                      <OnboardingOptionImage category="style" label={s.label} />
+                      <OnboardingOptionImage category="style" label={s.label} gender={gender} />
                       <div className="flex-1 text-left">
                         <span className="text-sm font-semibold text-foreground block">{s.label}</span>
                         <span className="text-[10px] text-muted-foreground">{s.desc}</span>
