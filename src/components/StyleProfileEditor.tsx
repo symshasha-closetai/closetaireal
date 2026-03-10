@@ -342,7 +342,7 @@ const StyleProfileEditor = () => {
               className={`flex items-center gap-2 p-2.5 rounded-xl border-2 text-xs font-medium transition-all ${
                 selectedStyles.includes(s) ? "border-primary bg-primary/10 text-foreground" : "border-border bg-secondary/50 text-muted-foreground"
               }`}>
-              <OptionImageThumbnail category="style" label={s} onPreview={setPreviewImage} />
+              <OptionImageThumbnail category="style" label={s} gender={gender} onPreview={setPreviewImage} />
               {s}
             </button>
           ))}

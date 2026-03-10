@@ -75,8 +75,8 @@ type AnalysisResult = {
   model_description?: string;
 };
 
-const OnboardingOptionImage = ({ category, label }: { category: string; label: string }) => {
-  const { imageUrl, loading } = useOptionImage(category, label);
+const OnboardingOptionImage = ({ category, label, gender }: { category: string; label: string; gender?: string | null }) => {
+  const { imageUrl, loading } = useOptionImage(category, label, gender);
   if (loading) return <Skeleton className="w-10 h-10 rounded-lg" />;
   if (!imageUrl) return null;
   return <img src={imageUrl} alt={label} className="w-10 h-10 rounded-lg object-cover" loading="lazy" />;
