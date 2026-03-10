@@ -58,7 +58,8 @@ SCORING METHODOLOGY:
 - occasion: Brief occasion descriptor (e.g. "Casual Brunch", "Evening Out", "Street Style").
 - advice: Professional stylist-grade advice. 2-3 sentences with specific, actionable suggestions. Reference current 2025-2026 trends when relevant.
 
-- PERSONALIZED SUGGESTIONS: If user profile data is available, ALL suggestions MUST reference the user's specific body type, skin tone, face shape, gender, and preferred styles. Be hyper-specific with brand-style descriptions. Reference current 2025-2026 fashion trends.`;
+- PERSONALIZED SUGGESTIONS: If user profile data is available, ALL suggestions MUST reference the user's specific body type, skin tone, face shape, gender, and preferred styles. Be hyper-specific with brand-style descriptions. Reference current 2025-2026 fashion trends.
+- Provide up to 5 wardrobe_suggestions (from user's wardrobe if available) and up to 10 shopping_suggestions. More suggestions = more value. Each shopping suggestion must have a unique, detailed image_prompt for generating a product photo.`;
 
     const response = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
       method: "POST",
