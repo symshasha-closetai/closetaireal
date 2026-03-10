@@ -441,8 +441,8 @@ const OutfitRatingCard = ({ image, imageBase64, result, wardrobeItems = [] }: Pr
 
           {/* Praise line */}
           {result.praise_line && (
-            <div style={{ padding: "16px 20px 8px", textAlign: "center" }}>
-              <p style={{ fontSize: 15, fontWeight: 600, color: "#e0e7ff", fontStyle: "italic", lineHeight: 1.5 }}>
+            <div style={{ padding: "12px 20px 8px", textAlign: "center" }}>
+              <p style={{ fontSize: 15, fontWeight: 600, color: "#e0e7ff", fontStyle: "italic", lineHeight: 1.5, textAlign: "center" }}>
                 🔥 "{result.praise_line}" ✨
               </p>
             </div>
