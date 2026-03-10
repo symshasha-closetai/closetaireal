@@ -65,6 +65,7 @@ const StyleProfileEditor = () => {
   const [regenerating, setRegenerating] = useState(false);
   const [reanalyzing, setReanalyzing] = useState(false);
   const [previewImage, setPreviewImage] = useState<string | null>(null);
+  const [refreshingIllustrations, setRefreshingIllustrations] = useState(false);
 
   const faceRef = useRef<HTMLInputElement>(null);
   const bodyRef = useRef<HTMLInputElement>(null);
