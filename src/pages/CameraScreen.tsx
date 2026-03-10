@@ -128,7 +128,7 @@ const CameraScreen = () => {
         </motion.div>
         <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.05 }}>
           <h1 className="font-display text-2xl font-semibold text-foreground">Drip Check</h1>
-          <p className="text-sm text-muted-foreground mt-1">Upload or capture your outfit for AI analysis</p>
+          <p className="text-sm text-muted-foreground mt-1">Upload or capture your outfit for styling insights</p>
         </motion.div>
 
         <input type="file" accept="image/*" ref={fileRef} className="hidden" onChange={handleUpload} onClick={(e) => { (e.target as HTMLInputElement).value = ""; }} />
@@ -136,7 +136,7 @@ const CameraScreen = () => {
 
         <AnimatePresence mode="wait">
           {!image ? (
-            <motion.div key="upload" initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0, scale: 0.95 }} className="glass-card-elevated overflow-hidden">
+            <motion.div key="upload" initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0, scale: 0.95 }} className="rounded-2xl bg-card border border-border/30 overflow-hidden">
               <div className="aspect-[3/4] flex flex-col items-center justify-center gap-6 p-8">
                 <div className="w-20 h-20 rounded-full bg-secondary flex items-center justify-center">
                   <Camera size={32} className="text-muted-foreground" />
@@ -158,7 +158,7 @@ const CameraScreen = () => {
           ) : (
             <motion.div key="preview" initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0, scale: 0.95 }} className="space-y-4">
               {analyzing ? (
-                <div className="glass-card-elevated overflow-hidden relative">
+                <div className="rounded-2xl overflow-hidden relative">
                   <img src={image} alt="Outfit" className="w-full aspect-[3/4] object-cover" />
                   <button onClick={cancelAnalysis} className="absolute top-3 right-3 z-20 flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-destructive/90 text-destructive-foreground backdrop-blur-sm text-xs font-medium active:scale-95 transition-transform">
                     <X size={14} /> Cancel
@@ -168,7 +168,7 @@ const CameraScreen = () => {
                       <motion.div animate={{ rotate: 360 }} transition={{ repeat: Infinity, duration: 1.5, ease: "linear" }}>
                         <Sparkles size={36} className="text-accent drop-shadow-[0_0_12px_hsl(var(--accent))]" />
                       </motion.div>
-                      <p className="text-sm font-medium text-foreground drop-shadow-sm">Checking your drip...</p>
+                      <p className="text-sm font-medium text-foreground drop-shadow-sm">Analyzing your style...</p>
                     </div>
                   </div>
                 </div>
@@ -183,7 +183,7 @@ const CameraScreen = () => {
                     animate={{ opacity: 1, y: 0 }}
                     transition={{ delay: 0.3 }}
                     onClick={clearImage}
-                    className="w-full mt-4 py-3 rounded-xl gradient-accent text-accent-foreground font-medium text-sm shadow-soft active:scale-[0.98] transition-transform flex items-center justify-center gap-2"
+                    className="w-full mt-4 py-3 rounded-full border border-border/40 text-foreground/70 font-medium text-sm active:scale-[0.98] transition-transform flex items-center justify-center gap-2 tracking-wider"
                   >
                     <Camera size={16} /> Check Another Photo
                   </motion.button>
