@@ -292,7 +292,7 @@ const StyleProfileEditor = () => {
               className={`flex items-center gap-2 p-2.5 rounded-xl border-2 transition-all text-left ${
                 bodyType === t.label ? "border-primary bg-primary/10" : "border-border bg-secondary/50"
               }`}>
-              <OptionImageThumbnail category="body_type" label={t.label} onPreview={setPreviewImage} />
+              <OptionImageThumbnail category="body_type" label={t.label} gender={gender} onPreview={setPreviewImage} />
               <div>
                 <span className="text-xs font-semibold text-foreground block">{t.label}</span>
                 <span className="text-lg">{t.emoji}</span>
