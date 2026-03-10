@@ -26,7 +26,7 @@ serve(async (req) => {
   if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
 
   try {
-    const { modelDescription, userId, occasion, facePhotoUrl, bodyPhotoUrl } = await req.json();
+    const { modelDescription, userId, occasion, gender, facePhotoUrl, bodyPhotoUrl } = await req.json();
     const replicateKey = Deno.env.get("REPLICATE_API_KEY");
     if (!replicateKey) throw new Error("REPLICATE_API_KEY not configured");
 
@@ -34,9 +34,10 @@ serve(async (req) => {
       ? `posing appropriately for a ${occasion} setting`
       : "standing in a natural, confident pose";
 
-    const prompt = `A photorealistic full-body photograph of a real person with these physical characteristics: ${modelDescription}. ${poseContext}. Wearing a simple white t-shirt and well-fitted jeans. Clean studio background, soft professional lighting, fashion editorial photography style, full body visible head to toe, shot on professional camera. NOT an illustration or cartoon.`;
+    const genderDesc = gender ? `${gender} ` : "";
 
-    // Use FLUX Schnell for fast, high-quality image generation
+    const prompt = `A photorealistic full-body photograph of a real ${genderDesc}person with these physical characteristics: ${modelDescription}. ${poseContext}. Wearing a simple white t-shirt and well-fitted jeans. Clean studio background, soft professional lighting, fashion editorial photography style, full body visible head to toe, shot on professional camera. NOT an illustration or cartoon.`;
+
     const input: Record<string, any> = {
       prompt,
       num_outputs: 1,
@@ -45,7 +46,6 @@ serve(async (req) => {
       output_quality: 90,
     };
 
-    // If we have a face photo, use FLUX with img2img for better likeness
     if (facePhotoUrl) {
       input.prompt = `${prompt} The person's face should match the reference photo exactly.`;
     }
@@ -72,7 +72,6 @@ serve(async (req) => {
     const imageUrl = Array.isArray(result.output) ? result.output[0] : result.output;
     if (!imageUrl) throw new Error("No image generated");
 
-    // Download image and upload to storage
     if (userId) {
       const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
       const supabaseServiceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;

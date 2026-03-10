@@ -9,7 +9,7 @@ serve(async (req) => {
   if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
 
   try {
-    const { wardrobeItems, occasion, timeOfDay, weather, styleProfile, surpriseMe } = await req.json();
+    const { wardrobeItems, occasion, timeOfDay, weather, styleProfile, surpriseMe, gender } = await req.json();
     const apiKey = Deno.env.get("LOVABLE_API_KEY");
     if (!apiKey) throw new Error("LOVABLE_API_KEY not configured");
 
@@ -17,8 +17,10 @@ serve(async (req) => {
       `ID:${i.id} - ${i.name || i.type} (${i.type}, color: ${i.color || "unknown"}, material: ${i.material || "unknown"})`
     ).join("\n");
 
+    const genderInfo = gender || styleProfile?.gender || "";
     const profileDesc = styleProfile
-      ? `Body type: ${styleProfile.body_type || "unknown"}, Skin tone: ${styleProfile.skin_tone || "unknown"}, Style preference: ${styleProfile.style_type || "any"}, Face shape: ${styleProfile.face_shape || "unknown"}`
+      ? `Gender: ${genderInfo || "unknown"}, Body type: ${styleProfile.body_type || "unknown"}, Skin tone: ${styleProfile.skin_tone || "unknown"}, Style preference: ${styleProfile.style_type || "any"}, Face shape: ${styleProfile.face_shape || "unknown"}`
+      : "No style profile available";
       : "No style profile available";
 
     const bodyAnalysis = styleProfile?.ai_body_analysis ? `\nAI Body Analysis: ${JSON.stringify(styleProfile.ai_body_analysis)}` : "";

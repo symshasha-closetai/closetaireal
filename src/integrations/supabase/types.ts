@@ -139,6 +139,7 @@ export type Database = {
           created_at: string
           face_photo_url: string | null
           face_shape: string | null
+          gender: string | null
           id: string
           model_image_url: string | null
           skin_tone: string | null
@@ -155,6 +156,7 @@ export type Database = {
           created_at?: string
           face_photo_url?: string | null
           face_shape?: string | null
+          gender?: string | null
           id?: string
           model_image_url?: string | null
           skin_tone?: string | null
@@ -171,6 +173,7 @@ export type Database = {
           created_at?: string
           face_photo_url?: string | null
           face_shape?: string | null
+          gender?: string | null
           id?: string
           model_image_url?: string | null
           skin_tone?: string | null

@@ -9,11 +9,13 @@ serve(async (req) => {
   if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
 
   try {
-    const { faceImageBase64, bodyImageBase64 } = await req.json();
+    const { faceImageBase64, bodyImageBase64, gender } = await req.json();
     const apiKey = Deno.env.get("LOVABLE_API_KEY");
     if (!apiKey) throw new Error("LOVABLE_API_KEY not configured");
 
-    const systemPrompt = `You are an expert body and face analyzer for a fashion styling app. Analyze the provided photos and extract precise physical attributes to help with clothing recommendations. Be respectful and objective.
+    const genderContext = gender ? `The person identifies as ${gender}. Use ${gender}-appropriate body composition analysis and fashion terminology.` : "";
+
+    const systemPrompt = `You are an expert body and face analyzer for a fashion styling app. Analyze the provided photos and extract precise physical attributes to help with clothing recommendations. Be respectful and objective. ${genderContext}
 
 You MUST respond with a JSON object (no markdown) containing:
 {
@@ -38,7 +40,7 @@ You MUST respond with a JSON object (no markdown) containing:
 }`;
 
     const contentParts: any[] = [
-      { type: "text", text: "Analyze these photos. The first is a face photo and the second is a full body photo. Extract detailed physical attributes for fashion styling purposes. Return JSON only." },
+      { type: "text", text: `Analyze these photos. The first is a face photo and the second is a full body photo. ${gender ? `The person is ${gender}.` : ""} Extract detailed physical attributes for fashion styling purposes. Return JSON only.` },
     ];
 
     if (faceImageBase64) {
