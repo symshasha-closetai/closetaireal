@@ -267,7 +267,7 @@ const HomeScreen = () => {
   const displayModelUrl = fullSizeModelUrl || styleProfile?.model_image_url || profile?.avatar_url;
 
   return (
-    <div className="min-h-screen pb-24 px-5 pt-14">
+    <div className="min-h-screen pb-24 px-5 pt-8">
       <input type="file" accept="image/*" capture="user" className="hidden" />
 
       <motion.div variants={container} initial="hidden" animate="show" className="max-w-5xl mx-auto space-y-5">

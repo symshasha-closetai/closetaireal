@@ -449,8 +449,8 @@ const OutfitRatingCard = ({ image, imageBase64, result, wardrobeItems = [] }: Pr
           )}
 
           {/* CTA */}
-          <div style={{ padding: "8px 20px 20px", textAlign: "center" }}>
-            <p style={{ fontSize: 11, color: "rgba(255,255,255,0.4)", letterSpacing: 0.5 }}>
+          <div style={{ padding: "8px 20px 16px", textAlign: "center" }}>
+            <p style={{ fontSize: 11, color: "rgba(255,255,255,0.4)", letterSpacing: 0.5, textAlign: "center" }}>
               Check your drip score → <span style={{ fontWeight: 600, color: "rgba(255,255,255,0.6)" }}>closetaireal.lovable.app</span>
             </p>
           </div>
