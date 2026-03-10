@@ -37,7 +37,7 @@ const skinTones = [
 const faceShapes = ["Oval", "Round", "Square", "Heart", "Oblong", "Diamond"];
 
 const styleOptions = [
-  "Casual", "Formal", "Streetwear", "Minimalist", "Bohemian", "Classic", "Sporty",
+  "Casual", "Formal", "Streetwear", "Minimalist", "Bohemian", "Classic", "Sporty", "Gym",
 ];
 
 const OptionImageThumbnail = ({ category, label, onPreview }: { category: string; label: string; onPreview?: (url: string) => void }) => {
