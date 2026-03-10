@@ -8,6 +8,12 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { useOptionImage } from "@/hooks/useOptionImage";
 import { compressImage } from "@/lib/imageCompression";
 
+const genderOptions = [
+  { label: "Male", emoji: "👨" },
+  { label: "Female", emoji: "👩" },
+  { label: "Other", emoji: "🧑" },
+];
+
 const bodyTypes = [
   { label: "Hourglass", emoji: "⏳" },
   { label: "Pear", emoji: "🍐" },
@@ -34,22 +40,17 @@ const styleOptions = [
   "Casual", "Formal", "Streetwear", "Minimalist", "Bohemian", "Classic", "Sporty",
 ];
 
-// useOptionImage is now imported from shared hook
-
 const OptionImageThumbnail = ({ category, label }: { category: string; label: string }) => {
   const { imageUrl, loading } = useOptionImage(category, label);
-
   if (loading) return <Skeleton className="w-10 h-10 rounded-lg" />;
   if (!imageUrl) return null;
-
-  return (
-    <img src={imageUrl} alt={label} className="w-10 h-10 rounded-lg object-cover" loading="lazy" />
-  );
+  return <img src={imageUrl} alt={label} className="w-10 h-10 rounded-lg object-cover" loading="lazy" />;
 };
 
 const StyleProfileEditor = () => {
   const { user, styleProfile, refreshProfile } = useAuth();
 
+  const [gender, setGender] = useState(styleProfile?.gender || "");
   const [bodyType, setBodyType] = useState(styleProfile?.body_type || "");
   const [skinTone, setSkinTone] = useState(styleProfile?.skin_tone || "");
   const [faceShape, setFaceShape] = useState(styleProfile?.face_shape || "");
@@ -76,6 +77,7 @@ const StyleProfileEditor = () => {
     try {
       await supabase.from("style_profiles").upsert({
         user_id: user.id,
+        gender: gender || null,
         body_type: bodyType || null,
         skin_tone: skinTone || null,
         face_shape: faceShape || null,
@@ -83,7 +85,8 @@ const StyleProfileEditor = () => {
       }, { onConflict: "user_id" });
 
       setRegenerating(true);
-      const modelDesc = `A person with ${skinTone || "medium"} skin tone, ${bodyType || "average"} body type, ${faceShape || "oval"} face shape. Standing pose, full body.`;
+      const genderDesc = gender ? `${gender} ` : "";
+      const modelDesc = `A ${genderDesc}person with ${skinTone || "medium"} skin tone, ${bodyType || "average"} body type, ${faceShape || "oval"} face shape. Standing pose, full body.`;
 
       const { data: spData } = await supabase.from("style_profiles").select("face_photo_url, body_photo_url").eq("user_id", user.id).single();
 
@@ -91,6 +94,7 @@ const StyleProfileEditor = () => {
         body: { 
           modelDescription: modelDesc, 
           userId: user.id,
+          gender: gender || null,
           facePhotoUrl: spData?.face_photo_url || null,
           bodyPhotoUrl: spData?.body_photo_url || null,
         },
@@ -114,7 +118,6 @@ const StyleProfileEditor = () => {
     setReanalyzing(true);
 
     try {
-
       let faceUrl: string | null = null;
       let bodyUrl: string | null = null;
       let faceB64: string | null = null;
@@ -139,7 +142,7 @@ const StyleProfileEditor = () => {
       }
 
       const { data, error } = await supabase.functions.invoke("analyze-body-profile", {
-        body: { faceImageBase64: faceB64, bodyImageBase64: bodyB64 },
+        body: { faceImageBase64: faceB64, bodyImageBase64: bodyB64, gender: gender || null },
       });
 
       if (error) throw error;
@@ -226,7 +229,23 @@ const StyleProfileEditor = () => {
         )}
       </motion.div>
 
-      {/* Body Type - with AI images */}
+      {/* Gender */}
+      <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.08 }} className="glass-card p-4 space-y-3">
+        <h3 className="text-sm font-semibold text-foreground">Gender</h3>
+        <div className="grid grid-cols-3 gap-2">
+          {genderOptions.map(g => (
+            <button key={g.label} onClick={() => setGender(g.label)}
+              className={`flex flex-col items-center gap-1.5 py-3 rounded-xl border-2 transition-all ${
+                gender === g.label ? "border-primary bg-primary/10" : "border-border bg-secondary/50"
+              }`}>
+              <span className="text-2xl">{g.emoji}</span>
+              <span className="text-xs font-semibold text-foreground">{g.label}</span>
+            </button>
+          ))}
+        </div>
+      </motion.div>
+
+      {/* Body Type */}
       <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.1 }} className="glass-card p-4 space-y-3">
         <h3 className="text-sm font-semibold text-foreground">Body Type</h3>
         <div className="grid grid-cols-2 gap-2">
@@ -260,7 +279,7 @@ const StyleProfileEditor = () => {
         </div>
       </motion.div>
 
-      {/* Face Shape - with AI images */}
+      {/* Face Shape */}
       <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.2 }} className="glass-card p-4 space-y-3">
         <h3 className="text-sm font-semibold text-foreground">Face Shape</h3>
         <div className="grid grid-cols-3 gap-2">
@@ -276,7 +295,7 @@ const StyleProfileEditor = () => {
         </div>
       </motion.div>
 
-      {/* Style Preferences - with AI images */}
+      {/* Style Preferences */}
       <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.25 }} className="glass-card p-4 space-y-3">
         <h3 className="text-sm font-semibold text-foreground">Style Preferences</h3>
         <div className="grid grid-cols-2 gap-2">

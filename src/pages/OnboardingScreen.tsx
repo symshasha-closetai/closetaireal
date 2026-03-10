@@ -8,6 +8,12 @@ import { toast } from "sonner";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useOptionImage } from "@/hooks/useOptionImage";
 
+const genderOptions = [
+  { label: "Male", emoji: "👨", desc: "Male body composition" },
+  { label: "Female", emoji: "👩", desc: "Female body composition" },
+  { label: "Other", emoji: "🧑", desc: "Non-binary / prefer not to say" },
+];
+
 const bodyTypes = [
   { label: "Hourglass", desc: "Balanced bust & hips, defined waist", emoji: "⏳" },
   { label: "Pear", desc: "Hips wider than shoulders", emoji: "🍐" },
@@ -68,8 +74,6 @@ type AnalysisResult = {
   model_description?: string;
 };
 
-// useOptionImage is now imported from shared hook
-
 const OnboardingOptionImage = ({ category, label }: { category: string; label: string }) => {
   const { imageUrl, loading } = useOptionImage(category, label);
   if (loading) return <Skeleton className="w-10 h-10 rounded-lg" />;
@@ -81,8 +85,11 @@ const OnboardingScreen = () => {
   const { user, refreshProfile } = useAuth();
   const navigate = useNavigate();
 
-  // Steps: 0=Photos, 1=Body(conditional), 2=Style, 3=ModelGen+Done
+  // Steps: 0=Gender+Photos, 1=Body(conditional), 2=Style, 3=ModelGen+Done
   const [step, setStep] = useState(0);
+
+  // Gender state
+  const [gender, setGender] = useState<string | null>(null);
 
   // Photo state
   const [facePreview, setFacePreview] = useState<string | null>(null);
@@ -138,7 +145,6 @@ const OnboardingScreen = () => {
     setAnalyzing(true);
 
     try {
-      // Upload photos to storage
       let faceUrl: string | null = null;
       let bodyUrl: string | null = null;
 
@@ -162,17 +168,15 @@ const OnboardingScreen = () => {
         setUploadingBody(false);
       }
 
-      // Also set as avatar if face photo provided
       if (faceUrl) {
         await supabase.from("profiles").update({ avatar_url: faceUrl }).eq("user_id", user.id);
       }
 
-      // Call AI analysis
       const faceB64 = faceFile ? await fileToBase64(faceFile) : null;
       const bodyB64 = bodyFile ? await fileToBase64(bodyFile) : null;
 
       const { data, error } = await supabase.functions.invoke("analyze-body-profile", {
-        body: { faceImageBase64: faceB64, bodyImageBase64: bodyB64 },
+        body: { faceImageBase64: faceB64, bodyImageBase64: bodyB64, gender },
       });
 
       if (error) throw error;
@@ -180,7 +184,6 @@ const OnboardingScreen = () => {
       setAnalysisResult(data);
       setPhotosProvided(true);
 
-      // Auto-fill from analysis
       if (data.face_analysis) {
         if (data.face_analysis.face_shape) setFaceShape(data.face_analysis.face_shape);
         if (data.face_analysis.skin_tone) setSkinTone(data.face_analysis.skin_tone);
@@ -189,9 +192,9 @@ const OnboardingScreen = () => {
         if (data.body_analysis.body_type) setBodyType(data.body_analysis.body_type);
       }
 
-      // Save photo URLs and analysis to DB
       await supabase.from("style_profiles").upsert({
         user_id: user.id,
+        gender,
         face_photo_url: faceUrl,
         body_photo_url: bodyUrl,
         ai_face_analysis: data.face_analysis || null,
@@ -199,7 +202,6 @@ const OnboardingScreen = () => {
       }, { onConflict: "user_id" });
 
       toast.success("AI analysis complete! ✨");
-      // Go to body profile step so user can review/edit AI results
       setStep(1);
     } catch (err) {
       console.error("Analysis error:", err);
@@ -219,27 +221,27 @@ const OnboardingScreen = () => {
     setSaving(true);
 
     try {
-      // Save style profile
       await supabase.from("style_profiles").upsert({
         user_id: user.id,
+        gender,
         body_type: bodyType,
         skin_tone: skinTone,
         face_shape: faceShape,
         style_type: selectedStyles.join(",") || null,
       }, { onConflict: "user_id" });
 
-      // Generate model avatar
       setGeneratingModel(true);
+      const genderDesc = gender ? `${gender} ` : "";
       const modelDesc = analysisResult?.model_description || 
-        `A person with ${skinTone || "medium"} skin tone, ${bodyType || "average"} body type, ${faceShape || "oval"} face shape. Standing pose, full body.`;
+        `A ${genderDesc}person with ${skinTone || "medium"} skin tone, ${bodyType || "average"} body type, ${faceShape || "oval"} face shape. Standing pose, full body.`;
 
-      // Get photo URLs from style profile for reference
       const { data: spData } = await supabase.from("style_profiles").select("face_photo_url, body_photo_url").eq("user_id", user.id).single();
 
       const { data, error } = await supabase.functions.invoke("generate-model-avatar", {
         body: { 
           modelDescription: modelDesc, 
           userId: user.id,
+          gender,
           facePhotoUrl: spData?.face_photo_url || null,
           bodyPhotoUrl: spData?.body_photo_url || null,
         },
@@ -247,7 +249,6 @@ const OnboardingScreen = () => {
 
       if (error) {
         console.error("Model generation error:", error);
-        // Continue anyway
       } else if (data?.imageUrl) {
         setModelImageUrl(data.imageUrl);
       }
@@ -259,7 +260,6 @@ const OnboardingScreen = () => {
     } catch (err) {
       console.error(err);
       toast.error("Failed to complete setup");
-      // Try to navigate anyway
       await refreshProfile();
       navigate("/", { replace: true });
     } finally {
@@ -272,7 +272,7 @@ const OnboardingScreen = () => {
     if (!user) return;
     setSaving(true);
     try {
-      await supabase.from("style_profiles").upsert({ user_id: user.id }, { onConflict: "user_id" });
+      await supabase.from("style_profiles").upsert({ user_id: user.id, gender }, { onConflict: "user_id" });
       await refreshProfile();
       navigate("/", { replace: true });
     } catch {
@@ -282,7 +282,7 @@ const OnboardingScreen = () => {
     }
   };
 
-  const totalSteps = 4; // Always 4 steps: Photos, Body, Style, Done
+  const totalSteps = 4;
 
   const slideVariants = {
     enter: (dir: number) => ({ x: dir > 0 ? 200 : -200, opacity: 0 }),
@@ -305,12 +305,33 @@ const OnboardingScreen = () => {
 
         {/* Steps */}
         <AnimatePresence mode="wait" custom={1}>
-          {/* Step 0: Photo Upload */}
+          {/* Step 0: Gender + Photo Upload */}
           {step === 0 && (
             <motion.div key="photos" custom={1} variants={slideVariants} initial="enter" animate="center" exit="exit" transition={{ duration: 0.3 }} className="flex-1 flex flex-col gap-6">
               <div className="text-center">
                 <h1 className="font-display text-2xl font-semibold text-foreground">Let's Get to Know You</h1>
-                <p className="text-sm text-muted-foreground mt-1">Upload photos for AI body & face analysis, or skip to set preferences manually</p>
+                <p className="text-sm text-muted-foreground mt-1">Select your gender and upload photos for AI analysis</p>
+              </div>
+
+              {/* Gender Selection */}
+              <div className="glass-card p-4 space-y-3">
+                <h3 className="text-sm font-semibold text-foreground">Gender</h3>
+                <div className="grid grid-cols-3 gap-2">
+                  {genderOptions.map(g => (
+                    <button
+                      key={g.label}
+                      onClick={() => setGender(g.label)}
+                      className={`flex flex-col items-center gap-1.5 py-3 rounded-xl border-2 transition-all ${
+                        gender === g.label
+                          ? "border-primary bg-primary/10 shadow-soft"
+                          : "border-border bg-secondary/50"
+                      }`}
+                    >
+                      <span className="text-2xl">{g.emoji}</span>
+                      <span className="text-xs font-semibold text-foreground">{g.label}</span>
+                    </button>
+                  ))}
+                </div>
               </div>
 
               {analyzing ? (
@@ -419,7 +440,7 @@ const OnboardingScreen = () => {
             </motion.div>
           )}
 
-          {/* Step 1: Body Profile (always shown — editable AI results or manual) */}
+          {/* Step 1: Body Profile */}
           {step === 1 && (
             <motion.div key="body" custom={1} variants={slideVariants} initial="enter" animate="center" exit="exit" transition={{ duration: 0.3 }} className="flex-1 space-y-5 overflow-y-auto">
               <div className="text-center">
@@ -509,7 +530,6 @@ const OnboardingScreen = () => {
                 <p className="text-sm text-muted-foreground mt-1">Pick the styles you love (select multiple)</p>
               </div>
 
-              {/* Show AI analysis summary if photos were provided */}
               {photosProvided && analysisResult && (
                 <div className="glass-card-elevated p-4 space-y-2">
                   <h3 className="text-xs font-semibold text-foreground flex items-center gap-1.5">
