@@ -51,6 +51,7 @@ const styleOptions = [
   { label: "Bohemian", desc: "Free-spirited & artsy" },
   { label: "Classic", desc: "Timeless & elegant" },
   { label: "Sporty", desc: "Active & athletic" },
+  { label: "Gym", desc: "Workout & fitness" },
 ];
 
 type AnalysisResult = {
