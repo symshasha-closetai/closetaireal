@@ -8,14 +8,6 @@ import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import ScoreRing from "../components/ScoreRing";
 
-const container = {
-  hidden: { opacity: 0 },
-  show: { opacity: 1, transition: { staggerChildren: 0.1 } },
-};
-const item = {
-  hidden: { opacity: 0, y: 16 },
-  show: { opacity: 1, y: 0, transition: { duration: 0.4, ease: "easeOut" as const } },
-};
 
 const occasions = [
   { label: "Casual", icon: Shirt, color: "bg-blue-100 text-blue-600" },
