@@ -415,7 +415,7 @@ const OutfitRatingCard = ({ image, imageBase64, result, wardrobeItems = [] }: Pr
           </div>
 
           {/* Sub-scores */}
-          <div style={{ display: "flex", justifyContent: "space-around", padding: "20px 16px 12px" }}>
+          <div style={{ display: "flex", justifyContent: "space-around", padding: "20px 16px 12px", textAlign: "center" }}>
             {[
               { label: "Color", score: result.color_score, color: "#86efac" },
               { label: "Style", score: result.style_score, color: "#fbbf24" },
