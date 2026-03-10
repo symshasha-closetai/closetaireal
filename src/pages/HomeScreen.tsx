@@ -437,7 +437,7 @@ const HomeScreen = () => {
           </div>
 
           {/* RIGHT PANEL: AI Model (no hover effect) */}
-          <div className="lg:w-[340px] flex-shrink-0 order-1 lg:order-2">
+          <div className="lg:w-[420px] flex-shrink-0 order-1 lg:order-2">
             <div className="sticky top-20">
               <div className="relative rounded-3xl overflow-hidden shadow-elevated bg-secondary">
                 {displayModelUrl ? (
