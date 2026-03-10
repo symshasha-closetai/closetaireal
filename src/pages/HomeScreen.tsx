@@ -478,8 +478,8 @@ const HomeScreen = () => {
               </div>
             </div>
           </div>
-        </motion.div>
-      </motion.div>
+        </div>
+      </div>
 
       {/* Style Me Results Sheet */}
       <AnimatePresence>
