@@ -359,7 +359,7 @@ const OutfitRatingCard = ({ image, imageBase64, result, wardrobeItems = [] }: Pr
             <img src={imageBase64 || image} alt="Outfit" style={{ width: 390, height: 520, objectFit: "cover", display: "block" }} crossOrigin="anonymous" />
             
             {/* Brand top-left */}
-            <div style={{ position: "absolute", top: 16, left: 16 }}>
+            <div style={{ position: "absolute", top: 10, left: 16 }}>
               <span style={{
                 fontSize: 12, fontWeight: 700, letterSpacing: 2, color: "rgba(255,255,255,0.9)",
                 background: "rgba(0,0,0,0.35)", backdropFilter: "blur(8px)",
