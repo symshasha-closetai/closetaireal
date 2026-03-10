@@ -185,7 +185,8 @@ const WardrobeScreen = () => {
             name: item.name,
             color: item.color,
             material: item.material,
-          })
+            quality: item.quality,
+          } as any)
           .select("id, image_url, type, color, material, name")
           .single();
 
