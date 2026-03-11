@@ -21,7 +21,6 @@ serve(async (req) => {
     const profileDesc = styleProfile
       ? `Gender: ${genderInfo || "unknown"}, Body type: ${styleProfile.body_type || "unknown"}, Skin tone: ${styleProfile.skin_tone || "unknown"}, Style preference: ${styleProfile.style_type || "any"}, Face shape: ${styleProfile.face_shape || "unknown"}`
       : "No style profile available";
-      : "No style profile available";
 
     const bodyAnalysis = styleProfile?.ai_body_analysis ? `\nAI Body Analysis: ${JSON.stringify(styleProfile.ai_body_analysis)}` : "";
     const faceAnalysis = styleProfile?.ai_face_analysis ? `\nAI Face Analysis: ${JSON.stringify(styleProfile.ai_face_analysis)}` : "";
