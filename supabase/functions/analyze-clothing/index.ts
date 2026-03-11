@@ -28,9 +28,10 @@ For each item found, return a JSON array of objects with these fields:
 - "color": primary color
 - "material": material if identifiable (e.g., "Denim", "Leather", "Cotton", "Linen", "Polyester", "Silk", "Wool", "Nylon", "Chiffon", "Velvet", "Satin"), or null
 - "quality": estimated quality based on visible fabric texture, stitching, brand indicators, and overall construction. One of "Premium", "Mid-range", "Budget", or "Unknown"
+- "brand": brand name if visible or identifiable from logos, tags, or distinctive design patterns (e.g., "Nike", "Zara", "Gucci"), or null if not identifiable
 
 Return ONLY valid JSON array, no markdown, no explanation. Example:
-[{"name":"White Cotton T-Shirt","type":"Tops","color":"White","material":"Cotton","quality":"Mid-range"},{"name":"Blue Slim Jeans","type":"Bottoms","color":"Blue","material":"Denim","quality":"Premium"}]`;
+[{"name":"White Cotton T-Shirt","type":"Tops","color":"White","material":"Cotton","quality":"Mid-range","brand":null},{"name":"Blue Slim Jeans","type":"Bottoms","color":"Blue","material":"Denim","quality":"Premium","brand":"Levi's"}]`;
 
     const response = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
       method: "POST",
