@@ -26,6 +26,24 @@ export type RatingResult = {
   shopping_suggestions: { item_name: string; category: string; reason: string; image_prompt?: string }[];
 };
 
+// Save drip card to localStorage history
+const saveDripToHistory = (image: string, result: RatingResult) => {
+  try {
+    const existing = JSON.parse(localStorage.getItem("drip-history") || "[]");
+    const entry = {
+      id: `drip-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`,
+      image, // This will be the share card image once captured, or the outfit photo
+      score: result.drip_score,
+      killerTag: result.killer_tag || "",
+      praiseLine: result.praise_line || "",
+      timestamp: Date.now(),
+    };
+    // Keep max 20 entries
+    const updated = [entry, ...existing].slice(0, 20);
+    localStorage.setItem("drip-history", JSON.stringify(updated));
+  } catch { /* quota */ }
+};
+
 const CameraScreen = () => {
   const { user, styleProfile } = useAuth();
   const [image, setImage] = useState<string | null>(null);
@@ -40,10 +58,7 @@ const CameraScreen = () => {
   const toBase64 = (file: File): Promise<string> =>
     new Promise((resolve, reject) => {
       const reader = new FileReader();
-      reader.onload = () => {
-        const dataUrl = reader.result as string;
-        resolve(dataUrl.split(",")[1]);
-      };
+      reader.onload = () => resolve((reader.result as string).split(",")[1]);
       reader.onerror = reject;
       reader.readAsDataURL(file);
     });
@@ -72,27 +87,22 @@ const CameraScreen = () => {
     abortControllerRef.current = new AbortController();
     try {
       const imageBase64 = await toBase64(file);
-
       let fetchedWardrobe: any[] = [];
       if (user) {
         const { data } = await supabase.from("wardrobe").select("id, name, type, color, material, image_url").eq("user_id", user.id);
         fetchedWardrobe = data || [];
         setWardrobeItems(fetchedWardrobe);
       }
-
       const { data, error } = await supabase.functions.invoke("rate-outfit", {
         body: { imageBase64, wardrobeItems: fetchedWardrobe, styleProfile: styleProfile || undefined },
       });
-
       if (abortControllerRef.current?.signal.aborted) return;
-
       if (error) throw error;
-      if (data?.error) {
-        toast.error(data.error);
-        return;
-      }
+      if (data?.error) { toast.error(data.error); return; }
       if (data?.result) {
         setResult(data.result);
+        // Save to drip history using the outfit photo (share card saved separately on share)
+        saveDripToHistory(URL.createObjectURL(file), data.result);
       }
     } catch (err: any) {
       if (err?.name === "AbortError" || abortControllerRef.current?.signal.aborted) return;
@@ -105,27 +115,16 @@ const CameraScreen = () => {
   };
 
   const cancelAnalysis = () => {
-    if (abortControllerRef.current) {
-      abortControllerRef.current.abort();
-    }
-    setAnalyzing(false);
-    setImage(null);
-    setImageBase64(null);
-    setResult(null);
+    if (abortControllerRef.current) abortControllerRef.current.abort();
+    setAnalyzing(false); setImage(null); setImageBase64(null); setResult(null);
   };
 
-  const clearImage = () => {
-    setImage(null);
-    setImageBase64(null);
-    setResult(null);
-  };
+  const clearImage = () => { setImage(null); setImageBase64(null); setResult(null); };
 
   return (
     <div className="min-h-screen pb-24 px-5 pt-14">
       <div className="max-w-lg mx-auto space-y-6">
-        <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }}>
-          <AppHeader />
-        </motion.div>
+        <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }}><AppHeader /></motion.div>
         <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.05 }}>
           <h1 className="font-display text-2xl font-semibold text-foreground">Drip Check</h1>
           <p className="text-sm text-muted-foreground mt-1">Upload or capture your outfit for styling insights</p>
@@ -178,13 +177,9 @@ const CameraScreen = () => {
                     <X size={16} />
                   </button>
                   <OutfitRatingCard image={image} imageBase64={imageBase64 || undefined} result={result} wardrobeItems={wardrobeItems} />
-                  <motion.button
-                    initial={{ opacity: 0, y: 10 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    transition={{ delay: 0.3 }}
+                  <motion.button initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.3 }}
                     onClick={clearImage}
-                    className="w-full mt-4 py-3 rounded-full border border-border/40 text-foreground/70 font-medium text-sm active:scale-[0.98] transition-transform flex items-center justify-center gap-2 tracking-wider"
-                  >
+                    className="w-full mt-4 py-3 rounded-full border border-border/40 text-foreground/70 font-medium text-sm active:scale-[0.98] transition-transform flex items-center justify-center gap-2 tracking-wider">
                     <Camera size={16} /> Check Another Photo
                   </motion.button>
                 </div>
