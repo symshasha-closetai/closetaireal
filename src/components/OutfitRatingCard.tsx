@@ -195,7 +195,7 @@ const OutfitRatingCard = ({ image, imageBase64, result, wardrobeItems = [] }: Pr
         </div>
 
         {/* Bottom gradient overlay */}
-        <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/60 via-black/30 to-transparent pt-20 pb-5 px-5">
+        <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/60 via-black/30 to-transparent pt-20 pb-3 px-5">
           <div className="flex items-end justify-between">
             {/* Drip Score Ring */}
             <button onClick={() => toggleTooltip("drip")} className="focus:outline-none active:scale-95 transition-transform">
@@ -222,6 +222,15 @@ const OutfitRatingCard = ({ image, imageBase64, result, wardrobeItems = [] }: Pr
               <p className="text-[9px] uppercase tracking-[0.15em] text-white/50 mt-1 text-center">Confidence</p>
             </button>
           </div>
+
+          {/* Occasion Badge - inside photo */}
+          {result.occasion && (
+            <div className="flex justify-center mt-2">
+              <span className="text-[10px] uppercase tracking-wider border border-white/20 rounded-full px-3 py-1 text-white/60">
+                {result.occasion}
+              </span>
+            </div>
+          )}
         </div>
       </motion.div>
 
@@ -249,14 +258,6 @@ const OutfitRatingCard = ({ image, imageBase64, result, wardrobeItems = [] }: Pr
           )}
         </AnimatePresence>
 
-        {/* Occasion Badge */}
-        {result.occasion && (
-          <div className="flex justify-center">
-            <span className="text-[10px] uppercase tracking-wider border border-border/40 rounded-full px-3 py-1 text-muted-foreground">
-              {result.occasion}
-            </span>
-          </div>
-        )}
 
         {/* Praise Line */}
         {result.praise_line && (
