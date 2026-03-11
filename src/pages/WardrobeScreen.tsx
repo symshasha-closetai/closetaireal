@@ -371,16 +371,112 @@ const WardrobeScreen = () => {
           )}
         </AnimatePresence>
 
-        {/* Categories */}
-        <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.1 }} className="flex gap-2 overflow-x-auto pb-1 no-scrollbar">
-          {categories.map((cat) => (
-            <button key={cat} onClick={() => setActiveCategory(cat)}
-              className={`px-4 py-2 rounded-full text-xs font-medium whitespace-nowrap transition-all duration-300 ${
-                activeCategory === cat ? "gradient-accent text-accent-foreground shadow-soft" : "bg-secondary text-secondary-foreground"}`}>
-              {cat}
-            </button>
-          ))}
+        {/* Categories + Filter Toggle */}
+        <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.1 }} className="flex gap-2 items-center">
+          <div className="flex gap-2 overflow-x-auto pb-1 no-scrollbar flex-1">
+            {categories.map((cat) => (
+              <button key={cat} onClick={() => setActiveCategory(cat)}
+                className={`px-4 py-2 rounded-full text-xs font-medium whitespace-nowrap transition-all duration-300 ${
+                  activeCategory === cat ? "gradient-accent text-accent-foreground shadow-soft" : "bg-secondary text-secondary-foreground"}`}>
+                {cat}
+              </button>
+            ))}
+          </div>
+          <button onClick={() => setShowFilters(!showFilters)}
+            className={`relative flex-shrink-0 w-9 h-9 rounded-full flex items-center justify-center transition-all ${showFilters ? "bg-primary text-primary-foreground" : "bg-secondary text-secondary-foreground"}`}>
+            <SlidersHorizontal size={16} />
+            {activeFilterCount > 0 && (
+              <span className="absolute -top-1 -right-1 w-4 h-4 rounded-full bg-primary text-primary-foreground text-[9px] font-bold flex items-center justify-center">{activeFilterCount}</span>
+            )}
+          </button>
         </motion.div>
+
+        {/* Filter Panel */}
+        <AnimatePresence>
+          {showFilters && (
+            <motion.div initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: "auto" }} exit={{ opacity: 0, height: 0 }}
+              className="overflow-hidden">
+              <div className="rounded-xl bg-card border border-border/30 p-4 space-y-3">
+                <div className="flex items-center justify-between">
+                  <span className="text-xs font-medium text-foreground">Filters</span>
+                  {activeFilterCount > 0 && (
+                    <button onClick={clearFilters} className="text-[10px] text-primary underline">Clear all</button>
+                  )}
+                </div>
+
+                {uniqueColors.length > 0 && (
+                  <div>
+                    <p className="text-[10px] uppercase tracking-wider text-muted-foreground mb-1.5">Color</p>
+                    <div className="flex flex-wrap gap-1.5">
+                      {uniqueColors.map(c => (
+                        <button key={c} onClick={() => setFilterColor(filterColor === c ? "" : c)}
+                          className={`px-2.5 py-1 rounded-full text-[10px] transition-all ${filterColor === c ? "bg-primary text-primary-foreground" : "bg-secondary text-secondary-foreground"}`}>
+                          {c}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {uniqueQualities.length > 0 && (
+                  <div>
+                    <p className="text-[10px] uppercase tracking-wider text-muted-foreground mb-1.5">Quality</p>
+                    <div className="flex flex-wrap gap-1.5">
+                      {uniqueQualities.map(q => (
+                        <button key={q} onClick={() => setFilterQuality(filterQuality === q ? "" : q)}
+                          className={`px-2.5 py-1 rounded-full text-[10px] transition-all ${filterQuality === q ? "bg-primary text-primary-foreground" : "bg-secondary text-secondary-foreground"}`}>
+                          {q}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {uniqueMaterials.length > 0 && (
+                  <div>
+                    <p className="text-[10px] uppercase tracking-wider text-muted-foreground mb-1.5">Material</p>
+                    <div className="flex flex-wrap gap-1.5">
+                      {uniqueMaterials.map(m => (
+                        <button key={m} onClick={() => setFilterMaterial(filterMaterial === m ? "" : m)}
+                          className={`px-2.5 py-1 rounded-full text-[10px] transition-all ${filterMaterial === m ? "bg-primary text-primary-foreground" : "bg-secondary text-secondary-foreground"}`}>
+                          {m}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {uniqueBrands.length > 0 && (
+                  <div>
+                    <p className="text-[10px] uppercase tracking-wider text-muted-foreground mb-1.5">Brand</p>
+                    <div className="flex flex-wrap gap-1.5">
+                      {uniqueBrands.map(b => (
+                        <button key={b} onClick={() => setFilterBrand(filterBrand === b ? "" : b)}
+                          className={`px-2.5 py-1 rounded-full text-[10px] transition-all ${filterBrand === b ? "bg-primary text-primary-foreground" : "bg-secondary text-secondary-foreground"}`}>
+                          {b}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {uniqueSeasons.length > 0 && (
+                  <div>
+                    <p className="text-[10px] uppercase tracking-wider text-muted-foreground mb-1.5">Season</p>
+                    <div className="flex flex-wrap gap-1.5">
+                      {uniqueSeasons.map(s => (
+                        <button key={s} onClick={() => setFilterSeason(filterSeason === s ? "" : s)}
+                          className={`px-2.5 py-1 rounded-full text-[10px] transition-all ${filterSeason === s ? "bg-primary text-primary-foreground" : "bg-secondary text-secondary-foreground"}`}>
+                          {s}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                )}
+              </div>
+            </motion.div>
+          )}
+        </AnimatePresence>
 
         {/* Grid */}
         {loading ? (
