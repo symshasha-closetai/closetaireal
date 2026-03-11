@@ -288,6 +288,11 @@ const ProfileScreen = () => {
           </div>
           <input type="file" ref={fileRef} accept="image/*" className="hidden" onChange={handleAvatarUpload} />
           {uploading && <p className="text-[10px] text-muted-foreground">Uploading...</p>}
+          {stylePersonality && (
+            <span className="text-[11px] tracking-wider text-primary/70 bg-primary/5 border border-primary/10 rounded-full px-3 py-1">
+              {stylePersonality}
+            </span>
+          )}
         </motion.div>
 
         {/* Tabs */}
