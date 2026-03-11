@@ -36,6 +36,42 @@ const saveDripHistory = (entries: DripHistoryEntry[]) => {
   try { localStorage.setItem("drip-history", JSON.stringify(entries)); } catch { /* quota */ }
 };
 
+// --- Suggest Me Section ---
+const SuggestMeSection = ({ userId }: { userId?: string }) => {
+  const [suggestion, setSuggestion] = useState("");
+  const [sending, setSending] = useState(false);
+
+  const handleSend = async () => {
+    if (!suggestion.trim() || !userId) return;
+    setSending(true);
+    const { error } = await supabase.from("user_suggestions" as any).insert({ user_id: userId, suggestion: suggestion.trim() } as any);
+    if (error) { toast.error("Failed to send suggestion"); }
+    else { toast.success("Thanks for your feedback! 💜"); setSuggestion(""); }
+    setSending(false);
+  };
+
+  return (
+    <div className="glass-card-elevated p-4 space-y-3">
+      <div className="flex items-center gap-2">
+        <MessageSquare size={14} className="text-primary" />
+        <label className="text-xs font-medium text-foreground">Suggest Me</label>
+      </div>
+      <textarea
+        value={suggestion}
+        onChange={(e) => setSuggestion(e.target.value)}
+        placeholder="Tell us anything — what you'd like to improve, features you want, style goals..."
+        className="w-full px-4 py-3 rounded-xl bg-secondary border border-border text-foreground text-sm placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-accent/30 transition-all resize-none min-h-[80px]"
+        rows={3}
+      />
+      <button onClick={handleSend} disabled={sending || !suggestion.trim()}
+        className="w-full flex items-center justify-center gap-2 py-2.5 rounded-xl gradient-accent text-accent-foreground font-medium text-xs shadow-soft active:scale-[0.98] transition-transform disabled:opacity-60">
+        <Send size={14} />
+        {sending ? "Sending..." : "Send Suggestion"}
+      </button>
+    </div>
+  );
+};
+
 const ProfileScreen = () => {
   const { user, profile, signOut, refreshProfile } = useAuth();
   const navigate = useNavigate();
