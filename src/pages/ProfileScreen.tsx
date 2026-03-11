@@ -1,6 +1,6 @@
 import { useState, useRef, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { ArrowLeft, Camera, LogOut, User, Save, Trash2, AlertTriangle, Loader2, Lock, X, Share2, Download, RefreshCw, RotateCcw, Clock, Sparkles } from "lucide-react";
+import { ArrowLeft, Camera, LogOut, User, Save, Trash2, AlertTriangle, Loader2, Lock, X, Share2, Download, RefreshCw, RotateCcw, Clock, Sparkles, Shield } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "../hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
@@ -62,6 +62,53 @@ const ProfileScreen = () => {
   const [viewingCard, setViewingCard] = useState<DripHistoryEntry | null>(null);
 
   const avatarUrl = avatarPreview || profile?.avatar_url || null;
+
+  // Style personality computation
+  const [stylePersonality, setStylePersonality] = useState<string | null>(null);
+
+  useEffect(() => {
+    const computeStylePersonality = async () => {
+      // Check localStorage cache (1-day TTL)
+      const cached = localStorage.getItem("style-personality");
+      if (cached) {
+        try {
+          const { tag, ts } = JSON.parse(cached);
+          if (Date.now() - ts < 86400000) { setStylePersonality(tag); return; }
+        } catch { /* ignore */ }
+      }
+      if (!user) return;
+      const { data: wardrobeItems } = await supabase.from("wardrobe").select("type, style, material, color, brand").eq("user_id", user.id);
+      const styles = styleActions.selectedStyles;
+      const items = wardrobeItems || [];
+      if (items.length === 0 && styles.length === 0) { setStylePersonality("Style Explorer"); return; }
+
+      const typeCount: Record<string, number> = {};
+      const styleCount: Record<string, number> = {};
+      const materialCount: Record<string, number> = {};
+      items.forEach(i => {
+        if (i.type) typeCount[i.type.toLowerCase()] = (typeCount[i.type.toLowerCase()] || 0) + 1;
+        if (i.style) styleCount[i.style.toLowerCase()] = (styleCount[i.style.toLowerCase()] || 0) + 1;
+        if (i.material) materialCount[i.material.toLowerCase()] = (materialCount[i.material.toLowerCase()] || 0) + 1;
+      });
+      styles.forEach(s => { styleCount[s.toLowerCase()] = (styleCount[s.toLowerCase()] || 0) + 2; });
+
+      const hasStyle = (keywords: string[]) => keywords.some(k => Object.keys(styleCount).some(s => s.includes(k)));
+      const hasMaterial = (keywords: string[]) => keywords.some(k => Object.keys(materialCount).some(m => m.includes(k)));
+
+      let tag = "Style Explorer";
+      if (hasStyle(["streetwear", "street", "urban", "hip"])) tag = "Streetcore";
+      else if (hasStyle(["formal", "classic"]) || hasMaterial(["silk", "wool", "cashmere"])) tag = "Classic Sophisticate";
+      else if (hasStyle(["minimalist", "minimal"]) || hasStyle(["casual"]) && items.length < 15) tag = "Elegant Minimalist";
+      else if (hasStyle(["bohemian", "boho"])) tag = "Boho Spirit";
+      else if (hasStyle(["sporty", "gym", "athletic"])) tag = "Athleisure Icon";
+      else if (hasStyle(["vintage", "retro"])) tag = "Vintage Rebel";
+      else if (hasStyle(["casual", "smart"])) tag = "Smart Casual";
+
+      setStylePersonality(tag);
+      localStorage.setItem("style-personality", JSON.stringify({ tag, ts: Date.now() }));
+    };
+    computeStylePersonality();
+  }, [user, styleActions.selectedStyles]);
 
   useEffect(() => {
     if (profile?.name !== undefined && profile?.name !== null) {
@@ -241,6 +288,11 @@ const ProfileScreen = () => {
           </div>
           <input type="file" ref={fileRef} accept="image/*" className="hidden" onChange={handleAvatarUpload} />
           {uploading && <p className="text-[10px] text-muted-foreground">Uploading...</p>}
+          {stylePersonality && (
+            <span className="text-[11px] tracking-wider text-primary/70 bg-primary/5 border border-primary/10 rounded-full px-3 py-1">
+              {stylePersonality}
+            </span>
+          )}
         </motion.div>
 
         {/* Tabs */}
@@ -296,6 +348,14 @@ const ProfileScreen = () => {
                 {saving ? "Saving..." : "Save Changes"}
               </button>
             </div>
+
+            {/* Privacy Notice */}
+            <div className="flex items-start gap-2.5 bg-secondary/30 border border-border/20 rounded-xl p-3">
+              <Shield size={14} className="text-muted-foreground mt-0.5 flex-shrink-0" />
+              <p className="text-[10px] text-muted-foreground leading-relaxed">
+                Your drip check photos & outfit ratings are stored <span className="font-semibold text-foreground/70">locally on your device only</span>. They are never uploaded to our servers.
+              </p>
+            </div>
           </TabsContent>
 
           {/* === PERSONALITY / BODY TAB === */}
@@ -308,14 +368,20 @@ const ProfileScreen = () => {
               reanalyzing={styleActions.reanalyzing} modelImageUrl={styleActions.modelImageUrl}
             />
 
-            <button onClick={styleActions.handleRefreshIllustrations} disabled={styleActions.refreshingIllustrations}
-              className="w-full flex items-center justify-center gap-2 py-2.5 rounded-xl bg-secondary text-secondary-foreground text-xs font-medium active:scale-[0.98] transition-transform disabled:opacity-60">
-              {styleActions.refreshingIllustrations ? (
-                <><Loader2 size={14} className="animate-spin" /> Clearing cache...</>
-              ) : (
-                <><RotateCcw size={14} /> Refresh All Illustrations</>
-              )}
-            </button>
+            <div className="flex gap-2">
+              <button onClick={styleActions.handleRefreshIllustrations} disabled={styleActions.refreshingIllustrations}
+                className="flex-1 flex items-center justify-center gap-2 py-2.5 rounded-xl bg-secondary text-secondary-foreground text-xs font-medium active:scale-[0.98] transition-transform disabled:opacity-60">
+                {styleActions.refreshingIllustrations ? (
+                  <><Loader2 size={14} className="animate-spin" /> Clearing...</>
+                ) : (
+                  <><RotateCcw size={14} /> Refresh Illustrations</>
+                )}
+              </button>
+              <button onClick={styleActions.handleClearSuggestionCache}
+                className="flex-1 flex items-center justify-center gap-2 py-2.5 rounded-xl bg-secondary text-secondary-foreground text-xs font-medium active:scale-[0.98] transition-transform">
+                <Trash2 size={14} /> Clear Suggestions
+              </button>
+            </div>
 
             <button onClick={styleActions.handleSaveAndRegenerate} disabled={styleActions.saving || styleActions.regenerating}
               className="w-full flex items-center justify-center gap-2 py-3 rounded-xl gradient-accent text-accent-foreground font-medium text-sm shadow-soft active:scale-[0.98] transition-transform disabled:opacity-60">
