@@ -71,6 +71,20 @@ const WardrobeScreen = () => {
   const bgQueueRef = useRef<Array<{ items: DetectedItem[]; selected: number[]; file: File }>>([]);
   const bgProcessingRef = useRef(false);
 
+  // Filters
+  const [showFilters, setShowFilters] = useState(false);
+  const [filterColor, setFilterColor] = useState("");
+  const [filterQuality, setFilterQuality] = useState("");
+  const [filterMaterial, setFilterMaterial] = useState("");
+  const [filterBrand, setFilterBrand] = useState("");
+  const [filterSeason, setFilterSeason] = useState("");
+
+  const activeFilterCount = [filterColor, filterQuality, filterMaterial, filterBrand, filterSeason].filter(Boolean).length;
+
+  const clearFilters = () => {
+    setFilterColor(""); setFilterQuality(""); setFilterMaterial(""); setFilterBrand(""); setFilterSeason("");
+  };
+
   useEffect(() => { if (user) fetchItems(); }, [user]);
 
   const fetchItems = async () => {
