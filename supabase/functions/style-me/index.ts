@@ -73,7 +73,7 @@ For each outfit, also provide a "reasoning" object with structured analysis acro
 Return ONLY valid JSON (no markdown) with this structure:
 {"outfits":[{"name":"string","top_id":"string or null","bottom_id":"string or null","shoes_id":"string or null","accessories":["string"],"score":number,"explanation":"string","reasoning":{"season":"string","mood":"string","time_of_day":"string","color_combination":"string","body_type":"string","skin_tone":"string"}}]}`;
 
-    const userPrompt = `Wardrobe items:\n${wardrobeDesc}\n\nOccasion: ${occasion}\nTime of day: ${timeOfDay}${weatherInfo}\nProfile: ${profileDesc}${bodyAnalysis}${faceAnalysis}\n\nSuggest 2-3 outfits. Return JSON only.`;
+    const userPrompt = `Wardrobe items:\n${wardrobeDesc}\n\nOccasion: ${occasion}\nTime of day: ${timeOfDay}${weatherInfo}\nProfile: ${profileDesc}${bodyAnalysis}${faceAnalysis}\n\nSuggest 3-5 outfits. Return JSON only.`;
 
     const response = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
       method: "POST",
