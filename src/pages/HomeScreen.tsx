@@ -222,6 +222,9 @@ const HomeScreen = () => {
       if (data?.outfits?.length) {
         setOutfitSuggestions(data.outfits);
         setShowResults(true);
+        if (styleProfile?.model_image_url && user) {
+          generateTryOn(data.outfits[0], 0);
+        }
       } else {
         toast.error("No outfits generated. Try adding more items.");
       }
