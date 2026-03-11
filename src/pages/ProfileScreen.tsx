@@ -348,6 +348,14 @@ const ProfileScreen = () => {
                 {saving ? "Saving..." : "Save Changes"}
               </button>
             </div>
+
+            {/* Privacy Notice */}
+            <div className="flex items-start gap-2.5 bg-secondary/30 border border-border/20 rounded-xl p-3">
+              <Shield size={14} className="text-muted-foreground mt-0.5 flex-shrink-0" />
+              <p className="text-[10px] text-muted-foreground leading-relaxed">
+                Your drip check photos & outfit ratings are stored <span className="font-semibold text-foreground/70">locally on your device only</span>. They are never uploaded to our servers.
+              </p>
+            </div>
           </TabsContent>
 
           {/* === PERSONALITY / BODY TAB === */}
