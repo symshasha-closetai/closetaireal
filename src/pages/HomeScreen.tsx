@@ -533,6 +533,46 @@ const HomeScreen = () => {
                         ))}
                       </div>
                       <p className="text-xs text-muted-foreground leading-relaxed">{outfit.explanation}</p>
+                      {outfit.reasoning && (
+                        <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 pt-1">
+                          {outfit.reasoning.season && (
+                            <div className="flex items-start gap-1.5 p-2 rounded-lg bg-secondary">
+                              <Leaf size={12} className="text-green-500 mt-0.5 flex-shrink-0" />
+                              <div><p className="text-[10px] font-semibold text-foreground">Season</p><p className="text-[9px] text-muted-foreground leading-tight">{outfit.reasoning.season}</p></div>
+                            </div>
+                          )}
+                          {outfit.reasoning.mood && (
+                            <div className="flex items-start gap-1.5 p-2 rounded-lg bg-secondary">
+                              <Smile size={12} className="text-yellow-500 mt-0.5 flex-shrink-0" />
+                              <div><p className="text-[10px] font-semibold text-foreground">Mood</p><p className="text-[9px] text-muted-foreground leading-tight">{outfit.reasoning.mood}</p></div>
+                            </div>
+                          )}
+                          {outfit.reasoning.time_of_day && (
+                            <div className="flex items-start gap-1.5 p-2 rounded-lg bg-secondary">
+                              <Sun size={12} className="text-orange-400 mt-0.5 flex-shrink-0" />
+                              <div><p className="text-[10px] font-semibold text-foreground">Time of Day</p><p className="text-[9px] text-muted-foreground leading-tight">{outfit.reasoning.time_of_day}</p></div>
+                            </div>
+                          )}
+                          {outfit.reasoning.color_combination && (
+                            <div className="flex items-start gap-1.5 p-2 rounded-lg bg-secondary">
+                              <Palette size={12} className="text-purple-500 mt-0.5 flex-shrink-0" />
+                              <div><p className="text-[10px] font-semibold text-foreground">Colors</p><p className="text-[9px] text-muted-foreground leading-tight">{outfit.reasoning.color_combination}</p></div>
+                            </div>
+                          )}
+                          {outfit.reasoning.body_type && (
+                            <div className="flex items-start gap-1.5 p-2 rounded-lg bg-secondary">
+                              <User size={12} className="text-blue-500 mt-0.5 flex-shrink-0" />
+                              <div><p className="text-[10px] font-semibold text-foreground">Body Type</p><p className="text-[9px] text-muted-foreground leading-tight">{outfit.reasoning.body_type}</p></div>
+                            </div>
+                          )}
+                          {outfit.reasoning.skin_tone && (
+                            <div className="flex items-start gap-1.5 p-2 rounded-lg bg-secondary">
+                              <Droplet size={12} className="text-rose-400 mt-0.5 flex-shrink-0" />
+                              <div><p className="text-[10px] font-semibold text-foreground">Skin Tone</p><p className="text-[9px] text-muted-foreground leading-tight">{outfit.reasoning.skin_tone}</p></div>
+                            </div>
+                          )}
+                        </div>
+                      )}
                       {!outfit.tryon_image && styleProfile?.model_image_url && (
                         <button onClick={() => generateTryOn(outfit, idx)} className="text-xs font-medium text-primary flex items-center gap-1">
                           <Sparkles size={12} /> Generate try-on preview
