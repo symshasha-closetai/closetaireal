@@ -38,25 +38,22 @@ serve(async (req) => {
 
     const prompt = `A photorealistic full-body photograph of a real ${genderDesc}person with these physical characteristics: ${modelDescription}. ${poseContext}. Wearing a simple white t-shirt and well-fitted jeans. Clean studio background, soft professional lighting, fashion editorial photography style, full body visible head to toe, shot on professional camera. NOT an illustration or cartoon.`;
 
-    const input: Record<string, any> = {
-      prompt,
-      num_outputs: 1,
-      aspect_ratio: "2:3",
-      output_format: "png",
-      output_quality: 90,
-    };
-
-    if (facePhotoUrl) {
-      input.prompt = `${prompt} The person's face should match the reference photo exactly.`;
-    }
-
+    // Step 1: Generate base model body
     const createRes = await fetch("https://api.replicate.com/v1/models/black-forest-labs/flux-schnell/predictions", {
       method: "POST",
       headers: {
         "Authorization": `Bearer ${replicateKey}`,
         "Content-Type": "application/json",
       },
-      body: JSON.stringify({ input }),
+      body: JSON.stringify({
+        input: {
+          prompt,
+          num_outputs: 1,
+          aspect_ratio: "2:3",
+          output_format: "png",
+          output_quality: 90,
+        },
+      }),
     });
 
     if (!createRes.ok) {
@@ -68,10 +65,46 @@ serve(async (req) => {
 
     const prediction = await createRes.json();
     const result = await waitForPrediction(prediction.urls.get, replicateKey);
-
-    const imageUrl = Array.isArray(result.output) ? result.output[0] : result.output;
+    let imageUrl = Array.isArray(result.output) ? result.output[0] : result.output;
     if (!imageUrl) throw new Error("No image generated");
 
+    // Step 2: Face-swap if user has a face photo
+    if (facePhotoUrl) {
+      try {
+        console.log("Starting face-swap with face photo:", facePhotoUrl);
+        const swapRes = await fetch("https://api.replicate.com/v1/predictions", {
+          method: "POST",
+          headers: {
+            "Authorization": `Bearer ${replicateKey}`,
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            version: "d1d6ea8c8be89d664a07a457526f7128109dee7030fdac424788d762c71ed111",
+            input: {
+              input_image: imageUrl,
+              swap_image: facePhotoUrl,
+            },
+          }),
+        });
+
+        if (swapRes.ok) {
+          const swapPrediction = await swapRes.json();
+          const swapResult = await waitForPrediction(swapPrediction.urls.get, replicateKey);
+          const swappedUrl = Array.isArray(swapResult.output) ? swapResult.output[0] : swapResult.output;
+          if (swappedUrl) {
+            imageUrl = swappedUrl;
+            console.log("Face-swap succeeded");
+          }
+        } else {
+          console.error("Face-swap API error:", swapRes.status, await swapRes.text());
+        }
+      } catch (swapErr) {
+        console.error("Face-swap failed, using original model:", swapErr);
+        // Fall back to the non-swapped model image
+      }
+    }
+
+    // Step 3: Upload to storage and update profile
     if (userId) {
       const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
       const supabaseServiceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
