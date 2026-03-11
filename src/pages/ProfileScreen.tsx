@@ -95,14 +95,41 @@ const ProfileScreen = () => {
       const hasStyle = (keywords: string[]) => keywords.some(k => Object.keys(styleCount).some(s => s.includes(k)));
       const hasMaterial = (keywords: string[]) => keywords.some(k => Object.keys(materialCount).some(m => m.includes(k)));
 
+      const hasColor = (keywords: string[]) => keywords.some(k => items.some(i => i.color?.toLowerCase().includes(k)));
+      const hasType = (keywords: string[]) => keywords.some(k => Object.keys(typeCount).some(t => t.includes(k)));
+      const uniqueStyles = new Set(Object.keys(styleCount));
+
       let tag = "Style Explorer";
-      if (hasStyle(["streetwear", "street", "urban", "hip"])) tag = "Streetcore";
+      // Dark Academia — formal/classic + dark tones + wool/tweed/leather
+      if ((hasStyle(["formal", "classic"]) && hasColor(["black", "brown", "navy", "dark"])) || hasMaterial(["tweed", "leather"]) && hasMaterial(["wool"])) tag = "Dark Academia";
+      // Quiet Luxury — minimalist/formal + premium materials
+      else if ((hasStyle(["minimalist", "formal"]) || hasStyle(["minimal"])) && hasMaterial(["cashmere", "silk", "merino"])) tag = "Quiet Luxury";
+      // Cottagecore — bohemian + light/floral/linen/cotton
+      else if (hasStyle(["bohemian", "boho"]) && (hasMaterial(["linen", "cotton"]) || hasColor(["white", "cream", "pastel", "floral"]))) tag = "Cottagecore";
+      // Techwear — sporty/urban + synthetic/nylon
+      else if (hasStyle(["sporty", "urban"]) && hasMaterial(["nylon", "synthetic", "polyester", "gore-tex"])) tag = "Techwear";
+      // Y2K Nostalgia — streetwear + bright/bold + denim/crop
+      else if (hasStyle(["streetwear", "street"]) && (hasColor(["pink", "blue", "bright", "neon"]) || hasType(["crop", "denim"]))) tag = "Y2K Nostalgia";
+      // Grunge — street + plaid/denim + dark tones
+      else if (hasStyle(["street", "grunge"]) && hasColor(["black", "grey", "dark"])) tag = "Grunge";
+      // Preppy — classic/smart + polo/blazer
+      else if (hasStyle(["classic", "smart", "preppy"]) && (hasType(["polo", "blazer", "chino"]) || hasMaterial(["cotton"]))) tag = "Preppy";
+      // Streetcore
+      else if (hasStyle(["streetwear", "street", "urban", "hip"])) tag = "Streetcore";
+      // Classic Sophisticate
       else if (hasStyle(["formal", "classic"]) || hasMaterial(["silk", "wool", "cashmere"])) tag = "Classic Sophisticate";
-      else if (hasStyle(["minimalist", "minimal"]) || hasStyle(["casual"]) && items.length < 15) tag = "Elegant Minimalist";
+      // Elegant Minimalist
+      else if (hasStyle(["minimalist", "minimal"]) || (hasStyle(["casual"]) && items.length < 15)) tag = "Elegant Minimalist";
+      // Boho Spirit
       else if (hasStyle(["bohemian", "boho"])) tag = "Boho Spirit";
+      // Athleisure Icon
       else if (hasStyle(["sporty", "gym", "athletic"])) tag = "Athleisure Icon";
+      // Vintage Rebel
       else if (hasStyle(["vintage", "retro"])) tag = "Vintage Rebel";
+      // Smart Casual
       else if (hasStyle(["casual", "smart"])) tag = "Smart Casual";
+      // Eclectic Mix — high variety of styles
+      else if (uniqueStyles.size >= 5) tag = "Eclectic Mix";
 
       setStylePersonality(tag);
       localStorage.setItem("style-personality", JSON.stringify({ tag, ts: Date.now() }));
