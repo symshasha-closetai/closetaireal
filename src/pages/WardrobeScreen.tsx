@@ -77,7 +77,7 @@ const WardrobeScreen = () => {
     if (!user) return;
     const { data, error } = await supabase
       .from("wardrobe")
-      .select("id, image_url, type, color, material, name, brand")
+      .select("id, image_url, type, color, material, name, brand, quality, season, style")
       .eq("user_id", user.id)
       .order("created_at", { ascending: false });
     if (error) toast.error("Failed to load wardrobe");
