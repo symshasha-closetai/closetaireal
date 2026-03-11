@@ -185,6 +185,7 @@ export type Database = {
       }
       wardrobe: {
         Row: {
+          brand: string | null
           color: string | null
           created_at: string
           id: string
@@ -198,6 +199,7 @@ export type Database = {
           user_id: string
         }
         Insert: {
+          brand?: string | null
           color?: string | null
           created_at?: string
           id?: string
@@ -211,6 +213,7 @@ export type Database = {
           user_id: string
         }
         Update: {
+          brand?: string | null
           color?: string | null
           created_at?: string
           id?: string
