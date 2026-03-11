@@ -306,6 +306,16 @@ export const useStyleProfileActions = () => {
     }
   };
 
+  const handleClearSuggestionCache = () => {
+    const keysToRemove: string[] = [];
+    for (let i = 0; i < localStorage.length; i++) {
+      const key = localStorage.key(i);
+      if (key?.startsWith("suggestion-img-")) keysToRemove.push(key);
+    }
+    keysToRemove.forEach(k => localStorage.removeItem(k));
+    toast.success(`Cleared ${keysToRemove.length} cached suggestion images`);
+  };
+
   const handleReuploadPhotos = async (faceFile: File | null, bodyFile: File | null) => {
     if (!user || (!faceFile && !bodyFile)) return;
     setReanalyzing(true);
