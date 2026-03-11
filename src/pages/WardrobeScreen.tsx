@@ -211,7 +211,7 @@ const WardrobeScreen = () => {
       if (uploadError) throw uploadError;
       const { data: { publicUrl } } = supabase.storage.from("wardrobe").getPublicUrl(path);
       const { data, error } = await supabase.from("wardrobe").insert({ user_id: user.id, image_url: publicUrl, type: newType, name: "New Item" })
-        .select("id, image_url, type, color, material, name, brand").single();
+        .select("id, image_url, type, color, material, name, brand, quality, season, style").single();
       if (error) throw error;
       if (data) setItems((prev) => [data as ClothingItem, ...prev]);
       toast.success("Item added!"); resetModal();
