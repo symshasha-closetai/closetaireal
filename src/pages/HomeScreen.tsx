@@ -452,10 +452,14 @@ const HomeScreen = () => {
                 {displayModelUrl ? (
                   <div className="relative">
                     {generatingModel && (
-                      <div className="absolute inset-0 z-10 flex items-center justify-center bg-background/60 backdrop-blur-sm">
-                        <motion.div animate={{ rotate: 360 }} transition={{ repeat: Infinity, duration: 1.5, ease: "linear" }}>
-                          <Sparkles size={32} className="text-primary" />
-                        </motion.div>
+                      <div className="absolute inset-0 z-10 flex flex-col items-center justify-center gap-4 bg-background/70 backdrop-blur-sm">
+                        <div className="relative w-32 h-48">
+                          <Skeleton className="absolute inset-0 rounded-full w-16 h-16 mx-auto" />
+                          <Skeleton className="absolute top-16 left-1/2 -translate-x-1/2 w-20 h-24 rounded-xl" />
+                          <Skeleton className="absolute top-[120px] left-1/2 -translate-x-[26px] w-10 h-20 rounded-lg" />
+                          <Skeleton className="absolute top-[120px] left-1/2 translate-x-[0px] w-10 h-20 rounded-lg" />
+                        </div>
+                        <p className="text-xs text-muted-foreground animate-pulse">Generating your AI model...</p>
                       </div>
                     )}
                     <img
@@ -474,6 +478,16 @@ const HomeScreen = () => {
                         </div>
                       </div>
                     </div>
+                  </div>
+                ) : generatingModel ? (
+                  <div className="w-full h-[280px] lg:h-[600px] flex flex-col items-center justify-center gap-4">
+                    <div className="relative w-32 h-48">
+                      <Skeleton className="absolute inset-0 rounded-full w-16 h-16 mx-auto" />
+                      <Skeleton className="absolute top-16 left-1/2 -translate-x-1/2 w-20 h-24 rounded-xl" />
+                      <Skeleton className="absolute top-[120px] left-1/2 -translate-x-[26px] w-10 h-20 rounded-lg" />
+                      <Skeleton className="absolute top-[120px] left-1/2 translate-x-[0px] w-10 h-20 rounded-lg" />
+                    </div>
+                    <p className="text-xs text-muted-foreground animate-pulse">Generating your AI model...</p>
                   </div>
                 ) : (
                   <div className="w-full h-[280px] lg:h-[600px] flex items-center justify-center">
