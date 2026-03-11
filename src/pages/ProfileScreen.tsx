@@ -383,6 +383,9 @@ const ProfileScreen = () => {
                 Your drip check photos & outfit ratings are stored <span className="font-semibold text-foreground/70">locally on your device only</span>. They are never uploaded to our servers.
               </p>
             </div>
+
+            {/* Suggest Me */}
+            <SuggestMeSection userId={user?.id} />
           </TabsContent>
 
           {/* === PERSONALITY / BODY TAB === */}
