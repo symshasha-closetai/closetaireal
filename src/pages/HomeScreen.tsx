@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { Sparkles, Camera, ChevronRight, X, Heart, GraduationCap, PartyPopper, Shirt, Palette, Music, Church, Briefcase, Sun, Moon, Sunset, CloudRain, Thermometer, CloudSun, Snowflake, Shuffle } from "lucide-react";
+import { Sparkles, Camera, ChevronRight, X, Heart, GraduationCap, PartyPopper, Shirt, Palette, Music, Church, Briefcase, Sun, Moon, Sunset, CloudRain, Thermometer, CloudSun, Snowflake, Shuffle, Leaf, Smile, Droplet, User } from "lucide-react";
 import AppHeader from "../components/AppHeader";
 import { useAuth } from "../hooks/useAuth";
 import { useNavigate } from "react-router-dom";
