@@ -1,6 +1,6 @@
 import { useState, useRef, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { ArrowLeft, Camera, LogOut, User, Save, Trash2, AlertTriangle, Loader2, Lock, X, Share2, Download, RefreshCw, RotateCcw, Clock, Sparkles, Shield } from "lucide-react";
+import { ArrowLeft, Camera, LogOut, User, Save, Trash2, AlertTriangle, Loader2, Lock, X, Share2, Download, RefreshCw, RotateCcw, Clock, Sparkles, Shield, Send, MessageSquare } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "../hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
@@ -34,6 +34,42 @@ const getDripHistory = (): DripHistoryEntry[] => {
 
 const saveDripHistory = (entries: DripHistoryEntry[]) => {
   try { localStorage.setItem("drip-history", JSON.stringify(entries)); } catch { /* quota */ }
+};
+
+// --- Suggest Me Section ---
+const SuggestMeSection = ({ userId }: { userId?: string }) => {
+  const [suggestion, setSuggestion] = useState("");
+  const [sending, setSending] = useState(false);
+
+  const handleSend = async () => {
+    if (!suggestion.trim() || !userId) return;
+    setSending(true);
+    const { error } = await supabase.from("user_suggestions" as any).insert({ user_id: userId, suggestion: suggestion.trim() } as any);
+    if (error) { toast.error("Failed to send suggestion"); }
+    else { toast.success("Thanks for your feedback! 💜"); setSuggestion(""); }
+    setSending(false);
+  };
+
+  return (
+    <div className="glass-card-elevated p-4 space-y-3">
+      <div className="flex items-center gap-2">
+        <MessageSquare size={14} className="text-primary" />
+        <label className="text-xs font-medium text-foreground">Suggest Me</label>
+      </div>
+      <textarea
+        value={suggestion}
+        onChange={(e) => setSuggestion(e.target.value)}
+        placeholder="Tell us anything — what you'd like to improve, features you want, style goals..."
+        className="w-full px-4 py-3 rounded-xl bg-secondary border border-border text-foreground text-sm placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-accent/30 transition-all resize-none min-h-[80px]"
+        rows={3}
+      />
+      <button onClick={handleSend} disabled={sending || !suggestion.trim()}
+        className="w-full flex items-center justify-center gap-2 py-2.5 rounded-xl gradient-accent text-accent-foreground font-medium text-xs shadow-soft active:scale-[0.98] transition-transform disabled:opacity-60">
+        <Send size={14} />
+        {sending ? "Sending..." : "Send Suggestion"}
+      </button>
+    </div>
+  );
 };
 
 const ProfileScreen = () => {
@@ -95,14 +131,41 @@ const ProfileScreen = () => {
       const hasStyle = (keywords: string[]) => keywords.some(k => Object.keys(styleCount).some(s => s.includes(k)));
       const hasMaterial = (keywords: string[]) => keywords.some(k => Object.keys(materialCount).some(m => m.includes(k)));
 
+      const hasColor = (keywords: string[]) => keywords.some(k => items.some(i => i.color?.toLowerCase().includes(k)));
+      const hasType = (keywords: string[]) => keywords.some(k => Object.keys(typeCount).some(t => t.includes(k)));
+      const uniqueStyles = new Set(Object.keys(styleCount));
+
       let tag = "Style Explorer";
-      if (hasStyle(["streetwear", "street", "urban", "hip"])) tag = "Streetcore";
+      // Dark Academia — formal/classic + dark tones + wool/tweed/leather
+      if ((hasStyle(["formal", "classic"]) && hasColor(["black", "brown", "navy", "dark"])) || hasMaterial(["tweed", "leather"]) && hasMaterial(["wool"])) tag = "Dark Academia";
+      // Quiet Luxury — minimalist/formal + premium materials
+      else if ((hasStyle(["minimalist", "formal"]) || hasStyle(["minimal"])) && hasMaterial(["cashmere", "silk", "merino"])) tag = "Quiet Luxury";
+      // Cottagecore — bohemian + light/floral/linen/cotton
+      else if (hasStyle(["bohemian", "boho"]) && (hasMaterial(["linen", "cotton"]) || hasColor(["white", "cream", "pastel", "floral"]))) tag = "Cottagecore";
+      // Techwear — sporty/urban + synthetic/nylon
+      else if (hasStyle(["sporty", "urban"]) && hasMaterial(["nylon", "synthetic", "polyester", "gore-tex"])) tag = "Techwear";
+      // Y2K Nostalgia — streetwear + bright/bold + denim/crop
+      else if (hasStyle(["streetwear", "street"]) && (hasColor(["pink", "blue", "bright", "neon"]) || hasType(["crop", "denim"]))) tag = "Y2K Nostalgia";
+      // Grunge — street + plaid/denim + dark tones
+      else if (hasStyle(["street", "grunge"]) && hasColor(["black", "grey", "dark"])) tag = "Grunge";
+      // Preppy — classic/smart + polo/blazer
+      else if (hasStyle(["classic", "smart", "preppy"]) && (hasType(["polo", "blazer", "chino"]) || hasMaterial(["cotton"]))) tag = "Preppy";
+      // Streetcore
+      else if (hasStyle(["streetwear", "street", "urban", "hip"])) tag = "Streetcore";
+      // Classic Sophisticate
       else if (hasStyle(["formal", "classic"]) || hasMaterial(["silk", "wool", "cashmere"])) tag = "Classic Sophisticate";
-      else if (hasStyle(["minimalist", "minimal"]) || hasStyle(["casual"]) && items.length < 15) tag = "Elegant Minimalist";
+      // Elegant Minimalist
+      else if (hasStyle(["minimalist", "minimal"]) || (hasStyle(["casual"]) && items.length < 15)) tag = "Elegant Minimalist";
+      // Boho Spirit
       else if (hasStyle(["bohemian", "boho"])) tag = "Boho Spirit";
+      // Athleisure Icon
       else if (hasStyle(["sporty", "gym", "athletic"])) tag = "Athleisure Icon";
+      // Vintage Rebel
       else if (hasStyle(["vintage", "retro"])) tag = "Vintage Rebel";
+      // Smart Casual
       else if (hasStyle(["casual", "smart"])) tag = "Smart Casual";
+      // Eclectic Mix — high variety of styles
+      else if (uniqueStyles.size >= 5) tag = "Eclectic Mix";
 
       setStylePersonality(tag);
       localStorage.setItem("style-personality", JSON.stringify({ tag, ts: Date.now() }));
@@ -290,7 +353,7 @@ const ProfileScreen = () => {
           {uploading && <p className="text-[10px] text-muted-foreground">Uploading...</p>}
           {stylePersonality && (
             <span className="text-[11px] tracking-wider text-primary/70 bg-primary/5 border border-primary/10 rounded-full px-3 py-1">
-              {stylePersonality}
+              My Style Personality: <span className="font-semibold text-primary">{stylePersonality}</span>
             </span>
           )}
         </motion.div>
@@ -356,6 +419,9 @@ const ProfileScreen = () => {
                 Your drip check photos & outfit ratings are stored <span className="font-semibold text-foreground/70">locally on your device only</span>. They are never uploaded to our servers.
               </p>
             </div>
+
+            {/* Suggest Me */}
+            <SuggestMeSection userId={user?.id} />
           </TabsContent>
 
           {/* === PERSONALITY / BODY TAB === */}

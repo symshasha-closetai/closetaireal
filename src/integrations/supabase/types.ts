@@ -183,6 +183,27 @@ export type Database = {
         }
         Relationships: []
       }
+      user_suggestions: {
+        Row: {
+          created_at: string | null
+          id: string
+          suggestion: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string | null
+          id?: string
+          suggestion: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string | null
+          id?: string
+          suggestion?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       wardrobe: {
         Row: {
           brand: string | null
