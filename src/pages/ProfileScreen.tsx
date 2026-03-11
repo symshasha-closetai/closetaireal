@@ -63,6 +63,53 @@ const ProfileScreen = () => {
 
   const avatarUrl = avatarPreview || profile?.avatar_url || null;
 
+  // Style personality computation
+  const [stylePersonality, setStylePersonality] = useState<string | null>(null);
+
+  useEffect(() => {
+    const computeStylePersonality = async () => {
+      // Check localStorage cache (1-day TTL)
+      const cached = localStorage.getItem("style-personality");
+      if (cached) {
+        try {
+          const { tag, ts } = JSON.parse(cached);
+          if (Date.now() - ts < 86400000) { setStylePersonality(tag); return; }
+        } catch { /* ignore */ }
+      }
+      if (!user) return;
+      const { data: wardrobeItems } = await supabase.from("wardrobe").select("type, style, material, color, brand").eq("user_id", user.id);
+      const styles = styleActions.selectedStyles;
+      const items = wardrobeItems || [];
+      if (items.length === 0 && styles.length === 0) { setStylePersonality("Style Explorer"); return; }
+
+      const typeCount: Record<string, number> = {};
+      const styleCount: Record<string, number> = {};
+      const materialCount: Record<string, number> = {};
+      items.forEach(i => {
+        if (i.type) typeCount[i.type.toLowerCase()] = (typeCount[i.type.toLowerCase()] || 0) + 1;
+        if (i.style) styleCount[i.style.toLowerCase()] = (styleCount[i.style.toLowerCase()] || 0) + 1;
+        if (i.material) materialCount[i.material.toLowerCase()] = (materialCount[i.material.toLowerCase()] || 0) + 1;
+      });
+      styles.forEach(s => { styleCount[s.toLowerCase()] = (styleCount[s.toLowerCase()] || 0) + 2; });
+
+      const hasStyle = (keywords: string[]) => keywords.some(k => Object.keys(styleCount).some(s => s.includes(k)));
+      const hasMaterial = (keywords: string[]) => keywords.some(k => Object.keys(materialCount).some(m => m.includes(k)));
+
+      let tag = "Style Explorer";
+      if (hasStyle(["streetwear", "street", "urban", "hip"])) tag = "Streetcore";
+      else if (hasStyle(["formal", "classic"]) || hasMaterial(["silk", "wool", "cashmere"])) tag = "Classic Sophisticate";
+      else if (hasStyle(["minimalist", "minimal"]) || hasStyle(["casual"]) && items.length < 15) tag = "Elegant Minimalist";
+      else if (hasStyle(["bohemian", "boho"])) tag = "Boho Spirit";
+      else if (hasStyle(["sporty", "gym", "athletic"])) tag = "Athleisure Icon";
+      else if (hasStyle(["vintage", "retro"])) tag = "Vintage Rebel";
+      else if (hasStyle(["casual", "smart"])) tag = "Smart Casual";
+
+      setStylePersonality(tag);
+      localStorage.setItem("style-personality", JSON.stringify({ tag, ts: Date.now() }));
+    };
+    computeStylePersonality();
+  }, [user, styleActions.selectedStyles]);
+
   useEffect(() => {
     if (profile?.name !== undefined && profile?.name !== null) {
       setName(profile.name);
