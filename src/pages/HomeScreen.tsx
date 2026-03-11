@@ -161,7 +161,9 @@ const HomeScreen = () => {
           modelDescription: desc,
           userId: user.id,
           occasion: selectedOccasion,
-          facePhotoUrl: styleProfile.model_image_url,
+          gender: sp.data?.gender || undefined,
+          facePhotoUrl: sp.data?.face_photo_url || sp.data?.body_photo_url || null,
+          bodyPhotoUrl: sp.data?.body_photo_url || null,
         },
       });
       if (!error && data?.imageUrl) {
