@@ -368,14 +368,20 @@ const ProfileScreen = () => {
               reanalyzing={styleActions.reanalyzing} modelImageUrl={styleActions.modelImageUrl}
             />
 
-            <button onClick={styleActions.handleRefreshIllustrations} disabled={styleActions.refreshingIllustrations}
-              className="w-full flex items-center justify-center gap-2 py-2.5 rounded-xl bg-secondary text-secondary-foreground text-xs font-medium active:scale-[0.98] transition-transform disabled:opacity-60">
-              {styleActions.refreshingIllustrations ? (
-                <><Loader2 size={14} className="animate-spin" /> Clearing cache...</>
-              ) : (
-                <><RotateCcw size={14} /> Refresh All Illustrations</>
-              )}
-            </button>
+            <div className="flex gap-2">
+              <button onClick={styleActions.handleRefreshIllustrations} disabled={styleActions.refreshingIllustrations}
+                className="flex-1 flex items-center justify-center gap-2 py-2.5 rounded-xl bg-secondary text-secondary-foreground text-xs font-medium active:scale-[0.98] transition-transform disabled:opacity-60">
+                {styleActions.refreshingIllustrations ? (
+                  <><Loader2 size={14} className="animate-spin" /> Clearing...</>
+                ) : (
+                  <><RotateCcw size={14} /> Refresh Illustrations</>
+                )}
+              </button>
+              <button onClick={styleActions.handleClearSuggestionCache}
+                className="flex-1 flex items-center justify-center gap-2 py-2.5 rounded-xl bg-secondary text-secondary-foreground text-xs font-medium active:scale-[0.98] transition-transform">
+                <Trash2 size={14} /> Clear Suggestions
+              </button>
+            </div>
 
             <button onClick={styleActions.handleSaveAndRegenerate} disabled={styleActions.saving || styleActions.regenerating}
               className="w-full flex items-center justify-center gap-2 py-3 rounded-xl gradient-accent text-accent-foreground font-medium text-sm shadow-soft active:scale-[0.98] transition-transform disabled:opacity-60">

@@ -283,6 +283,15 @@ const WardrobeScreen = () => {
           <div>
             <h1 className="font-display text-2xl font-semibold text-foreground">My Wardrobe</h1>
             <p className="text-sm text-muted-foreground mt-0.5">{items.length} items</p>
+            {(() => {
+              const tops = items.filter(i => i.type === "Tops").length;
+              const bottoms = items.filter(i => i.type === "Bottoms").length;
+              const shoes = items.filter(i => i.type === "Shoes").length;
+              const outfits = Math.min(tops, bottoms, shoes);
+              return outfits > 0 ? (
+                <p className="text-[11px] text-muted-foreground/60">~{outfits} full outfits possible</p>
+              ) : null;
+            })()}
           </div>
           <div className="flex gap-2">
             {items.length > 0 && (

@@ -378,7 +378,7 @@ export const useStyleProfileActions = () => {
     saving, regenerating, reanalyzing, refreshingIllustrations,
     modelImageUrl,
     handleSaveAndRegenerate, handleSaveStylesOnly,
-    handleRefreshIllustrations, handleReuploadPhotos,
+    handleRefreshIllustrations, handleClearSuggestionCache, handleReuploadPhotos,
   };
 };
 
