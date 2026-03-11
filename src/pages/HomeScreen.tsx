@@ -7,6 +7,7 @@ import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import ScoreRing from "../components/ScoreRing";
+import { Skeleton } from "@/components/ui/skeleton";
 
 
 const occasions = [
@@ -82,6 +83,7 @@ const HomeScreen = () => {
   const [showResults, setShowResults] = useState(false);
   const [fullSizeModelUrl, setFullSizeModelUrl] = useState<string | null>(null);
   const [generatingModel, setGeneratingModel] = useState(false);
+  const [selectedOutfitIdx, setSelectedOutfitIdx] = useState<number | null>(null);
 
   useEffect(() => {
     if (user) {
@@ -450,10 +452,14 @@ const HomeScreen = () => {
                 {displayModelUrl ? (
                   <div className="relative">
                     {generatingModel && (
-                      <div className="absolute inset-0 z-10 flex items-center justify-center bg-background/60 backdrop-blur-sm">
-                        <motion.div animate={{ rotate: 360 }} transition={{ repeat: Infinity, duration: 1.5, ease: "linear" }}>
-                          <Sparkles size={32} className="text-primary" />
-                        </motion.div>
+                      <div className="absolute inset-0 z-10 flex flex-col items-center justify-center gap-4 bg-background/70 backdrop-blur-sm">
+                        <div className="relative w-32 h-48">
+                          <Skeleton className="absolute inset-0 rounded-full w-16 h-16 mx-auto" />
+                          <Skeleton className="absolute top-16 left-1/2 -translate-x-1/2 w-20 h-24 rounded-xl" />
+                          <Skeleton className="absolute top-[120px] left-1/2 -translate-x-[26px] w-10 h-20 rounded-lg" />
+                          <Skeleton className="absolute top-[120px] left-1/2 translate-x-[0px] w-10 h-20 rounded-lg" />
+                        </div>
+                        <p className="text-xs text-muted-foreground animate-pulse">Generating your AI model...</p>
                       </div>
                     )}
                     <img
@@ -473,6 +479,16 @@ const HomeScreen = () => {
                       </div>
                     </div>
                   </div>
+                ) : generatingModel ? (
+                  <div className="w-full h-[280px] lg:h-[600px] flex flex-col items-center justify-center gap-4">
+                    <div className="relative w-32 h-48">
+                      <Skeleton className="absolute inset-0 rounded-full w-16 h-16 mx-auto" />
+                      <Skeleton className="absolute top-16 left-1/2 -translate-x-1/2 w-20 h-24 rounded-xl" />
+                      <Skeleton className="absolute top-[120px] left-1/2 -translate-x-[26px] w-10 h-20 rounded-lg" />
+                      <Skeleton className="absolute top-[120px] left-1/2 translate-x-[0px] w-10 h-20 rounded-lg" />
+                    </div>
+                    <p className="text-xs text-muted-foreground animate-pulse">Generating your AI model...</p>
+                  </div>
                 ) : (
                   <div className="w-full h-[280px] lg:h-[600px] flex items-center justify-center">
                     <div className="text-center space-y-3">
@@ -491,11 +507,11 @@ const HomeScreen = () => {
       {/* Style Me Results Sheet */}
       <AnimatePresence>
         {showResults && (
-          <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="fixed inset-0 z-50 bg-background/80 backdrop-blur-sm" onClick={() => setShowResults(false)}>
+          <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="fixed inset-0 z-50 bg-background/80 backdrop-blur-sm" onClick={() => { setShowResults(false); setSelectedOutfitIdx(null); }}>
             <motion.div initial={{ y: "100%" }} animate={{ y: 0 }} exit={{ y: "100%" }} transition={{ type: "spring", damping: 25, stiffness: 300 }} className="absolute bottom-0 left-0 right-0 max-h-[85vh] overflow-y-auto bg-card rounded-t-3xl shadow-elevated p-5 space-y-4" onClick={e => e.stopPropagation()}>
               <div className="flex items-center justify-between">
                 <h2 className="font-display text-xl font-semibold text-foreground">AI Outfit Suggestions</h2>
-                <button onClick={() => setShowResults(false)} className="w-8 h-8 rounded-full bg-secondary flex items-center justify-center">
+                <button onClick={() => { setShowResults(false); setSelectedOutfitIdx(null); }} className="w-8 h-8 rounded-full bg-secondary flex items-center justify-center">
                   <X size={16} className="text-muted-foreground" />
                 </button>
               </div>
@@ -508,9 +524,9 @@ const HomeScreen = () => {
                 const accessoryItems = (outfit.accessories || []).map(id => getItemById(id)).filter(Boolean);
 
                 return (
-                  <motion.div key={idx} initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: idx * 0.1 }} className="glass-card overflow-hidden">
+                  <motion.div key={idx} initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: idx * 0.1 }} className="glass-card overflow-hidden cursor-pointer active:scale-[0.98] transition-transform" onClick={() => setSelectedOutfitIdx(idx)}>
                     {outfit.tryon_image && (
-                      <div className="h-64 overflow-hidden">
+                      <div className="h-48 overflow-hidden">
                         <img src={outfit.tryon_image} alt="Virtual try-on" className="w-full h-full object-cover object-top" />
                       </div>
                     )}
@@ -524,60 +540,13 @@ const HomeScreen = () => {
                       </div>
                       <div className="flex gap-2 overflow-x-auto no-scrollbar">
                         {[top, bottom, shoes, ...accessoryItems].filter(Boolean).map((wi) => (
-                          <div key={wi!.id} className="relative flex-shrink-0 w-16 h-16 rounded-xl overflow-hidden bg-secondary">
+                          <div key={wi!.id} className="relative flex-shrink-0 w-14 h-14 rounded-xl overflow-hidden bg-secondary">
                             <img src={wi!.image_url} alt={wi!.name || wi!.type} className="w-full h-full object-cover" />
-                            <div className="absolute bottom-0 left-0 right-0 bg-foreground/40 backdrop-blur-sm px-1 py-0.5">
-                              <p className="text-[8px] text-primary-foreground truncate text-center font-medium">{wi!.type}</p>
-                            </div>
                           </div>
                         ))}
                       </div>
-                      <p className="text-xs text-muted-foreground leading-relaxed">{outfit.explanation}</p>
-                      {outfit.reasoning && (
-                        <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 pt-1">
-                          {outfit.reasoning.season && (
-                            <div className="flex items-start gap-1.5 p-2 rounded-lg bg-secondary">
-                              <Leaf size={12} className="text-green-500 mt-0.5 flex-shrink-0" />
-                              <div><p className="text-[10px] font-semibold text-foreground">Season</p><p className="text-[9px] text-muted-foreground leading-tight">{outfit.reasoning.season}</p></div>
-                            </div>
-                          )}
-                          {outfit.reasoning.mood && (
-                            <div className="flex items-start gap-1.5 p-2 rounded-lg bg-secondary">
-                              <Smile size={12} className="text-yellow-500 mt-0.5 flex-shrink-0" />
-                              <div><p className="text-[10px] font-semibold text-foreground">Mood</p><p className="text-[9px] text-muted-foreground leading-tight">{outfit.reasoning.mood}</p></div>
-                            </div>
-                          )}
-                          {outfit.reasoning.time_of_day && (
-                            <div className="flex items-start gap-1.5 p-2 rounded-lg bg-secondary">
-                              <Sun size={12} className="text-orange-400 mt-0.5 flex-shrink-0" />
-                              <div><p className="text-[10px] font-semibold text-foreground">Time of Day</p><p className="text-[9px] text-muted-foreground leading-tight">{outfit.reasoning.time_of_day}</p></div>
-                            </div>
-                          )}
-                          {outfit.reasoning.color_combination && (
-                            <div className="flex items-start gap-1.5 p-2 rounded-lg bg-secondary">
-                              <Palette size={12} className="text-purple-500 mt-0.5 flex-shrink-0" />
-                              <div><p className="text-[10px] font-semibold text-foreground">Colors</p><p className="text-[9px] text-muted-foreground leading-tight">{outfit.reasoning.color_combination}</p></div>
-                            </div>
-                          )}
-                          {outfit.reasoning.body_type && (
-                            <div className="flex items-start gap-1.5 p-2 rounded-lg bg-secondary">
-                              <User size={12} className="text-blue-500 mt-0.5 flex-shrink-0" />
-                              <div><p className="text-[10px] font-semibold text-foreground">Body Type</p><p className="text-[9px] text-muted-foreground leading-tight">{outfit.reasoning.body_type}</p></div>
-                            </div>
-                          )}
-                          {outfit.reasoning.skin_tone && (
-                            <div className="flex items-start gap-1.5 p-2 rounded-lg bg-secondary">
-                              <Droplet size={12} className="text-rose-400 mt-0.5 flex-shrink-0" />
-                              <div><p className="text-[10px] font-semibold text-foreground">Skin Tone</p><p className="text-[9px] text-muted-foreground leading-tight">{outfit.reasoning.skin_tone}</p></div>
-                            </div>
-                          )}
-                        </div>
-                      )}
-                      {!outfit.tryon_image && styleProfile?.model_image_url && (
-                        <button onClick={() => generateTryOn(outfit, idx)} className="text-xs font-medium text-primary flex items-center gap-1">
-                          <Sparkles size={12} /> Generate try-on preview
-                        </button>
-                      )}
+                      <p className="text-xs text-muted-foreground line-clamp-2">{outfit.explanation}</p>
+                      <p className="text-[10px] text-primary font-medium">Tap to view details →</p>
                     </div>
                   </motion.div>
                 );
@@ -585,6 +554,148 @@ const HomeScreen = () => {
             </motion.div>
           </motion.div>
         )}
+      </AnimatePresence>
+
+      {/* Full-Screen Outfit Detail View */}
+      <AnimatePresence>
+        {selectedOutfitIdx !== null && outfitSuggestions[selectedOutfitIdx] && (() => {
+          const outfit = outfitSuggestions[selectedOutfitIdx];
+          const top = getItemById(outfit.top_id);
+          const bottom = getItemById(outfit.bottom_id);
+          const shoes = getItemById(outfit.shoes_id);
+          const accessoryItems = (outfit.accessories || []).map(id => getItemById(id)).filter(Boolean);
+          const allItems = [top, bottom, shoes, ...accessoryItems].filter(Boolean);
+          const matchPercent = Math.round(outfit.score * 10);
+
+          return (
+            <motion.div
+              key="outfit-detail"
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              className="fixed inset-0 z-[60] bg-background overflow-y-auto"
+            >
+              <div className="max-w-lg mx-auto px-5 py-6 space-y-5 pb-32">
+                {/* Header */}
+                <div className="flex items-center justify-between">
+                  <div className="flex gap-2">
+                    <span className="px-2.5 py-1 rounded-full bg-secondary text-[10px] font-medium text-foreground">{selectedOccasion}</span>
+                    <span className="px-2.5 py-1 rounded-full bg-secondary text-[10px] font-medium text-foreground">{selectedTime}</span>
+                  </div>
+                  <button onClick={() => setSelectedOutfitIdx(null)} className="w-9 h-9 rounded-full bg-secondary flex items-center justify-center">
+                    <X size={18} className="text-foreground" />
+                  </button>
+                </div>
+
+                {/* Title */}
+                <div className="text-center space-y-1">
+                  <h2 className="font-display text-xl font-semibold text-foreground">AI Selected the Perfect Outfit for You</h2>
+                  <p className="text-xs text-muted-foreground">{outfit.name}</p>
+                </div>
+
+                {/* Overlapping Product Images */}
+                <div className="flex justify-center items-end -space-x-4 py-4">
+                  {allItems.map((wi, i) => (
+                    <motion.div
+                      key={wi!.id}
+                      initial={{ opacity: 0, y: 20, scale: 0.9 }}
+                      animate={{ opacity: 1, y: 0, scale: 1 }}
+                      transition={{ delay: i * 0.1 }}
+                      className="relative w-24 h-28 rounded-2xl overflow-hidden bg-secondary shadow-elevated border-2 border-background"
+                      style={{ zIndex: allItems.length - i }}
+                    >
+                      <img src={wi!.image_url} alt={wi!.name || wi!.type} className="w-full h-full object-cover" />
+                      <div className="absolute bottom-0 left-0 right-0 bg-foreground/50 backdrop-blur-sm px-1 py-0.5">
+                        <p className="text-[8px] text-primary-foreground truncate text-center font-medium">{wi!.type}</p>
+                      </div>
+                    </motion.div>
+                  ))}
+                </div>
+
+                {/* Try-on image if available */}
+                {outfit.tryon_image && (
+                  <div className="rounded-2xl overflow-hidden shadow-elevated">
+                    <img src={outfit.tryon_image} alt="Virtual try-on" className="w-full h-72 object-cover object-top" />
+                  </div>
+                )}
+
+                {/* Score Section */}
+                <div className="glass-card-elevated p-5 space-y-4">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <p className="text-2xl font-bold text-foreground">Score: {outfit.score.toFixed(1)}</p>
+                      <p className="text-xs text-muted-foreground">Matches better than {matchPercent}%</p>
+                    </div>
+                    <ScoreRing score={outfit.score} maxScore={10} size={64} label="Match" strokeColor="hsl(var(--primary))" />
+                  </div>
+                </div>
+
+                {/* Explanation */}
+                <div className="glass-card p-4 space-y-2">
+                  <h3 className="text-sm font-semibold text-foreground">Why This Works</h3>
+                  <p className="text-xs text-muted-foreground leading-relaxed">{outfit.explanation}</p>
+                </div>
+
+                {/* Reasoning Grid */}
+                {outfit.reasoning && (
+                  <div className="grid grid-cols-2 gap-2.5">
+                    {outfit.reasoning.season && (
+                      <div className="flex items-start gap-2 p-3 rounded-xl bg-secondary">
+                        <Leaf size={14} className="text-primary mt-0.5 flex-shrink-0" />
+                        <div><p className="text-[10px] font-semibold text-foreground">Season</p><p className="text-[9px] text-muted-foreground leading-tight">{outfit.reasoning.season}</p></div>
+                      </div>
+                    )}
+                    {outfit.reasoning.mood && (
+                      <div className="flex items-start gap-2 p-3 rounded-xl bg-secondary">
+                        <Smile size={14} className="text-primary mt-0.5 flex-shrink-0" />
+                        <div><p className="text-[10px] font-semibold text-foreground">Mood</p><p className="text-[9px] text-muted-foreground leading-tight">{outfit.reasoning.mood}</p></div>
+                      </div>
+                    )}
+                    {outfit.reasoning.time_of_day && (
+                      <div className="flex items-start gap-2 p-3 rounded-xl bg-secondary">
+                        <Sun size={14} className="text-primary mt-0.5 flex-shrink-0" />
+                        <div><p className="text-[10px] font-semibold text-foreground">Time of Day</p><p className="text-[9px] text-muted-foreground leading-tight">{outfit.reasoning.time_of_day}</p></div>
+                      </div>
+                    )}
+                    {outfit.reasoning.color_combination && (
+                      <div className="flex items-start gap-2 p-3 rounded-xl bg-secondary">
+                        <Palette size={14} className="text-primary mt-0.5 flex-shrink-0" />
+                        <div><p className="text-[10px] font-semibold text-foreground">Colors</p><p className="text-[9px] text-muted-foreground leading-tight">{outfit.reasoning.color_combination}</p></div>
+                      </div>
+                    )}
+                    {outfit.reasoning.body_type && (
+                      <div className="flex items-start gap-2 p-3 rounded-xl bg-secondary">
+                        <User size={14} className="text-primary mt-0.5 flex-shrink-0" />
+                        <div><p className="text-[10px] font-semibold text-foreground">Body Type</p><p className="text-[9px] text-muted-foreground leading-tight">{outfit.reasoning.body_type}</p></div>
+                      </div>
+                    )}
+                    {outfit.reasoning.skin_tone && (
+                      <div className="flex items-start gap-2 p-3 rounded-xl bg-secondary">
+                        <Droplet size={14} className="text-primary mt-0.5 flex-shrink-0" />
+                        <div><p className="text-[10px] font-semibold text-foreground">Skin Tone</p><p className="text-[9px] text-muted-foreground leading-tight">{outfit.reasoning.skin_tone}</p></div>
+                      </div>
+                    )}
+                  </div>
+                )}
+
+                {/* Action Buttons */}
+                <div className="space-y-3">
+                  <button onClick={() => navigate("/camera")} className="w-full py-4 rounded-2xl gradient-accent text-accent-foreground font-semibold text-base shadow-soft active:scale-[0.98] transition-transform flex items-center justify-center gap-2">
+                    <Camera size={18} /> Rate Your Outfit
+                  </button>
+                  {!outfit.tryon_image && styleProfile?.model_image_url && (
+                    <button onClick={() => generateTryOn(outfit, selectedOutfitIdx)} className="w-full py-3 rounded-2xl bg-secondary text-foreground font-medium text-sm active:scale-[0.98] transition-transform flex items-center justify-center gap-2">
+                      <Sparkles size={16} /> Generate Try-On Preview
+                    </button>
+                  )}
+                  <button onClick={() => setSelectedOutfitIdx(null)} className="w-full text-center text-sm text-muted-foreground font-medium py-2">
+                    ← Try a Different Look
+                  </button>
+                </div>
+              </div>
+            </motion.div>
+          );
+        })()}
       </AnimatePresence>
     </div>
   );
