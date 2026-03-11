@@ -258,14 +258,6 @@ const OutfitRatingCard = ({ image, imageBase64, result, wardrobeItems = [] }: Pr
           )}
         </AnimatePresence>
 
-        {/* Occasion Badge */}
-        {result.occasion && (
-          <div className="flex justify-center">
-            <span className="text-[10px] uppercase tracking-wider border border-border/40 rounded-full px-3 py-1 text-muted-foreground">
-              {result.occasion}
-            </span>
-          </div>
-        )}
 
         {/* Praise Line */}
         {result.praise_line && (
