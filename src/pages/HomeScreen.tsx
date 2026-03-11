@@ -43,6 +43,15 @@ type WardrobeItem = {
   material: string | null;
 };
 
+type OutfitReasoning = {
+  season?: string;
+  mood?: string;
+  time_of_day?: string;
+  color_combination?: string;
+  body_type?: string;
+  skin_tone?: string;
+};
+
 type OutfitSuggestion = {
   name: string;
   top_id?: string;
@@ -51,6 +60,7 @@ type OutfitSuggestion = {
   accessories?: string[];
   score: number;
   explanation: string;
+  reasoning?: OutfitReasoning;
   tryon_image?: string;
 };
 
