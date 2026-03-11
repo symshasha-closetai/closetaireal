@@ -99,7 +99,22 @@ const WardrobeScreen = () => {
     setLoading(false);
   };
 
-  const filtered = activeCategory === "All" ? items : items.filter((i) => i.type === activeCategory);
+  // Extract unique filter values
+  const uniqueColors = useMemo(() => [...new Set(items.map(i => i.color).filter(Boolean))] as string[], [items]);
+  const uniqueQualities = useMemo(() => [...new Set(items.map(i => i.quality).filter(Boolean))] as string[], [items]);
+  const uniqueMaterials = useMemo(() => [...new Set(items.map(i => i.material).filter(Boolean))] as string[], [items]);
+  const uniqueBrands = useMemo(() => [...new Set(items.map(i => i.brand).filter(Boolean))] as string[], [items]);
+  const uniqueSeasons = useMemo(() => [...new Set(items.map(i => i.season).filter(Boolean))] as string[], [items]);
+
+  const filtered = useMemo(() => {
+    let result = activeCategory === "All" ? items : items.filter((i) => i.type === activeCategory);
+    if (filterColor) result = result.filter(i => i.color?.toLowerCase() === filterColor.toLowerCase());
+    if (filterQuality) result = result.filter(i => i.quality?.toLowerCase() === filterQuality.toLowerCase());
+    if (filterMaterial) result = result.filter(i => i.material?.toLowerCase() === filterMaterial.toLowerCase());
+    if (filterBrand) result = result.filter(i => i.brand?.toLowerCase() === filterBrand.toLowerCase());
+    if (filterSeason) result = result.filter(i => i.season?.toLowerCase() === filterSeason.toLowerCase());
+    return result;
+  }, [items, activeCategory, filterColor, filterQuality, filterMaterial, filterBrand, filterSeason]);
 
   const deleteItem = async (id: string) => {
     const { error } = await supabase.from("wardrobe").delete().eq("id", id);
