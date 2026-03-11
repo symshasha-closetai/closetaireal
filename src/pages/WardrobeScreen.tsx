@@ -16,6 +16,9 @@ type ClothingItem = {
   material: string | null;
   name: string | null;
   brand: string | null;
+  quality: string | null;
+  season: string | null;
+  style: string | null;
 };
 
 type DetectedItem = {
