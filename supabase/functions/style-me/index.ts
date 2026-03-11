@@ -30,7 +30,7 @@ serve(async (req) => {
       ? `\n\n## SURPRISE ME MODE:\nThe user wants you to pick the BEST possible outfit without any occasion/time/weather constraints. Choose the most stylish, versatile, and flattering combination from their wardrobe. Pick an occasion that suits the outfit best and mention it. Be creative and bold!`
       : "";
 
-    const systemPrompt = `You are an expert fashion stylist AI with deep knowledge of color theory, fabric science, and seasonal dressing. Given the user's wardrobe items, occasion, time of day, weather, body profile, and face analysis, suggest 2-3 complete outfit combinations using ONLY items from their wardrobe.${surpriseInstruction}
+     const systemPrompt = `You are an expert fashion stylist AI with deep knowledge of color theory, fabric science, and seasonal dressing. Given the user's wardrobe items, occasion, time of day, weather, body profile, and face analysis, suggest 3-5 complete outfit combinations using ONLY items from their wardrobe.${surpriseInstruction}
 
 ## COLOR RULES (Critical — apply rigorously):
 - **Complementary**: Pair opposites on the color wheel (navy + burnt orange, burgundy + olive).
@@ -62,8 +62,16 @@ serve(async (req) => {
 
 Each outfit must use real item IDs from the provided wardrobe. In the explanation, briefly mention WHY the colors and materials work together for the given context.
 
+For each outfit, also provide a "reasoning" object with structured analysis across these categories:
+- "season": Why these fabrics/colors suit the season (1 sentence)
+- "mood": The vibe or mood this outfit conveys (1 sentence)
+- "time_of_day": Why these tones work for the time of day (1 sentence)
+- "color_combination": How the colors complement each other (1 sentence)
+- "body_type": How this outfit flatters the user's body type (1 sentence)
+- "skin_tone": How these colors complement the user's skin tone (1 sentence)
+
 Return ONLY valid JSON (no markdown) with this structure:
-{"outfits":[{"name":"string","top_id":"string or null","bottom_id":"string or null","shoes_id":"string or null","accessories":["string"],"score":number,"explanation":"string"}]}`;
+{"outfits":[{"name":"string","top_id":"string or null","bottom_id":"string or null","shoes_id":"string or null","accessories":["string"],"score":number,"explanation":"string","reasoning":{"season":"string","mood":"string","time_of_day":"string","color_combination":"string","body_type":"string","skin_tone":"string"}}]}`;
 
     const userPrompt = `Wardrobe items:\n${wardrobeDesc}\n\nOccasion: ${occasion}\nTime of day: ${timeOfDay}${weatherInfo}\nProfile: ${profileDesc}${bodyAnalysis}${faceAnalysis}\n\nSuggest 2-3 outfits. Return JSON only.`;
 
