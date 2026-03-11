@@ -176,7 +176,7 @@ const WardrobeScreen = () => {
           const { data: insertData, error: insertError } = await supabase
             .from("wardrobe")
             .insert({ user_id: user.id, image_url: imageUrl, type: item.type, name: item.name, color: item.color, material: item.material, quality: item.quality, brand: item.brand } as any)
-            .select("id, image_url, type, color, material, name, brand")
+            .select("id, image_url, type, color, material, name, brand, quality, season, style")
             .single();
           if (!insertError && insertData) setItems((prev) => [insertData as ClothingItem, ...prev]);
           setBgJob(prev => ({ ...prev, completedItems: prev.completedItems + 1 }));
