@@ -221,7 +221,7 @@ const OutfitRatingCard = ({ image, imageBase64, result, wardrobeItems = [] }: Pr
         
         {/* ClosetAI branding */}
         <div className="absolute top-4 left-4 z-10">
-          <span className="text-[10px] tracking-[0.2em] font-medium text-white/90 drop-shadow-md bg-black/40 rounded-lg px-2.5 py-1">
+          <span className="text-[10px] tracking-[0.2em] font-medium text-white/90" style={{ textShadow: "-1px -1px 0 #000, 1px -1px 0 #000, -1px 1px 0 #000, 1px 1px 0 #000" }}>
             ClosetAI
           </span>
         </div>
@@ -300,40 +300,6 @@ const OutfitRatingCard = ({ image, imageBase64, result, wardrobeItems = [] }: Pr
           </motion.div>
         )}
 
-        {/* Sub-scores */}
-        <div className="relative">
-          <div className="flex justify-around">
-            {subScores.map((s) => (
-              <button key={s.key} onClick={() => toggleTooltip(s.key)} className="focus:outline-none active:scale-95 transition-transform">
-                <ScoreRing score={s.score} label={s.label} size={56} strokeColor={s.strokeColor} />
-              </button>
-            ))}
-          </div>
-          <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 1.5 }} className="flex items-center justify-center gap-1 mt-2">
-            <Info size={9} className="text-muted-foreground/40" />
-            <span className="text-[9px] text-muted-foreground/40">Tap for details</span>
-          </motion.div>
-        </div>
-
-        {/* Sub-score Tooltip */}
-        <AnimatePresence>
-          {activeTooltip && !["drip", "confidence"].includes(activeTooltip) && (
-            <motion.div
-              initial={{ opacity: 0, y: -8 }}
-              animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0, y: -8 }}
-              className="bg-card border border-border/50 rounded-xl p-3 relative shadow-sm"
-            >
-              <button onClick={() => setActiveTooltip(null)} className="absolute top-2 right-2">
-                <X size={12} className="text-muted-foreground" />
-              </button>
-              <p className="text-xs font-medium text-foreground capitalize mb-1">{activeTooltip}</p>
-              <p className="text-xs text-muted-foreground leading-relaxed">
-                {subScores.find(s => s.key === activeTooltip)?.reason || "No detailed reasoning available."}
-              </p>
-            </motion.div>
-          )}
-        </AnimatePresence>
 
         {/* Advice */}
         {result.advice && (
@@ -469,9 +435,9 @@ const OutfitRatingCard = ({ image, imageBase64, result, wardrobeItems = [] }: Pr
             
             {/* Brand */}
             <div style={{ position: "absolute", top: 14, left: 18 }}>
-              <div style={{ display: "inline-block", fontSize: 10, letterSpacing: 5, color: "rgba(255,255,255,0.9)", fontWeight: 500, backgroundColor: "rgba(0,0,0,0.5)", borderRadius: 8, padding: "4px 10px", lineHeight: "1.4" }}>
+              <span style={{ fontSize: 10, letterSpacing: 5, color: "rgba(255,255,255,0.9)", fontWeight: 500, textShadow: "-1px -1px 0 #000, 1px -1px 0 #000, -1px 1px 0 #000, 1px 1px 0 #000" }}>
                 ClosetAI
-              </div>
+              </span>
             </div>
 
             {/* Score overlay */}
@@ -517,29 +483,6 @@ const OutfitRatingCard = ({ image, imageBase64, result, wardrobeItems = [] }: Pr
           {/* Separator */}
           <div style={{ height: 1, background: "linear-gradient(90deg, transparent, rgba(201,169,110,0.2), rgba(168,168,168,0.2), transparent)", margin: "0 24px" }} />
 
-          {/* Sub-scores */}
-          <div style={{ display: "flex", justifyContent: "space-around", padding: "20px 20px 14px", textAlign: "center" }}>
-            {[
-              { label: "Color", score: result.color_score, color: "#8B9A7B" },
-              { label: "Style", score: result.style_score, color: "#C9A96E" },
-              { label: "Fit", score: result.fit_score, color: "#B08B8B" },
-            ].map(s => (
-              <div key={s.label} style={{ textAlign: "center" }}>
-                <div style={{
-                  width: 54, height: 54, borderRadius: "50%",
-                  border: `2px solid ${s.color}`,
-                  display: "flex", alignItems: "center", justifyContent: "center",
-                  margin: "0 auto",
-                  boxSizing: "border-box",
-                }}>
-                  <span style={{ fontSize: 17, fontWeight: 500, color: "#fff", lineHeight: "1", display: "block", textAlign: "center" }}>
-                    {Number.isInteger(s.score) ? s.score : s.score.toFixed(1)}
-                  </span>
-                </div>
-                <span style={{ fontSize: 8, color: "rgba(255,255,255,0.4)", fontWeight: 500, marginTop: 6, display: "block", textTransform: "uppercase", letterSpacing: 2 }}>{s.label}</span>
-              </div>
-            ))}
-          </div>
 
           {/* Praise line */}
           {result.praise_line && (
