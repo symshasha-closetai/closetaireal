@@ -293,7 +293,7 @@ const ProfileScreen = () => {
   };
 
   return (
-    <div className="min-h-screen pb-24 px-5 pt-14">
+    <div className="min-h-screen pb-24 px-5 pt-6">
       <div className="max-w-lg mx-auto space-y-5">
         {/* Fullscreen Image Preview */}
         <AnimatePresence>
