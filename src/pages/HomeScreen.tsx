@@ -175,6 +175,8 @@ const HomeScreen = () => {
           setWardrobeItems(items.slice(0, 6));
           setWardrobeCount(items.length);
           setCache(cacheKey, items);
+          // Precache wardrobe images in service worker
+          precacheImages(items.map((i: any) => i.image_url).filter(Boolean));
         });
     }
   }, [user]);
