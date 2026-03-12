@@ -96,6 +96,37 @@ const HomeScreen = () => {
   const [generatingModel, setGeneratingModel] = useState(false);
   const [generatingTryOnIdx, setGeneratingTryOnIdx] = useState<number | null>(null);
   const [selectedOutfitIdx, setSelectedOutfitIdx] = useState<number | null>(null);
+  const [savedOutfitIds, setSavedOutfitIds] = useState<Set<number>>(new Set());
+
+  const handleSaveOutfit = async (outfit: OutfitSuggestion, idx: number) => {
+    if (!user || savedOutfitIds.has(idx)) return;
+    try {
+      const items = [
+        outfit.top_id && { id: outfit.top_id, type: "top" },
+        outfit.bottom_id && { id: outfit.bottom_id, type: "bottom" },
+        outfit.shoes_id && { id: outfit.shoes_id, type: "shoes" },
+        ...(outfit.accessories || []).map(id => ({ id, type: "accessory" })),
+      ].filter(Boolean);
+
+      const { error } = await supabase.from("saved_outfits" as any).insert({
+        user_id: user.id,
+        name: outfit.name,
+        occasion: selectedOccasion,
+        score: outfit.score,
+        explanation: outfit.explanation,
+        items: items as any,
+        tryon_image: outfit.tryon_image || null,
+        score_breakdown: outfit.score_breakdown || null,
+        reasoning: outfit.reasoning || null,
+      } as any);
+      if (error) throw error;
+      setSavedOutfitIds(prev => new Set(prev).add(idx));
+      toast.success("Outfit saved! Find it in your profile history.");
+    } catch (err) {
+      console.error("Save outfit error:", err);
+      toast.error("Failed to save outfit");
+    }
+  };
 
   // Progress tracking
   const [progressStage, setProgressStage] = useState<string>("");
