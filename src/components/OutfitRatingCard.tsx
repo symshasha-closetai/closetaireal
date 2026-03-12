@@ -190,7 +190,7 @@ const OutfitRatingCard = ({ image, imageBase64, result, wardrobeItems = [] }: Pr
         
         {/* ClosetAI branding */}
         <div className="absolute top-4 left-4 z-10">
-          <span className="text-[10px] tracking-[0.2em] font-light text-white/80 drop-shadow-md">
+          <span className="text-[10px] tracking-[0.2em] font-medium text-white/90 drop-shadow-md bg-black/40 rounded-lg px-2.5 py-1">
             ClosetAI
           </span>
         </div>
