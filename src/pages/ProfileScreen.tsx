@@ -499,9 +499,15 @@ const ProfileScreen = () => {
           <TabsContent value="history" className="space-y-5 mt-4">
             {/* Drip History */}
             <div className="space-y-3">
-              <h3 className="text-xs uppercase tracking-[0.15em] text-foreground/50 flex items-center gap-2">
-                <Sparkles size={12} /> Drip History
-              </h3>
+              <div className="flex items-center justify-between">
+                <h3 className="text-xs uppercase tracking-[0.15em] text-foreground/50 flex items-center gap-2">
+                  <Sparkles size={12} /> Drip History
+                </h3>
+                {dripHistory.length > 0 && (
+                  <button onClick={() => { setDripHistory([]); saveDripHistory([]); toast.success("Drip history cleared", { duration: 2000 }); }}
+                    className="text-[10px] text-destructive/60 font-medium">Clear All</button>
+                )}
+              </div>
               {dripHistory.length === 0 ? (
                 <p className="text-xs text-muted-foreground py-4 text-center">No drip checks saved yet. Rate an outfit to see it here!</p>
               ) : (
@@ -517,7 +523,7 @@ const ProfileScreen = () => {
                         <p className="text-[8px] text-white/50 truncate">{entry.killerTag}</p>
                       </div>
                       <button onClick={(e) => { e.stopPropagation(); deleteDripEntry(entry.id); }}
-                        className="absolute top-1 right-1 w-5 h-5 rounded-full bg-black/50 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
+                        className="absolute top-1 right-1 w-5 h-5 rounded-full bg-black/50 flex items-center justify-center opacity-70 group-hover:opacity-100 transition-opacity">
                         <X size={10} className="text-white" />
                       </button>
                     </motion.div>
