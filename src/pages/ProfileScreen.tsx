@@ -619,7 +619,8 @@ const ProfileScreen = () => {
               </button>
             </div>
           </motion.div>
-        )
+        )}
+
       </div>
     </div>
   );
