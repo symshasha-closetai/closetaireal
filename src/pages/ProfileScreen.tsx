@@ -233,7 +233,7 @@ const ProfileScreen = () => {
     // Save gender to style_profiles
     await supabase.from("style_profiles").upsert({ user_id: user.id, gender: styleActions.gender || null }, { onConflict: "user_id" });
     if (error) { toast.error("Failed to update profile"); }
-    else { await refreshProfile(); toast.success("Profile updated!"); }
+    else { await refreshProfile(); toast.success("Profile updated!", { duration: 2000 }); }
     setSaving(false);
   };
 
