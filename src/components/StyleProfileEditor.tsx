@@ -279,7 +279,7 @@ export const useStyleProfileActions = () => {
         style_type: selectedStyles.join(",") || null,
       }, { onConflict: "user_id" });
       await refreshProfile();
-      toast.success("Style preferences saved!");
+      toast.success("Style preferences saved!", { duration: 2000 });
     } catch {
       toast.error("Failed to save preferences");
     } finally {
