@@ -94,6 +94,8 @@ const ProfileScreen = () => {
   // History
   const [dripHistory, setDripHistory] = useState<DripHistoryEntry[]>([]);
   const [dailyRatings, setDailyRatings] = useState<any[]>([]);
+  const [savedOutfits, setSavedOutfits] = useState<any[]>([]);
+  const [savedSuggestions, setSavedSuggestions] = useState<any[]>([]);
   const [historyLoading, setHistoryLoading] = useState(false);
   const [viewingCard, setViewingCard] = useState<DripHistoryEntry | null>(null);
 
