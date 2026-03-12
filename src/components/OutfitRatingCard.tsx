@@ -426,7 +426,7 @@ const OutfitRatingCard = ({ image, imageBase64, result, wardrobeItems = [] }: Pr
             
             {/* Brand */}
             <div style={{ position: "absolute", top: 14, left: 18 }}>
-              <span style={{ fontSize: 10, letterSpacing: 5, color: "rgba(255,255,255,0.6)", fontWeight: 300 }}>
+              <span style={{ fontSize: 10, letterSpacing: 5, color: "rgba(255,255,255,0.9)", fontWeight: 500, background: "rgba(0,0,0,0.5)", borderRadius: 8, padding: "4px 10px" }}>
                 ClosetAI
               </span>
             </div>
