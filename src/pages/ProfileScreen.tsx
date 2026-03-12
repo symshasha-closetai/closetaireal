@@ -91,11 +91,14 @@ const ProfileScreen = () => {
   const styleActions = useStyleProfileActions();
   const [previewImage, setPreviewImage] = useState<string | null>(null);
 
-  // History
-  const [dripHistory, setDripHistory] = useState<DripHistoryEntry[]>([]);
-  const [dailyRatings, setDailyRatings] = useState<any[]>([]);
-  const [savedOutfits, setSavedOutfits] = useState<any[]>([]);
-  const [savedSuggestions, setSavedSuggestions] = useState<any[]>([]);
+  // History — loaded from localStorage first, then synced from DB
+  const [dripHistory, setDripHistory] = useState<DripHistoryEntry[]>(() => getDripHistory());
+  const [savedOutfits, setSavedOutfits] = useState<any[]>(() => {
+    try { return JSON.parse(localStorage.getItem("saved-outfits") || "[]"); } catch { return []; }
+  });
+  const [savedSuggestions, setSavedSuggestions] = useState<any[]>(() => {
+    try { return JSON.parse(localStorage.getItem("saved-suggestions") || "[]"); } catch { return []; }
+  });
   const [historyLoading, setHistoryLoading] = useState(false);
   const [viewingCard, setViewingCard] = useState<DripHistoryEntry | null>(null);
 
@@ -176,34 +179,43 @@ const ProfileScreen = () => {
     }
   }, [profile?.name]);
 
-  useEffect(() => {
-    setDripHistory(getDripHistory());
-  }, []);
-
-  const loadDailyRatings = async () => {
+  // Background sync from DB to localStorage on history tab open
+  const syncHistoryFromDb = async () => {
     if (!user) return;
     setHistoryLoading(true);
-    const [ratingsRes, outfitsRes, suggestionsRes] = await Promise.all([
-      supabase.from("daily_ratings").select("*").eq("user_id", user.id).order("created_at", { ascending: false }).limit(50),
+    const [outfitsRes, suggestionsRes] = await Promise.all([
       supabase.from("saved_outfits" as any).select("*").eq("user_id", user.id).order("created_at", { ascending: false }).limit(50),
       supabase.from("saved_suggestions" as any).select("*").eq("user_id", user.id).order("created_at", { ascending: false }).limit(50),
     ]);
-    setDailyRatings(ratingsRes.data || []);
-    setSavedOutfits(outfitsRes.data || []);
-    setSavedSuggestions(suggestionsRes.data || []);
+    const outfits = outfitsRes.data || [];
+    const suggestions = suggestionsRes.data || [];
+    setSavedOutfits(outfits);
+    setSavedSuggestions(suggestions);
+    try {
+      localStorage.setItem("saved-outfits", JSON.stringify(outfits));
+      localStorage.setItem("saved-suggestions", JSON.stringify(suggestions));
+    } catch { /* quota */ }
     setHistoryLoading(false);
   };
 
   const deleteSavedOutfit = async (id: string) => {
     await supabase.from("saved_outfits" as any).delete().eq("id", id);
-    setSavedOutfits(prev => prev.filter(o => o.id !== id));
-    toast.success("Outfit removed");
+    setSavedOutfits(prev => {
+      const updated = prev.filter(o => o.id !== id);
+      try { localStorage.setItem("saved-outfits", JSON.stringify(updated)); } catch {}
+      return updated;
+    });
+    toast.success("Outfit removed", { duration: 2000 });
   };
 
   const deleteSavedSuggestion = async (id: string) => {
     await supabase.from("saved_suggestions" as any).delete().eq("id", id);
-    setSavedSuggestions(prev => prev.filter(s => s.id !== id));
-    toast.success("Suggestion removed");
+    setSavedSuggestions(prev => {
+      const updated = prev.filter(s => s.id !== id);
+      try { localStorage.setItem("saved-suggestions", JSON.stringify(updated)); } catch {}
+      return updated;
+    });
+    toast.success("Suggestion removed", { duration: 2000 });
   };
 
   const handleAvatarUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -369,7 +381,7 @@ const ProfileScreen = () => {
         </motion.div>
 
         {/* Tabs */}
-        <Tabs defaultValue="personal" className="w-full" onValueChange={(v) => { if (v === "history") loadDailyRatings(); }}>
+        <Tabs defaultValue="personal" className="w-full" onValueChange={(v) => { if (v === "history") syncHistoryFromDb(); }}>
           <TabsList className="w-full grid grid-cols-4 bg-secondary/50 rounded-xl h-9">
             <TabsTrigger value="personal" className="text-[11px] rounded-lg data-[state=active]:bg-card data-[state=active]:shadow-sm">Personal</TabsTrigger>
             <TabsTrigger value="personality" className="text-[11px] rounded-lg data-[state=active]:bg-card data-[state=active]:shadow-sm">Body</TabsTrigger>

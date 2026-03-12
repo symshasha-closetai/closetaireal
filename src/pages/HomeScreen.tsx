@@ -108,7 +108,7 @@ const HomeScreen = () => {
         ...(outfit.accessories || []).map(id => ({ id, type: "accessory" })),
       ].filter(Boolean);
 
-      const { error } = await supabase.from("saved_outfits" as any).insert({
+      const outfitData = {
         user_id: user.id,
         name: outfit.name,
         occasion: selectedOccasion,
@@ -118,10 +118,17 @@ const HomeScreen = () => {
         tryon_image: outfit.tryon_image || null,
         score_breakdown: outfit.score_breakdown || null,
         reasoning: outfit.reasoning || null,
-      } as any);
+      };
+      const { data, error } = await supabase.from("saved_outfits" as any).insert(outfitData as any).select().single();
       if (error) throw error;
       setSavedOutfitIds(prev => new Set(prev).add(idx));
-      toast.success("Outfit saved! Find it in your profile history.");
+      // Sync to localStorage
+      try {
+        const cached = JSON.parse(localStorage.getItem("saved-outfits") || "[]");
+        cached.unshift(data);
+        localStorage.setItem("saved-outfits", JSON.stringify(cached));
+      } catch {}
+      toast.success("Outfit saved! Find it in your profile history.", { duration: 2000 });
     } catch (err) {
       console.error("Save outfit error:", err);
       toast.error("Failed to save outfit");
