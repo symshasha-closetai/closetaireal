@@ -201,7 +201,7 @@ const OutfitRatingCard = ({ image, imageBase64, result, wardrobeItems = [] }: Pr
             {/* Drip Score Ring */}
             <button onClick={() => toggleTooltip("drip")} className="focus:outline-none active:scale-95 transition-transform">
               <ScoreRing score={result.drip_score} size={54} strokeColor="#C9A96E" />
-              <p className="text-[9px] uppercase tracking-[0.15em] text-white/50 mt-1 text-center">Drip Score</p>
+              <p className="text-[9px] uppercase tracking-[0.15em] text-white/50 mt-1 text-center">Drip</p>
             </button>
 
             {/* Killer Tag */}
