@@ -24,15 +24,28 @@ serve(async (req) => {
   if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
 
   try {
-    const { itemName, itemType, itemColor, itemMaterial, userId, bodyType } = await req.json();
+    const { itemName, itemType, itemColor, itemMaterial, userId, bodyType, gender } = await req.json();
     const replicateKey = Deno.env.get("REPLICATE_API_KEY");
     if (!replicateKey) throw new Error("REPLICATE_API_KEY not configured");
 
     const colorDesc = itemColor ? ` in ${itemColor} color` : "";
     const materialDesc = itemMaterial ? ` made of ${itemMaterial}` : "";
-    const bodyDesc = bodyType ? ` The mannequin should have ${bodyType} body proportions.` : "";
+    const typeLower = (itemType || "").toLowerCase();
+    const nameLower = (itemName || "").toLowerCase();
+    const combined = `${typeLower} ${nameLower}`;
 
-    const prompt = `A photorealistic product photograph of a ${itemName || itemType}${colorDesc}${materialDesc} displayed on a mannequin/dress form against a pure white background.${bodyDesc} Faceless mannequin body form, complete garment properly fitted, photorealistic high-quality fashion photography, natural fabric texture, accurate colors, professional fashion store display, well-lit with soft even lighting, minimal shadows.`;
+    const isEyewear = ["glasses", "eyewear", "sunglasses", "shades"].some(k => combined.includes(k));
+    const isJewelry = ["jewelry", "jewellery", "necklace", "bracelet", "ring", "watch", "earring", "chain", "pendant", "anklet"].some(k => combined.includes(k));
+    const genderWord = gender === "female" ? "female" : gender === "male" ? "male" : "";
+
+    let prompt: string;
+    if (isEyewear) {
+      prompt = `A photorealistic close-up portrait of a ${genderWord} person wearing ${itemName || itemType}${colorDesc}${materialDesc}. Focus on the face showing the eyewear clearly, pure white background, professional fashion photography, well-lit with soft even lighting, minimal shadows.`;
+    } else if (isJewelry) {
+      prompt = `A photorealistic close-up photograph of a ${genderWord} person wearing ${itemName || itemType}${colorDesc}${materialDesc}. Focus on the jewelry piece, pure white background, professional fashion photography, well-lit with soft even lighting, minimal shadows.`;
+    } else {
+      prompt = `A photorealistic flat-lay product photograph of a ${itemName || itemType}${colorDesc}${materialDesc} neatly arranged on a pure white background. No mannequin, no person, no dress form. Clean e-commerce style product shot, natural fabric texture, accurate colors, well-lit with soft even lighting, minimal shadows, top-down view.`;
+    }
 
     const createRes = await fetch("https://api.replicate.com/v1/models/black-forest-labs/flux-schnell/predictions", {
       method: "POST",

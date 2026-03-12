@@ -163,7 +163,7 @@ const WardrobeScreen = () => {
           let imageUrl: string | null = null;
           try {
             const { data: genData, error: genError } = await supabase.functions.invoke("generate-clothing-image", {
-              body: { imageBase64: base64, itemName: item.name, itemType: item.type, itemColor: item.color, itemMaterial: item.material, userId: user.id, bodyType: styleProfile?.body_type || null },
+              body: { imageBase64: base64, itemName: item.name, itemType: item.type, itemColor: item.color, itemMaterial: item.material, userId: user.id, bodyType: styleProfile?.body_type || null, gender: styleProfile?.gender || null },
             });
             if (!genError && genData?.imageUrl) imageUrl = genData.imageUrl;
           } catch {}
