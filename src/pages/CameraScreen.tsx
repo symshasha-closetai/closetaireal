@@ -1,6 +1,7 @@
-import { useState, useRef } from "react";
+import { useState, useRef, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { Camera, Upload, X, Sparkles } from "lucide-react";
+import { Progress } from "@/components/ui/progress";
 import AppHeader from "../components/AppHeader";
 import OutfitRatingCard from "../components/OutfitRatingCard";
 import { supabase } from "@/integrations/supabase/client";
@@ -49,6 +50,8 @@ const CameraScreen = () => {
   const [image, setImage] = useState<string | null>(null);
   const [imageBase64, setImageBase64] = useState<string | null>(null);
   const [analyzing, setAnalyzing] = useState(false);
+  const [analysisProgress, setAnalysisProgress] = useState(0);
+  const [analysisStage, setAnalysisStage] = useState("");
   const [result, setResult] = useState<RatingResult | null>(null);
   const [wardrobeItems, setWardrobeItems] = useState<any[]>([]);
   const fileRef = useRef<HTMLInputElement>(null);
@@ -84,24 +87,32 @@ const CameraScreen = () => {
 
   const analyzeOutfit = async (file: File) => {
     setAnalyzing(true);
+    setAnalysisProgress(10);
+    setAnalysisStage("Reading your outfit...");
     abortControllerRef.current = new AbortController();
     try {
       const imageBase64 = await toBase64(file);
+      setAnalysisProgress(30);
+      setAnalysisStage("Fetching wardrobe...");
       let fetchedWardrobe: any[] = [];
       if (user) {
         const { data } = await supabase.from("wardrobe").select("id, name, type, color, material, image_url").eq("user_id", user.id);
         fetchedWardrobe = data || [];
         setWardrobeItems(fetchedWardrobe);
       }
+      setAnalysisProgress(50);
+      setAnalysisStage("Analyzing your style...");
       const { data, error } = await supabase.functions.invoke("rate-outfit", {
         body: { imageBase64, wardrobeItems: fetchedWardrobe, styleProfile: styleProfile || undefined },
       });
       if (abortControllerRef.current?.signal.aborted) return;
+      setAnalysisProgress(90);
+      setAnalysisStage("Almost done...");
       if (error) throw error;
       if (data?.error) { toast.error(data.error); return; }
       if (data?.result) {
+        setAnalysisProgress(100);
         setResult(data.result);
-        // Save to drip history using the outfit photo (share card saved separately on share)
         saveDripToHistory(URL.createObjectURL(file), data.result);
       }
     } catch (err: any) {
@@ -110,6 +121,8 @@ const CameraScreen = () => {
       toast.error("Failed to analyze outfit. Please try again.");
     } finally {
       setAnalyzing(false);
+      setAnalysisProgress(0);
+      setAnalysisStage("");
       abortControllerRef.current = null;
     }
   };
@@ -163,11 +176,14 @@ const CameraScreen = () => {
                     <X size={14} /> Cancel
                   </button>
                   <div className="absolute inset-0 bg-background/40 backdrop-blur-sm flex items-center justify-center">
-                    <div className="flex flex-col items-center gap-3">
+                    <div className="flex flex-col items-center gap-4 w-full max-w-[200px]">
                       <motion.div animate={{ rotate: 360 }} transition={{ repeat: Infinity, duration: 1.5, ease: "linear" }}>
                         <Sparkles size={36} className="text-accent drop-shadow-[0_0_12px_hsl(var(--accent))]" />
                       </motion.div>
-                      <p className="text-sm font-medium text-foreground drop-shadow-sm">Analyzing your style...</p>
+                      <div className="w-full space-y-2">
+                        <Progress value={analysisProgress} className="h-2" />
+                        <p className="text-xs font-medium text-foreground drop-shadow-sm text-center">{analysisStage}</p>
+                      </div>
                     </div>
                   </div>
                 </div>

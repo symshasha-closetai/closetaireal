@@ -1,9 +1,10 @@
 import { useState, useRef, useCallback } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { Share2, ShoppingBag, Shirt, Footprints, Watch, Gem, Loader2, X, Info, Download } from "lucide-react";
+import { Share2, ShoppingBag, Shirt, Footprints, Watch, Gem, Loader2, X, Info, Download, Heart } from "lucide-react";
 import ScoreRing from "./ScoreRing";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
+import { useAuth } from "@/hooks/useAuth";
 import html2canvas from "html2canvas";
 import type { RatingResult } from "@/pages/CameraScreen";
 
@@ -54,13 +55,36 @@ const findWardrobeMatch = (suggestion: Suggestion, wardrobeItems: WardrobeItem[]
 };
 
 const OutfitRatingCard = ({ image, imageBase64, result, wardrobeItems = [] }: Props) => {
+  const { user } = useAuth();
   const [activeTooltip, setActiveTooltip] = useState<string | null>(null);
   const [suggestionImages, setSuggestionImages] = useState<Record<number, string | null>>({});
   const [loadingImages, setLoadingImages] = useState<Record<number, boolean>>({});
   const [sharing, setSharing] = useState(false);
   const [downloading, setDownloading] = useState(false);
   const [showShareCard, setShowShareCard] = useState(false);
+  const [savedSuggestions, setSavedSuggestions] = useState<Set<string>>(new Set());
   const shareRef = useRef<HTMLDivElement>(null);
+
+  const handleSaveSuggestion = async (type: "wardrobe" | "shopping", s: Suggestion) => {
+    const key = `${type}-${s.item_name}`;
+    if (!user || savedSuggestions.has(key)) return;
+    try {
+      const { error } = await supabase.from("saved_suggestions" as any).insert({
+        user_id: user.id,
+        drip_score: result.drip_score,
+        killer_tag: result.killer_tag || null,
+        suggestion_type: type,
+        item_name: s.item_name,
+        category: s.category,
+        reason: s.reason,
+      } as any);
+      if (error) throw error;
+      setSavedSuggestions(prev => new Set(prev).add(key));
+      toast.success("Suggestion saved!");
+    } catch {
+      toast.error("Failed to save suggestion");
+    }
+  };
 
   const captureCard = useCallback(async (): Promise<Blob | null> => {
     setShowShareCard(true);
@@ -356,6 +380,12 @@ const OutfitRatingCard = ({ image, imageBase64, result, wardrobeItems = [] }: Pr
                     </div>
                     <p className="text-xs text-muted-foreground">{s.reason}</p>
                   </div>
+                  <button
+                    onClick={() => handleSaveSuggestion("wardrobe", s)}
+                    className="flex-shrink-0 self-center active:scale-90 transition-transform"
+                  >
+                    <Heart size={16} className={savedSuggestions.has(`wardrobe-${s.item_name}`) ? "fill-primary text-primary" : "text-muted-foreground"} />
+                  </button>
                 </div>
               );
             })}
@@ -397,6 +427,12 @@ const OutfitRatingCard = ({ image, imageBase64, result, wardrobeItems = [] }: Pr
                     </div>
                     <p className="text-xs text-muted-foreground">{s.reason}</p>
                   </div>
+                  <button
+                    onClick={() => handleSaveSuggestion("shopping", s)}
+                    className="flex-shrink-0 self-center active:scale-90 transition-transform"
+                  >
+                    <Heart size={16} className={savedSuggestions.has(`shopping-${s.item_name}`) ? "fill-primary text-primary" : "text-muted-foreground"} />
+                  </button>
                 </div>
               );
             })}

@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { Sparkles, Camera, ChevronRight, X, Heart, GraduationCap, PartyPopper, Shirt, Palette, Music, Church, Briefcase, Sun, Moon, Sunset, CloudRain, Thermometer, CloudSun, Snowflake, Shuffle, Leaf, Smile, Droplet, User, Loader2 } from "lucide-react";
+import { Sparkles, Camera, ChevronRight, X, Heart, GraduationCap, PartyPopper, Shirt, Palette, Music, Church, Briefcase, Sun, Moon, Sunset, CloudRain, Thermometer, CloudSun, Snowflake, Shuffle, Leaf, Smile, Droplet, User, Loader2, Bookmark, BookmarkCheck } from "lucide-react";
 import AppHeader from "../components/AppHeader";
 import { useAuth } from "../hooks/useAuth";
 import { useNavigate } from "react-router-dom";
@@ -96,6 +96,37 @@ const HomeScreen = () => {
   const [generatingModel, setGeneratingModel] = useState(false);
   const [generatingTryOnIdx, setGeneratingTryOnIdx] = useState<number | null>(null);
   const [selectedOutfitIdx, setSelectedOutfitIdx] = useState<number | null>(null);
+  const [savedOutfitIds, setSavedOutfitIds] = useState<Set<number>>(new Set());
+
+  const handleSaveOutfit = async (outfit: OutfitSuggestion, idx: number) => {
+    if (!user || savedOutfitIds.has(idx)) return;
+    try {
+      const items = [
+        outfit.top_id && { id: outfit.top_id, type: "top" },
+        outfit.bottom_id && { id: outfit.bottom_id, type: "bottom" },
+        outfit.shoes_id && { id: outfit.shoes_id, type: "shoes" },
+        ...(outfit.accessories || []).map(id => ({ id, type: "accessory" })),
+      ].filter(Boolean);
+
+      const { error } = await supabase.from("saved_outfits" as any).insert({
+        user_id: user.id,
+        name: outfit.name,
+        occasion: selectedOccasion,
+        score: outfit.score,
+        explanation: outfit.explanation,
+        items: items as any,
+        tryon_image: outfit.tryon_image || null,
+        score_breakdown: outfit.score_breakdown || null,
+        reasoning: outfit.reasoning || null,
+      } as any);
+      if (error) throw error;
+      setSavedOutfitIds(prev => new Set(prev).add(idx));
+      toast.success("Outfit saved! Find it in your profile history.");
+    } catch (err) {
+      console.error("Save outfit error:", err);
+      toast.error("Failed to save outfit");
+    }
+  };
 
   // Progress tracking
   const [progressStage, setProgressStage] = useState<string>("");
@@ -774,6 +805,19 @@ const HomeScreen = () => {
 
                 {/* Action Buttons */}
                 <div className="space-y-3">
+                  {/* Save Outfit Button */}
+                  <button
+                    onClick={() => handleSaveOutfit(outfit, selectedOutfitIdx!)}
+                    disabled={savedOutfitIds.has(selectedOutfitIdx!)}
+                    className="w-full py-3 rounded-2xl border border-border/40 text-foreground font-medium text-sm flex items-center justify-center gap-2 active:scale-[0.98] transition-transform disabled:opacity-60"
+                  >
+                    {savedOutfitIds.has(selectedOutfitIdx!) ? (
+                      <><BookmarkCheck size={16} className="text-primary" /> Outfit Saved</>
+                    ) : (
+                      <><Bookmark size={16} /> Save Outfit</>
+                    )}
+                  </button>
+
                   {!outfit.tryon_image && generatingTryOnIdx === selectedOutfitIdx ? (
                     <div className="w-full py-8 rounded-2xl bg-secondary flex flex-col items-center justify-center gap-3">
                       <div className="relative w-24 h-32">

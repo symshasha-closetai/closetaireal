@@ -129,6 +129,87 @@ export type Database = {
         }
         Relationships: []
       }
+      saved_outfits: {
+        Row: {
+          created_at: string
+          explanation: string | null
+          id: string
+          items: Json
+          name: string
+          occasion: string | null
+          reasoning: Json | null
+          score: number | null
+          score_breakdown: Json | null
+          tryon_image: string | null
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          explanation?: string | null
+          id?: string
+          items?: Json
+          name: string
+          occasion?: string | null
+          reasoning?: Json | null
+          score?: number | null
+          score_breakdown?: Json | null
+          tryon_image?: string | null
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          explanation?: string | null
+          id?: string
+          items?: Json
+          name?: string
+          occasion?: string | null
+          reasoning?: Json | null
+          score?: number | null
+          score_breakdown?: Json | null
+          tryon_image?: string | null
+          user_id?: string
+        }
+        Relationships: []
+      }
+      saved_suggestions: {
+        Row: {
+          category: string | null
+          created_at: string
+          drip_score: number | null
+          id: string
+          image: string | null
+          item_name: string
+          killer_tag: string | null
+          reason: string | null
+          suggestion_type: string
+          user_id: string
+        }
+        Insert: {
+          category?: string | null
+          created_at?: string
+          drip_score?: number | null
+          id?: string
+          image?: string | null
+          item_name: string
+          killer_tag?: string | null
+          reason?: string | null
+          suggestion_type?: string
+          user_id: string
+        }
+        Update: {
+          category?: string | null
+          created_at?: string
+          drip_score?: number | null
+          id?: string
+          image?: string | null
+          item_name?: string
+          killer_tag?: string | null
+          reason?: string | null
+          suggestion_type?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       style_profiles: {
         Row: {
           ai_body_analysis: Json | null
