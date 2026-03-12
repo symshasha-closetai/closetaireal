@@ -290,6 +290,38 @@ const OutfitRatingCard = ({ image, imageBase64, result, wardrobeItems = [] }: Pr
           )}
         </AnimatePresence>
 
+        {/* Sub-Score Rings */}
+        <div className="flex justify-center gap-6">
+          {subScores.map((s) => (
+            <button key={s.key} onClick={() => toggleTooltip(s.key)} className="focus:outline-none active:scale-95 transition-transform flex flex-col items-center">
+              <ScoreRing score={s.score} size={44} strokeColor={s.strokeColor} />
+              <p className="text-[9px] uppercase tracking-[0.12em] text-muted-foreground mt-1">{s.label}</p>
+            </button>
+          ))}
+        </div>
+        <p className="text-[9px] text-center text-muted-foreground/40 -mt-1">Tap for details</p>
+
+        {/* Sub-Score Tooltip */}
+        <AnimatePresence>
+          {subScores.some(s => s.key === activeTooltip) && (
+            <motion.div
+              initial={{ opacity: 0, y: -8 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -8 }}
+              className="bg-card border border-border/50 rounded-xl p-3 relative shadow-sm"
+            >
+              <button onClick={() => setActiveTooltip(null)} className="absolute top-2 right-2">
+                <X size={12} className="text-muted-foreground" />
+              </button>
+              <p className="text-xs font-medium text-foreground capitalize mb-1">
+                {subScores.find(s => s.key === activeTooltip)?.label} Analysis
+              </p>
+              <p className="text-xs text-muted-foreground leading-relaxed">
+                {subScores.find(s => s.key === activeTooltip)?.reason || "No detailed reasoning available."}
+              </p>
+            </motion.div>
+          )}
+        </AnimatePresence>
 
         {/* Praise Line */}
         {result.praise_line && (
