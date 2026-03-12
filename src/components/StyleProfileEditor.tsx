@@ -260,7 +260,7 @@ export const useStyleProfileActions = () => {
       });
 
       await refreshProfile();
-      toast.success("Style profile updated & model regenerated! ✨");
+      toast.success("Style profile updated & model regenerated! ✨", { duration: 2000 });
     } catch (err) {
       console.error(err);
       toast.error("Failed to update style profile");
@@ -279,7 +279,7 @@ export const useStyleProfileActions = () => {
         style_type: selectedStyles.join(",") || null,
       }, { onConflict: "user_id" });
       await refreshProfile();
-      toast.success("Style preferences saved!");
+      toast.success("Style preferences saved!", { duration: 2000 });
     } catch {
       toast.error("Failed to save preferences");
     } finally {

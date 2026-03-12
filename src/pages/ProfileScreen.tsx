@@ -106,19 +106,30 @@ const ProfileScreen = () => {
 
   useEffect(() => {
     const computeStylePersonality = async () => {
-      // Check localStorage cache (1-day TTL)
-      const cached = localStorage.getItem("style-personality");
-      if (cached) {
-        try {
-          const { tag, ts } = JSON.parse(cached);
-          if (Date.now() - ts < 86400000) { setStylePersonality(tag); return; }
-        } catch { /* ignore */ }
-      }
       if (!user) return;
       const { data: wardrobeItems } = await supabase.from("wardrobe").select("type, style, material, color, brand").eq("user_id", user.id);
       const styles = styleActions.selectedStyles;
       const items = wardrobeItems || [];
-      if (items.length === 0 && styles.length === 0) { setStylePersonality("Style Explorer"); return; }
+
+      // Build a deterministic hash from wardrobe + preferences
+      const sortedItems = [...items].sort((a, b) => JSON.stringify(a).localeCompare(JSON.stringify(b)));
+      const currentHash = JSON.stringify({ items: sortedItems.map(i => ({ t: i.type, s: i.style, m: i.material, c: i.color, b: i.brand })), styles: [...styles].sort() });
+
+      // Check cache — only recompute if wardrobe/preferences changed
+      const cached = localStorage.getItem("style-personality");
+      if (cached) {
+        try {
+          const { tag, hash } = JSON.parse(cached);
+          if (hash === currentHash) { setStylePersonality(tag); return; }
+        } catch { /* ignore */ }
+      }
+
+      if (items.length === 0 && styles.length === 0) {
+        const tag = "Style Explorer";
+        setStylePersonality(tag);
+        localStorage.setItem("style-personality", JSON.stringify({ tag, hash: currentHash }));
+        return;
+      }
 
       const typeCount: Record<string, number> = {};
       const styleCount: Record<string, number> = {};
@@ -132,45 +143,29 @@ const ProfileScreen = () => {
 
       const hasStyle = (keywords: string[]) => keywords.some(k => Object.keys(styleCount).some(s => s.includes(k)));
       const hasMaterial = (keywords: string[]) => keywords.some(k => Object.keys(materialCount).some(m => m.includes(k)));
-
       const hasColor = (keywords: string[]) => keywords.some(k => items.some(i => i.color?.toLowerCase().includes(k)));
       const hasType = (keywords: string[]) => keywords.some(k => Object.keys(typeCount).some(t => t.includes(k)));
       const uniqueStyles = new Set(Object.keys(styleCount));
 
       let tag = "Style Explorer";
-      // Dark Academia — formal/classic + dark tones + wool/tweed/leather
       if ((hasStyle(["formal", "classic"]) && hasColor(["black", "brown", "navy", "dark"])) || hasMaterial(["tweed", "leather"]) && hasMaterial(["wool"])) tag = "Dark Academia";
-      // Quiet Luxury — minimalist/formal + premium materials
       else if ((hasStyle(["minimalist", "formal"]) || hasStyle(["minimal"])) && hasMaterial(["cashmere", "silk", "merino"])) tag = "Quiet Luxury";
-      // Cottagecore — bohemian + light/floral/linen/cotton
       else if (hasStyle(["bohemian", "boho"]) && (hasMaterial(["linen", "cotton"]) || hasColor(["white", "cream", "pastel", "floral"]))) tag = "Cottagecore";
-      // Techwear — sporty/urban + synthetic/nylon
       else if (hasStyle(["sporty", "urban"]) && hasMaterial(["nylon", "synthetic", "polyester", "gore-tex"])) tag = "Techwear";
-      // Y2K Nostalgia — streetwear + bright/bold + denim/crop
       else if (hasStyle(["streetwear", "street"]) && (hasColor(["pink", "blue", "bright", "neon"]) || hasType(["crop", "denim"]))) tag = "Y2K Nostalgia";
-      // Grunge — street + plaid/denim + dark tones
       else if (hasStyle(["street", "grunge"]) && hasColor(["black", "grey", "dark"])) tag = "Grunge";
-      // Preppy — classic/smart + polo/blazer
       else if (hasStyle(["classic", "smart", "preppy"]) && (hasType(["polo", "blazer", "chino"]) || hasMaterial(["cotton"]))) tag = "Preppy";
-      // Streetcore
       else if (hasStyle(["streetwear", "street", "urban", "hip"])) tag = "Streetcore";
-      // Classic Sophisticate
       else if (hasStyle(["formal", "classic"]) || hasMaterial(["silk", "wool", "cashmere"])) tag = "Classic Sophisticate";
-      // Elegant Minimalist
       else if (hasStyle(["minimalist", "minimal"]) || (hasStyle(["casual"]) && items.length < 15)) tag = "Elegant Minimalist";
-      // Boho Spirit
       else if (hasStyle(["bohemian", "boho"])) tag = "Boho Spirit";
-      // Athleisure Icon
       else if (hasStyle(["sporty", "gym", "athletic"])) tag = "Athleisure Icon";
-      // Vintage Rebel
       else if (hasStyle(["vintage", "retro"])) tag = "Vintage Rebel";
-      // Smart Casual
       else if (hasStyle(["casual", "smart"])) tag = "Smart Casual";
-      // Eclectic Mix — high variety of styles
       else if (uniqueStyles.size >= 5) tag = "Eclectic Mix";
 
       setStylePersonality(tag);
-      localStorage.setItem("style-personality", JSON.stringify({ tag, ts: Date.now() }));
+      localStorage.setItem("style-personality", JSON.stringify({ tag, hash: currentHash }));
     };
     computeStylePersonality();
   }, [user, styleActions.selectedStyles]);
@@ -238,7 +233,7 @@ const ProfileScreen = () => {
     // Save gender to style_profiles
     await supabase.from("style_profiles").upsert({ user_id: user.id, gender: styleActions.gender || null }, { onConflict: "user_id" });
     if (error) { toast.error("Failed to update profile"); }
-    else { await refreshProfile(); toast.success("Profile updated!"); }
+    else { await refreshProfile(); toast.success("Profile updated!", { duration: 2000 }); }
     setSaving(false);
   };
 
@@ -298,7 +293,7 @@ const ProfileScreen = () => {
   };
 
   return (
-    <div className="min-h-screen pb-24 px-5 pt-14">
+    <div className="min-h-screen pb-24 px-5 pt-6">
       <div className="max-w-lg mx-auto space-y-5">
         {/* Fullscreen Image Preview */}
         <AnimatePresence>
@@ -519,36 +514,6 @@ const ProfileScreen = () => {
               )}
             </div>
 
-            {/* Outfit Check History from DB */}
-            <div className="space-y-3">
-              <h3 className="text-xs uppercase tracking-[0.15em] text-foreground/50 flex items-center gap-2">
-                <Clock size={12} /> Outfit Check History
-              </h3>
-              {historyLoading ? (
-                <div className="flex justify-center py-6"><Loader2 className="w-5 h-5 animate-spin text-muted-foreground" /></div>
-              ) : dailyRatings.length === 0 ? (
-                <p className="text-xs text-muted-foreground py-4 text-center">No outfit ratings yet.</p>
-              ) : (
-                <div className="space-y-2">
-                  {dailyRatings.map((r) => (
-                    <div key={r.id} className="glass-card p-3 flex items-center gap-3">
-                      {r.image_url && (
-                        <img src={r.image_url} alt="" className="w-10 h-10 rounded-lg object-cover flex-shrink-0" />
-                      )}
-                      <div className="flex-1 min-w-0">
-                        <div className="flex items-center justify-between">
-                          <span className="text-sm font-medium text-foreground">{r.score}/10</span>
-                          <span className="text-[10px] text-muted-foreground">{new Date(r.created_at).toLocaleDateString()}</span>
-                        </div>
-                        {r.ai_feedback && (
-                          <p className="text-[11px] text-muted-foreground truncate mt-0.5">{r.ai_feedback}</p>
-                        )}
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              )}
-            </div>
 
             {/* Saved Outfits */}
             <div className="space-y-3">
@@ -619,44 +584,43 @@ const ProfileScreen = () => {
           </TabsContent>
         </Tabs>
 
-        {/* Sign Out & Delete — always visible */}
-        <div className="space-y-3 pt-2">
-          <button onClick={handleLogout}
-            className="w-full flex items-center justify-center gap-2 py-3 rounded-xl bg-destructive/10 text-destructive font-medium text-sm active:scale-[0.98] transition-transform">
-            <LogOut size={16} /> Sign Out
-          </button>
+        {/* Sign Out & Delete */}
+        <motion.button onClick={handleLogout} initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.2 }}
+          className="w-full flex items-center justify-center gap-2 py-3 rounded-xl bg-destructive/10 text-destructive font-medium text-sm active:scale-[0.98] transition-transform">
+          <LogOut size={16} /> Sign Out
+        </motion.button>
 
-          {!showDeleteConfirm ? (
-            <button onClick={() => setShowDeleteConfirm(true)}
-              className="w-full flex items-center justify-center gap-2 py-3 rounded-xl border border-destructive/30 text-destructive/70 font-medium text-sm active:scale-[0.98] transition-transform">
-              <Trash2 size={16} /> Delete Account
-            </button>
-          ) : (
-            <div className="glass-card border-destructive/30 p-5 space-y-4">
-              <div className="flex items-center gap-2 text-destructive">
-                <AlertTriangle size={20} />
-                <h3 className="font-semibold text-sm">Delete Account</h3>
-              </div>
-              <p className="text-xs text-muted-foreground leading-relaxed">
-                This will permanently delete all your data. This action cannot be undone.
-              </p>
-              <div className="space-y-2">
-                <label className="text-xs font-medium text-foreground">Type DELETE to confirm</label>
-                <input type="text" value={deleteConfirmText} onChange={(e) => setDeleteConfirmText(e.target.value)}
-                  className="w-full px-4 py-3 rounded-xl bg-secondary border border-border text-foreground text-sm placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-destructive/30 transition-all"
-                  placeholder="DELETE" />
-              </div>
-              <div className="flex gap-3">
-                <button onClick={() => { setShowDeleteConfirm(false); setDeleteConfirmText(""); }}
-                  className="flex-1 py-2.5 rounded-xl bg-secondary text-secondary-foreground text-sm font-medium">Cancel</button>
-                <button onClick={handleDeleteAccount} disabled={deleteConfirmText !== "DELETE" || deleting}
-                  className="flex-1 py-2.5 rounded-xl bg-destructive text-destructive-foreground text-sm font-medium disabled:opacity-40 active:scale-[0.98] transition-transform">
-                  {deleting ? "Deleting..." : "Delete Forever"}
-                </button>
-              </div>
+        {!showDeleteConfirm ? (
+          <motion.button onClick={() => setShowDeleteConfirm(true)} initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.25 }}
+            className="w-full flex items-center justify-center gap-2 py-2.5 rounded-xl text-destructive/50 font-medium text-xs active:scale-[0.98] transition-transform">
+            <Trash2 size={14} /> Delete Account
+          </motion.button>
+        ) : (
+          <motion.div initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: "auto" }} className="space-y-4 pt-2">
+            <div className="flex items-center gap-2 text-destructive">
+              <AlertTriangle size={20} />
+              <h3 className="font-semibold text-sm">Delete Account</h3>
             </div>
-          )}
-        </div>
+            <p className="text-xs text-muted-foreground leading-relaxed">
+              This will permanently delete all your data. This action cannot be undone.
+            </p>
+            <div className="space-y-2">
+              <label className="text-xs font-medium text-foreground">Type DELETE to confirm</label>
+              <input type="text" value={deleteConfirmText} onChange={(e) => setDeleteConfirmText(e.target.value)}
+                className="w-full px-4 py-3 rounded-xl bg-secondary border border-border text-foreground text-sm placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-destructive/30 transition-all"
+                placeholder="DELETE" />
+            </div>
+            <div className="flex gap-3">
+              <button onClick={() => { setShowDeleteConfirm(false); setDeleteConfirmText(""); }}
+                className="flex-1 py-2.5 rounded-xl bg-secondary text-secondary-foreground text-sm font-medium">Cancel</button>
+              <button onClick={handleDeleteAccount} disabled={deleteConfirmText !== "DELETE" || deleting}
+                className="flex-1 py-2.5 rounded-xl bg-destructive text-destructive-foreground text-sm font-medium disabled:opacity-40 active:scale-[0.98] transition-transform">
+                {deleting ? "Deleting..." : "Delete Forever"}
+              </button>
+            </div>
+          </motion.div>
+        )}
+
       </div>
     </div>
   );
