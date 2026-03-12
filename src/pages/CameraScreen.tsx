@@ -112,7 +112,7 @@ const runAnalysis = async (file: File, userId: string | undefined, styleProfile:
     if (error) throw error;
     if (data?.error) { toast.error(data.error); updateGlobal({ analyzing: false, progress: 0, stage: "" }); return; }
     if (data?.result) {
-      updateGlobal({ progress: 100, result: data.result, analyzing: false, progress: 0, stage: "" });
+      updateGlobal({ result: data.result, analyzing: false, progress: 0, stage: "" });
       saveDripToHistory(globalDripState.image || "", data.result);
     }
   } catch (err: any) {
