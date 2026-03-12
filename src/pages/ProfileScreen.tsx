@@ -519,7 +519,7 @@ const ProfileScreen = () => {
               )}
             </div>
 
-            {/* Outfit History from DB */}
+            {/* Outfit Check History from DB */}
             <div className="space-y-3">
               <h3 className="text-xs uppercase tracking-[0.15em] text-foreground/50 flex items-center gap-2">
                 <Clock size={12} /> Outfit Check History
@@ -544,6 +544,73 @@ const ProfileScreen = () => {
                           <p className="text-[11px] text-muted-foreground truncate mt-0.5">{r.ai_feedback}</p>
                         )}
                       </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+
+            {/* Saved Outfits */}
+            <div className="space-y-3">
+              <h3 className="text-xs uppercase tracking-[0.15em] text-foreground/50 flex items-center gap-2">
+                <Bookmark size={12} /> Saved Outfits
+              </h3>
+              {savedOutfits.length === 0 ? (
+                <p className="text-xs text-muted-foreground py-4 text-center">No saved outfits yet. Save an outfit from Style Me!</p>
+              ) : (
+                <div className="space-y-2">
+                  {savedOutfits.map((o: any) => (
+                    <div key={o.id} className="glass-card p-3 flex items-center gap-3 group">
+                      <div className="w-10 h-10 rounded-lg bg-secondary flex items-center justify-center flex-shrink-0">
+                        <Bookmark size={16} className="text-primary" />
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center justify-between">
+                          <span className="text-sm font-medium text-foreground truncate">{o.name}</span>
+                          <span className="text-[10px] text-muted-foreground">{o.score?.toFixed(1)}/10</span>
+                        </div>
+                        <p className="text-[11px] text-muted-foreground truncate mt-0.5">{o.occasion} • {new Date(o.created_at).toLocaleDateString()}</p>
+                      </div>
+                      <button onClick={() => deleteSavedOutfit(o.id)}
+                        className="flex-shrink-0 w-6 h-6 rounded-full bg-destructive/10 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
+                        <X size={10} className="text-destructive" />
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+
+            {/* Saved Suggestions */}
+            <div className="space-y-3">
+              <h3 className="text-xs uppercase tracking-[0.15em] text-foreground/50 flex items-center gap-2">
+                <Heart size={12} /> Saved Suggestions
+              </h3>
+              {savedSuggestions.length === 0 ? (
+                <p className="text-xs text-muted-foreground py-4 text-center">No saved suggestions yet. Favourite items from Drip Check!</p>
+              ) : (
+                <div className="space-y-2">
+                  {savedSuggestions.map((s: any) => (
+                    <div key={s.id} className="glass-card p-3 flex items-center gap-3 group">
+                      <div className="w-10 h-10 rounded-lg bg-secondary flex items-center justify-center flex-shrink-0">
+                        {s.suggestion_type === "shopping" ? (
+                          <ShoppingBag size={16} className="text-primary" />
+                        ) : (
+                          <Heart size={16} className="text-primary" />
+                        )}
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center justify-between">
+                          <span className="text-sm font-medium text-foreground truncate">{s.item_name}</span>
+                          <span className="text-[9px] uppercase tracking-wider text-muted-foreground/60 border border-border/30 rounded-full px-2 py-0.5">{s.category}</span>
+                        </div>
+                        <p className="text-[11px] text-muted-foreground truncate mt-0.5">{s.reason}</p>
+                        {s.drip_score && <p className="text-[10px] text-primary mt-0.5">Drip: {s.drip_score}/10</p>}
+                      </div>
+                      <button onClick={() => deleteSavedSuggestion(s.id)}
+                        className="flex-shrink-0 w-6 h-6 rounded-full bg-destructive/10 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
+                        <X size={10} className="text-destructive" />
+                      </button>
                     </div>
                   ))}
                 </div>
