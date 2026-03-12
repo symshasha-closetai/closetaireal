@@ -201,7 +201,7 @@ const OutfitRatingCard = ({ image, imageBase64, result, wardrobeItems = [] }: Pr
             {/* Drip Score Ring */}
             <button onClick={() => toggleTooltip("drip")} className="focus:outline-none active:scale-95 transition-transform">
               <ScoreRing score={result.drip_score} size={54} strokeColor="#C9A96E" />
-              <p className="text-[9px] uppercase tracking-[0.15em] text-white/50 mt-1 text-center">Drip Score</p>
+              <p className="text-[9px] uppercase tracking-[0.15em] text-white/50 mt-1 text-center">Drip</p>
             </button>
 
             {/* Killer Tag */}
@@ -250,7 +250,7 @@ const OutfitRatingCard = ({ image, imageBase64, result, wardrobeItems = [] }: Pr
                 <X size={12} className="text-muted-foreground" />
               </button>
               <p className="text-xs font-medium text-foreground capitalize mb-1">
-                {activeTooltip === "drip" ? "Style Score Analysis" : "Confidence Analysis"}
+                {activeTooltip === "drip" ? "Drip Analysis" : "Confidence Analysis"}
               </p>
               <p className="text-xs text-muted-foreground leading-relaxed">
                 {mainScores.find(s => s.key === activeTooltip)?.reason || "No detailed reasoning available."}
@@ -426,9 +426,9 @@ const OutfitRatingCard = ({ image, imageBase64, result, wardrobeItems = [] }: Pr
             
             {/* Brand */}
             <div style={{ position: "absolute", top: 14, left: 18 }}>
-              <span style={{ fontSize: 10, letterSpacing: 5, color: "rgba(255,255,255,0.9)", fontWeight: 500, background: "rgba(0,0,0,0.5)", borderRadius: 8, padding: "4px 10px" }}>
+              <div style={{ display: "inline-block", fontSize: 10, letterSpacing: 5, color: "rgba(255,255,255,0.9)", fontWeight: 500, backgroundColor: "rgba(0,0,0,0.5)", borderRadius: 8, padding: "4px 10px", lineHeight: "1.4" }}>
                 ClosetAI
-              </span>
+              </div>
             </div>
 
             {/* Score overlay */}
@@ -447,7 +447,7 @@ const OutfitRatingCard = ({ image, imageBase64, result, wardrobeItems = [] }: Pr
                     }}>{result.drip_score}</span>
                     <span style={{ fontSize: 13, color: "rgba(255,255,255,0.3)", fontWeight: 400 }}>/10</span>
                   </div>
-                  <p style={{ fontSize: 9, color: "rgba(201,169,110,0.6)", textTransform: "uppercase", letterSpacing: 3, marginTop: 2, fontWeight: 500 }}>Style Score</p>
+                  <p style={{ fontSize: 9, color: "rgba(201,169,110,0.6)", textTransform: "uppercase", letterSpacing: 3, marginTop: 2, fontWeight: 500 }}>Drip</p>
                 </div>
 
                 {result.killer_tag && (
@@ -483,12 +483,13 @@ const OutfitRatingCard = ({ image, imageBase64, result, wardrobeItems = [] }: Pr
             ].map(s => (
               <div key={s.label} style={{ textAlign: "center" }}>
                 <div style={{
-                  width: 50, height: 50, borderRadius: "50%",
+                  width: 54, height: 54, borderRadius: "50%",
                   border: `2px solid ${s.color}`,
                   display: "flex", alignItems: "center", justifyContent: "center",
                   margin: "0 auto",
+                  boxSizing: "border-box",
                 }}>
-                  <span style={{ fontSize: 16, fontWeight: 500, color: "#fff" }}>
+                  <span style={{ fontSize: 17, fontWeight: 500, color: "#fff", lineHeight: "1", display: "block", textAlign: "center" }}>
                     {Number.isInteger(s.score) ? s.score : s.score.toFixed(1)}
                   </span>
                 </div>
