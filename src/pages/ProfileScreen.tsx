@@ -91,11 +91,14 @@ const ProfileScreen = () => {
   const styleActions = useStyleProfileActions();
   const [previewImage, setPreviewImage] = useState<string | null>(null);
 
-  // History
-  const [dripHistory, setDripHistory] = useState<DripHistoryEntry[]>([]);
-  const [dailyRatings, setDailyRatings] = useState<any[]>([]);
-  const [savedOutfits, setSavedOutfits] = useState<any[]>([]);
-  const [savedSuggestions, setSavedSuggestions] = useState<any[]>([]);
+  // History — loaded from localStorage first, then synced from DB
+  const [dripHistory, setDripHistory] = useState<DripHistoryEntry[]>(() => getDripHistory());
+  const [savedOutfits, setSavedOutfits] = useState<any[]>(() => {
+    try { return JSON.parse(localStorage.getItem("saved-outfits") || "[]"); } catch { return []; }
+  });
+  const [savedSuggestions, setSavedSuggestions] = useState<any[]>(() => {
+    try { return JSON.parse(localStorage.getItem("saved-suggestions") || "[]"); } catch { return []; }
+  });
   const [historyLoading, setHistoryLoading] = useState(false);
   const [viewingCard, setViewingCard] = useState<DripHistoryEntry | null>(null);
 
