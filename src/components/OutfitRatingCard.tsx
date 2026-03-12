@@ -508,7 +508,7 @@ const OutfitRatingCard = ({ image, imageBase64, result, wardrobeItems = [] }: Pr
 
           {/* CTA */}
           <div style={{ padding: "8px 20px 18px", textAlign: "center" }}>
-            <p style={{ fontSize: 9, color: "rgba(255,255,255,0.25)", letterSpacing: 4, textTransform: "uppercase" }}>
+            <p style={{ fontSize: 10, color: "rgba(255,255,255,0.55)", letterSpacing: 4, textTransform: "uppercase", fontWeight: 500 }}>
               closetaireal.lovable.app
             </p>
           </div>
