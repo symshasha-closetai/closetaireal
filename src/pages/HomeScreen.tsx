@@ -94,7 +94,7 @@ const HomeScreen = () => {
   const [showResults, setShowResults] = useState(false);
   const [fullSizeModelUrl, setFullSizeModelUrl] = useState<string | null>(null);
   const [generatingModel, setGeneratingModel] = useState(false);
-  const [selectedOutfitIdx, setSelectedOutfitIdx] = useState<number | null>(null);
+  const [generatingTryOnIdx, setGeneratingTryOnIdx] = useState<number | null>(null);
 
   // Progress tracking
   const [progressStage, setProgressStage] = useState<string>("");
