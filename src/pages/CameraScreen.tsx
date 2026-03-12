@@ -87,24 +87,32 @@ const CameraScreen = () => {
 
   const analyzeOutfit = async (file: File) => {
     setAnalyzing(true);
+    setAnalysisProgress(10);
+    setAnalysisStage("Reading your outfit...");
     abortControllerRef.current = new AbortController();
     try {
       const imageBase64 = await toBase64(file);
+      setAnalysisProgress(30);
+      setAnalysisStage("Fetching wardrobe...");
       let fetchedWardrobe: any[] = [];
       if (user) {
         const { data } = await supabase.from("wardrobe").select("id, name, type, color, material, image_url").eq("user_id", user.id);
         fetchedWardrobe = data || [];
         setWardrobeItems(fetchedWardrobe);
       }
+      setAnalysisProgress(50);
+      setAnalysisStage("Analyzing your style...");
       const { data, error } = await supabase.functions.invoke("rate-outfit", {
         body: { imageBase64, wardrobeItems: fetchedWardrobe, styleProfile: styleProfile || undefined },
       });
       if (abortControllerRef.current?.signal.aborted) return;
+      setAnalysisProgress(90);
+      setAnalysisStage("Almost done...");
       if (error) throw error;
       if (data?.error) { toast.error(data.error); return; }
       if (data?.result) {
+        setAnalysisProgress(100);
         setResult(data.result);
-        // Save to drip history using the outfit photo (share card saved separately on share)
         saveDripToHistory(URL.createObjectURL(file), data.result);
       }
     } catch (err: any) {
@@ -113,6 +121,8 @@ const CameraScreen = () => {
       toast.error("Failed to analyze outfit. Please try again.");
     } finally {
       setAnalyzing(false);
+      setAnalysisProgress(0);
+      setAnalysisStage("");
       abortControllerRef.current = null;
     }
   };
