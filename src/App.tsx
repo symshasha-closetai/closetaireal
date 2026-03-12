@@ -6,7 +6,7 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import { ThemeProvider } from "next-themes";
 import { AuthProvider, useAuth } from "./hooks/useAuth";
-import SplashScreen from "./components/SplashScreen";
+
 
 const HomeScreen = lazy(() => import("./pages/HomeScreen"));
 const CameraScreen = lazy(() => import("./pages/CameraScreen"));
