@@ -102,6 +102,22 @@ const ProfileScreen = () => {
   const [historyLoading, setHistoryLoading] = useState(false);
   const [viewingCard, setViewingCard] = useState<DripHistoryEntry | null>(null);
 
+  // Pull-to-refresh
+  const pullRef = useRef<HTMLDivElement>(null);
+  const [pullDistance, setPullDistance] = useState(0);
+  const [isPulling, setIsPulling] = useState(false);
+  const [isRefreshing, setIsRefreshing] = useState(false);
+  const touchStartY = useRef(0);
+  const PULL_THRESHOLD = 60;
+
+  const handlePullRefresh = useCallback(async () => {
+    setIsRefreshing(true);
+    await syncHistoryFromDb();
+    setDripHistory(getDripHistory());
+    setIsRefreshing(false);
+    toast.success("History synced", { duration: 1500 });
+  }, []);
+
   const avatarUrl = avatarPreview || profile?.avatar_url || null;
 
   // Style personality computation
