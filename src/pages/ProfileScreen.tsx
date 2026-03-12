@@ -188,14 +188,27 @@ const ProfileScreen = () => {
   const loadDailyRatings = async () => {
     if (!user) return;
     setHistoryLoading(true);
-    const { data } = await supabase
-      .from("daily_ratings")
-      .select("*")
-      .eq("user_id", user.id)
-      .order("created_at", { ascending: false })
-      .limit(50);
-    setDailyRatings(data || []);
+    const [ratingsRes, outfitsRes, suggestionsRes] = await Promise.all([
+      supabase.from("daily_ratings").select("*").eq("user_id", user.id).order("created_at", { ascending: false }).limit(50),
+      supabase.from("saved_outfits" as any).select("*").eq("user_id", user.id).order("created_at", { ascending: false }).limit(50),
+      supabase.from("saved_suggestions" as any).select("*").eq("user_id", user.id).order("created_at", { ascending: false }).limit(50),
+    ]);
+    setDailyRatings(ratingsRes.data || []);
+    setSavedOutfits(outfitsRes.data || []);
+    setSavedSuggestions(suggestionsRes.data || []);
     setHistoryLoading(false);
+  };
+
+  const deleteSavedOutfit = async (id: string) => {
+    await supabase.from("saved_outfits" as any).delete().eq("id", id);
+    setSavedOutfits(prev => prev.filter(o => o.id !== id));
+    toast.success("Outfit removed");
+  };
+
+  const deleteSavedSuggestion = async (id: string) => {
+    await supabase.from("saved_suggestions" as any).delete().eq("id", id);
+    setSavedSuggestions(prev => prev.filter(s => s.id !== id));
+    toast.success("Suggestion removed");
   };
 
   const handleAvatarUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
