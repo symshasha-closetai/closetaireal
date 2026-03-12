@@ -499,9 +499,15 @@ const ProfileScreen = () => {
           <TabsContent value="history" className="space-y-5 mt-4">
             {/* Drip History */}
             <div className="space-y-3">
-              <h3 className="text-xs uppercase tracking-[0.15em] text-foreground/50 flex items-center gap-2">
-                <Sparkles size={12} /> Drip History
-              </h3>
+              <div className="flex items-center justify-between">
+                <h3 className="text-xs uppercase tracking-[0.15em] text-foreground/50 flex items-center gap-2">
+                  <Sparkles size={12} /> Drip History
+                </h3>
+                {dripHistory.length > 0 && (
+                  <button onClick={() => { setDripHistory([]); saveDripHistory([]); toast.success("Drip history cleared", { duration: 2000 }); }}
+                    className="text-[10px] text-destructive/60 font-medium">Clear All</button>
+                )}
+              </div>
               {dripHistory.length === 0 ? (
                 <p className="text-xs text-muted-foreground py-4 text-center">No drip checks saved yet. Rate an outfit to see it here!</p>
               ) : (
@@ -517,7 +523,7 @@ const ProfileScreen = () => {
                         <p className="text-[8px] text-white/50 truncate">{entry.killerTag}</p>
                       </div>
                       <button onClick={(e) => { e.stopPropagation(); deleteDripEntry(entry.id); }}
-                        className="absolute top-1 right-1 w-5 h-5 rounded-full bg-black/50 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
+                        className="absolute top-1 right-1 w-5 h-5 rounded-full bg-black/50 flex items-center justify-center opacity-70 group-hover:opacity-100 transition-opacity">
                         <X size={10} className="text-white" />
                       </button>
                     </motion.div>
@@ -529,15 +535,24 @@ const ProfileScreen = () => {
 
             {/* Saved Outfits */}
             <div className="space-y-3">
-              <h3 className="text-xs uppercase tracking-[0.15em] text-foreground/50 flex items-center gap-2">
-                <Bookmark size={12} /> Saved Outfits
-              </h3>
+              <div className="flex items-center justify-between">
+                <h3 className="text-xs uppercase tracking-[0.15em] text-foreground/50 flex items-center gap-2">
+                  <Bookmark size={12} /> Saved Outfits
+                </h3>
+                {savedOutfits.length > 0 && (
+                  <button onClick={async () => {
+                    await Promise.all(savedOutfits.map(o => supabase.from("saved_outfits" as any).delete().eq("id", o.id)));
+                    setSavedOutfits([]); localStorage.setItem("saved-outfits", "[]");
+                    toast.success("All saved outfits cleared", { duration: 2000 });
+                  }} className="text-[10px] text-destructive/60 font-medium">Clear All</button>
+                )}
+              </div>
               {savedOutfits.length === 0 ? (
                 <p className="text-xs text-muted-foreground py-4 text-center">No saved outfits yet. Save an outfit from Style Me!</p>
               ) : (
                 <div className="space-y-2">
                   {savedOutfits.map((o: any) => (
-                    <div key={o.id} className="glass-card p-3 flex items-center gap-3 group">
+                    <div key={o.id} className="glass-card p-3 flex items-center gap-3">
                       <div className="w-10 h-10 rounded-lg bg-secondary flex items-center justify-center flex-shrink-0">
                         <Bookmark size={16} className="text-primary" />
                       </div>
@@ -549,7 +564,7 @@ const ProfileScreen = () => {
                         <p className="text-[11px] text-muted-foreground truncate mt-0.5">{o.occasion} • {new Date(o.created_at).toLocaleDateString()}</p>
                       </div>
                       <button onClick={() => deleteSavedOutfit(o.id)}
-                        className="flex-shrink-0 w-6 h-6 rounded-full bg-destructive/10 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
+                        className="flex-shrink-0 w-6 h-6 rounded-full bg-destructive/10 flex items-center justify-center">
                         <X size={10} className="text-destructive" />
                       </button>
                     </div>
@@ -560,15 +575,24 @@ const ProfileScreen = () => {
 
             {/* Saved Suggestions */}
             <div className="space-y-3">
-              <h3 className="text-xs uppercase tracking-[0.15em] text-foreground/50 flex items-center gap-2">
-                <Heart size={12} /> Saved Suggestions
-              </h3>
+              <div className="flex items-center justify-between">
+                <h3 className="text-xs uppercase tracking-[0.15em] text-foreground/50 flex items-center gap-2">
+                  <Heart size={12} /> Saved Suggestions
+                </h3>
+                {savedSuggestions.length > 0 && (
+                  <button onClick={async () => {
+                    await Promise.all(savedSuggestions.map(s => supabase.from("saved_suggestions" as any).delete().eq("id", s.id)));
+                    setSavedSuggestions([]); localStorage.setItem("saved-suggestions", "[]");
+                    toast.success("All saved suggestions cleared", { duration: 2000 });
+                  }} className="text-[10px] text-destructive/60 font-medium">Clear All</button>
+                )}
+              </div>
               {savedSuggestions.length === 0 ? (
                 <p className="text-xs text-muted-foreground py-4 text-center">No saved suggestions yet. Favourite items from Drip Check!</p>
               ) : (
                 <div className="space-y-2">
                   {savedSuggestions.map((s: any) => (
-                    <div key={s.id} className="glass-card p-3 flex items-center gap-3 group">
+                    <div key={s.id} className="glass-card p-3 flex items-center gap-3">
                       <div className="w-10 h-10 rounded-lg bg-secondary flex items-center justify-center flex-shrink-0">
                         {s.suggestion_type === "shopping" ? (
                           <ShoppingBag size={16} className="text-primary" />
@@ -585,7 +609,7 @@ const ProfileScreen = () => {
                         {s.drip_score && <p className="text-[10px] text-primary mt-0.5">Drip: {s.drip_score}/10</p>}
                       </div>
                       <button onClick={() => deleteSavedSuggestion(s.id)}
-                        className="flex-shrink-0 w-6 h-6 rounded-full bg-destructive/10 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
+                        className="flex-shrink-0 w-6 h-6 rounded-full bg-destructive/10 flex items-center justify-center">
                         <X size={10} className="text-destructive" />
                       </button>
                     </div>
