@@ -70,15 +70,25 @@ For each outfit, also provide a "reasoning" object with structured analysis acro
 - "body_type": How this outfit flatters the user's body type (1 sentence)
 - "skin_tone": How these colors complement the user's skin tone (1 sentence)
 
+Also provide a "score_breakdown" object with per-factor scores (each a number between 1.0 and 10.0):
+- "color": How well the colors harmonize (1.0-10.0)
+- "occasion": How appropriate for the occasion (1.0-10.0)
+- "season": How suitable for the season/weather (1.0-10.0)
+- "body_type": How flattering for the body type (1.0-10.0)
+- "skin_tone": How complementary to the skin tone (1.0-10.0)
+- "fabric": How appropriate the fabric choices are (1.0-10.0)
+The overall "score" should be a weighted average of these factors.
+
 CRITICAL SCORING RULES:
 - "score" MUST be a number between 1.0 and 10.0 (e.g. 6.5, 7.8, 8.2, 9.0)
+- All score_breakdown values MUST also be between 1.0 and 10.0
 - NEVER return a score above 10. NEVER use a percentage scale (0-100).
 - NEVER return a score below 1.0.
 - Base the score on how well the outfit matches: color harmony, fabric suitability, occasion fit, body type flattery, skin tone complement, and season appropriateness.
 - A score of 10 means absolutely perfect match across ALL dimensions. 7-8 is a good match. 5-6 is average. Below 5 means poor match.
 
 Return ONLY valid JSON (no markdown) with this structure:
-{"outfits":[{"name":"string","top_id":"string or null","bottom_id":"string or null","shoes_id":"string or null","accessories":["string"],"score":"number between 1.0 and 10.0","explanation":"string","reasoning":{"season":"string","mood":"string","time_of_day":"string","color_combination":"string","body_type":"string","skin_tone":"string"}}]}`;
+{"outfits":[{"name":"string","top_id":"string or null","bottom_id":"string or null","shoes_id":"string or null","accessories":["string"],"score":"number between 1.0 and 10.0","explanation":"string","reasoning":{"season":"string","mood":"string","time_of_day":"string","color_combination":"string","body_type":"string","skin_tone":"string"},"score_breakdown":{"color":"number 1-10","occasion":"number 1-10","season":"number 1-10","body_type":"number 1-10","skin_tone":"number 1-10","fabric":"number 1-10"}}]}`;
 
     const userPrompt = `Wardrobe items:\n${wardrobeDesc}\n\nOccasion: ${occasion}\nTime of day: ${timeOfDay}${weatherInfo}\nProfile: ${profileDesc}${bodyAnalysis}${faceAnalysis}\n\nSuggest 3-5 outfits. Return JSON only.`;
 
