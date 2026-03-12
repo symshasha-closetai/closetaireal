@@ -54,6 +54,15 @@ type OutfitReasoning = {
   skin_tone?: string;
 };
 
+type ScoreBreakdown = {
+  color?: number;
+  occasion?: number;
+  season?: number;
+  body_type?: number;
+  skin_tone?: number;
+  fabric?: number;
+};
+
 type OutfitSuggestion = {
   name: string;
   top_id?: string;
@@ -63,6 +72,7 @@ type OutfitSuggestion = {
   score: number;
   explanation: string;
   reasoning?: OutfitReasoning;
+  score_breakdown?: ScoreBreakdown;
   tryon_image?: string;
 };
 
