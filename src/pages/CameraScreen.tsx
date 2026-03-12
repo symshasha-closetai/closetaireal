@@ -50,6 +50,8 @@ const CameraScreen = () => {
   const [image, setImage] = useState<string | null>(null);
   const [imageBase64, setImageBase64] = useState<string | null>(null);
   const [analyzing, setAnalyzing] = useState(false);
+  const [analysisProgress, setAnalysisProgress] = useState(0);
+  const [analysisStage, setAnalysisStage] = useState("");
   const [result, setResult] = useState<RatingResult | null>(null);
   const [wardrobeItems, setWardrobeItems] = useState<any[]>([]);
   const fileRef = useRef<HTMLInputElement>(null);
