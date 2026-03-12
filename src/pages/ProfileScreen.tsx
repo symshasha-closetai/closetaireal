@@ -110,13 +110,13 @@ const ProfileScreen = () => {
   const touchStartY = useRef(0);
   const PULL_THRESHOLD = 60;
 
-  const handlePullRefresh = useCallback(async () => {
+  const handlePullRefresh = async () => {
     setIsRefreshing(true);
     await syncHistoryFromDb();
     setDripHistory(getDripHistory());
     setIsRefreshing(false);
     toast.success("History synced", { duration: 1500 });
-  }, []);
+  };
 
   const avatarUrl = avatarPreview || profile?.avatar_url || null;
 
