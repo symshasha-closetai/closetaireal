@@ -695,6 +695,41 @@ const HomeScreen = () => {
                   <p className="text-xs text-muted-foreground leading-relaxed">{outfit.explanation}</p>
                 </div>
 
+                {/* Score Breakdown */}
+                {outfit.score_breakdown && (
+                  <div className="glass-card p-4 space-y-3">
+                    <h3 className="text-sm font-semibold text-foreground">Score Breakdown</h3>
+                    <div className="space-y-2">
+                      {([
+                        { key: "color", label: "Color Harmony", icon: Palette },
+                        { key: "occasion", label: "Occasion Fit", icon: Briefcase },
+                        { key: "season", label: "Season", icon: Leaf },
+                        { key: "body_type", label: "Body Type", icon: User },
+                        { key: "skin_tone", label: "Skin Tone", icon: Droplet },
+                        { key: "fabric", label: "Fabric", icon: Shirt },
+                      ] as const).map(({ key, label, icon: Icon }) => {
+                        const val = Number(outfit.score_breakdown![key as keyof ScoreBreakdown]) || 0;
+                        const clamped = Math.max(0, Math.min(10, val));
+                        return (
+                          <div key={key} className="flex items-center gap-2">
+                            <Icon size={12} className="text-primary flex-shrink-0" />
+                            <span className="text-[10px] text-foreground w-20 flex-shrink-0">{label}</span>
+                            <div className="flex-1 h-1.5 rounded-full bg-secondary overflow-hidden">
+                              <motion.div
+                                initial={{ width: 0 }}
+                                animate={{ width: `${clamped * 10}%` }}
+                                transition={{ duration: 0.6, delay: 0.1 }}
+                                className="h-full rounded-full bg-primary"
+                              />
+                            </div>
+                            <span className="text-[10px] font-semibold text-foreground w-8 text-right">{clamped.toFixed(1)}</span>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </div>
+                )}
+
                 {/* Reasoning Grid */}
                 {outfit.reasoning && (
                   <div className="grid grid-cols-2 gap-2.5">
@@ -739,14 +774,19 @@ const HomeScreen = () => {
 
                 {/* Action Buttons */}
                 <div className="space-y-3">
-                  <button onClick={() => navigate("/camera")} className="w-full py-4 rounded-2xl gradient-accent text-accent-foreground font-semibold text-base shadow-soft active:scale-[0.98] transition-transform flex items-center justify-center gap-2">
-                    <Camera size={18} /> Rate Your Outfit
-                  </button>
-                  {!outfit.tryon_image && styleProfile?.model_image_url && (
-                    <button onClick={() => generateTryOn(outfit, selectedOutfitIdx)} className="w-full py-3 rounded-2xl bg-secondary text-foreground font-medium text-sm active:scale-[0.98] transition-transform flex items-center justify-center gap-2">
-                      <Sparkles size={16} /> Generate Try-On Preview
+                  {!outfit.tryon_image && generatingTryOnIdx === selectedOutfitIdx ? (
+                    <div className="w-full py-8 rounded-2xl bg-secondary flex flex-col items-center justify-center gap-3">
+                      <div className="relative w-24 h-32">
+                        <Skeleton className="absolute inset-0 rounded-full w-12 h-12 mx-auto" />
+                        <Skeleton className="absolute top-12 left-1/2 -translate-x-1/2 w-16 h-16 rounded-xl" />
+                      </div>
+                      <p className="text-xs text-muted-foreground animate-pulse">Creating your virtual try-on...</p>
+                    </div>
+                  ) : !outfit.tryon_image && styleProfile?.model_image_url ? (
+                    <button onClick={() => generateTryOn(outfit, selectedOutfitIdx!)} className="w-full py-4 rounded-2xl gradient-accent text-accent-foreground font-semibold text-base shadow-soft active:scale-[0.98] transition-transform flex items-center justify-center gap-2">
+                      <Sparkles size={18} /> Generate Try-On Preview
                     </button>
-                  )}
+                  ) : null}
                   <button onClick={() => setSelectedOutfitIdx(null)} className="w-full text-center text-sm text-muted-foreground font-medium py-2">
                     ← Try a Different Look
                   </button>
