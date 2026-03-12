@@ -268,6 +268,7 @@ const HomeScreen = () => {
 
   const generateTryOn = async (outfit: OutfitSuggestion, idx: number) => {
     if (!styleProfile?.model_image_url || !user) return;
+    setGeneratingTryOnIdx(idx);
     try {
       const items = [outfit.top_id, outfit.bottom_id, outfit.shoes_id, ...(outfit.accessories || [])]
         .map(id => allWardrobeItems.find(w => w.id === id))
@@ -295,6 +296,8 @@ const HomeScreen = () => {
       }
     } catch (err) {
       console.error("Try-on error:", err);
+    } finally {
+      setGeneratingTryOnIdx(null);
     }
   };
 
