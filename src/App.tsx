@@ -40,7 +40,14 @@ const AppRoutes = () => {
   if (loading) return null;
 
   return (
-    <>
+    <Suspense fallback={
+      <div className="min-h-screen flex items-center justify-center bg-background">
+        <div className="text-center space-y-3">
+          <div className="w-12 h-12 rounded-xl gradient-accent mx-auto animate-pulse" />
+          <p className="text-sm text-muted-foreground">Loading...</p>
+        </div>
+      </div>
+    }>
       <Routes>
         <Route path="/auth" element={user ? <Navigate to="/" replace /> : <AuthScreen />} />
         <Route path="/onboarding" element={
@@ -55,7 +62,7 @@ const AppRoutes = () => {
         <Route path="*" element={<NotFound />} />
       </Routes>
       {user && hasCompletedOnboarding !== false && <BottomNav />}
-    </>
+    </Suspense>
   );
 };
 
