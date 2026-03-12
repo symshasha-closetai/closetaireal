@@ -86,6 +86,10 @@ const HomeScreen = () => {
   const [generatingModel, setGeneratingModel] = useState(false);
   const [selectedOutfitIdx, setSelectedOutfitIdx] = useState<number | null>(null);
 
+  // Progress tracking
+  const [progressStage, setProgressStage] = useState<string>("");
+  const [progressPercent, setProgressPercent] = useState(0);
+
   useEffect(() => {
     if (user) {
       supabase
@@ -110,61 +114,17 @@ const HomeScreen = () => {
     return acc;
   }, {} as Record<string, number>);
 
-  const handleStyleMe = async () => {
-    if (allWardrobeItems.length < 2) {
-      toast.error("Add at least 2 items to your wardrobe first!");
-      return;
-    }
-    setStyling(true);
-    try {
-      generateFullSizeModel();
+  const fetchStyleProfile = useCallback(async () => {
+    if (!user) return null;
+    const { data } = await supabase.from("style_profiles").select("*").eq("user_id", user.id).maybeSingle();
+    return data;
+  }, [user]);
 
-      let sp = null;
-      if (user) {
-        const { data } = await supabase.from("style_profiles").select("*").eq("user_id", user.id).maybeSingle();
-        sp = data;
-      }
-
-      const { data, error } = await supabase.functions.invoke("style-me", {
-        body: {
-          wardrobeItems: allWardrobeItems,
-          occasion: selectedOccasion,
-          timeOfDay: selectedTime,
-          weather: selectedWeather,
-          styleProfile: sp,
-        },
-      });
-
-      if (error) {
-        const msg = data?.error || (error as any)?.message || "Failed to generate outfits";
-        toast.error(msg);
-        return;
-      }
-      if (data?.error) { toast.error(data.error); return; }
-
-      if (data?.outfits?.length) {
-        setOutfitSuggestions(data.outfits);
-        setShowResults(true);
-        if (styleProfile?.model_image_url && user) {
-          generateTryOn(data.outfits[0], 0);
-        }
-      } else {
-        toast.error("No outfits generated. Try adding more items.");
-      }
-    } catch (err) {
-      console.error("Style me error:", err);
-      toast.error("Failed to generate outfits. Please try again.");
-    } finally {
-      setStyling(false);
-    }
-  };
-
-  const generateFullSizeModel = async () => {
-    if (!user || !styleProfile?.model_image_url) return;
+  const generateModelAvatar = useCallback(async (sp: any) => {
+    if (!user || !styleProfile?.model_image_url) return null;
     setGeneratingModel(true);
     try {
-      const sp = await supabase.from("style_profiles").select("*").eq("user_id", user.id).maybeSingle();
-      const bodyAnalysis = sp.data?.ai_body_analysis as any;
+      const bodyAnalysis = sp?.ai_body_analysis as any;
       const desc = bodyAnalysis
         ? `${bodyAnalysis.body_type || ""} build, ${bodyAnalysis.skin_tone || ""} skin tone, ${bodyAnalysis.face_shape || ""} face`
         : "average build";
@@ -174,47 +134,62 @@ const HomeScreen = () => {
           modelDescription: desc,
           userId: user.id,
           occasion: selectedOccasion,
-          gender: sp.data?.gender || undefined,
-          facePhotoUrl: sp.data?.face_photo_url || sp.data?.body_photo_url || null,
-          bodyPhotoUrl: sp.data?.body_photo_url || null,
+          gender: sp?.gender || undefined,
+          facePhotoUrl: sp?.face_photo_url || sp?.body_photo_url || null,
+          bodyPhotoUrl: sp?.body_photo_url || null,
         },
       });
       if (!error && data?.imageUrl) {
         setFullSizeModelUrl(data.imageUrl);
+        return data.imageUrl;
       }
     } catch (err) {
-      console.error("Full-size model error:", err);
+      console.error("Model avatar error:", err);
     } finally {
       setGeneratingModel(false);
     }
-  };
+    return null;
+  }, [user, styleProfile, selectedOccasion]);
 
-  const handleSurpriseMe = async () => {
+  const callStyleMe = useCallback(async (sp: any, isSurprise: boolean) => {
+    return supabase.functions.invoke("style-me", {
+      body: {
+        wardrobeItems: allWardrobeItems,
+        occasion: isSurprise ? "Surprise Me" : selectedOccasion,
+        timeOfDay: isSurprise ? "Any" : selectedTime,
+        weather: isSurprise ? "Any" : selectedWeather,
+        styleProfile: sp,
+        ...(isSurprise ? { surpriseMe: true } : {}),
+      },
+    });
+  }, [allWardrobeItems, selectedOccasion, selectedTime, selectedWeather]);
+
+  const handleStyleFlow = async (isSurprise: boolean) => {
     if (allWardrobeItems.length < 2) {
       toast.error("Add at least 2 items to your wardrobe first!");
       return;
     }
-    setSurprising(true);
+
+    isSurprise ? setSurprising(true) : setStyling(true);
+    setProgressStage("Analyzing your wardrobe...");
+    setProgressPercent(10);
+
     try {
-      generateFullSizeModel();
+      // Step 1: Fetch style profile (needed by both parallel calls)
+      const sp = await fetchStyleProfile();
+      setProgressStage("Generating outfits & AI model...");
+      setProgressPercent(25);
 
-      let sp = null;
-      if (user) {
-        const { data } = await supabase.from("style_profiles").select("*").eq("user_id", user.id).maybeSingle();
-        sp = data;
-      }
+      // Step 2: Run style-me AND model avatar generation IN PARALLEL
+      const [styleResult, _modelResult] = await Promise.all([
+        callStyleMe(sp, isSurprise),
+        generateModelAvatar(sp),
+      ]);
 
-      const { data, error } = await supabase.functions.invoke("style-me", {
-        body: {
-          wardrobeItems: allWardrobeItems,
-          occasion: "Surprise Me",
-          timeOfDay: "Any",
-          weather: "Any",
-          styleProfile: sp,
-          surpriseMe: true,
-        },
-      });
+      setProgressPercent(75);
+      setProgressStage("Preparing your results...");
 
+      const { data, error } = styleResult;
       if (error) {
         const msg = data?.error || (error as any)?.message || "Failed to generate outfits";
         toast.error(msg);
@@ -225,19 +200,29 @@ const HomeScreen = () => {
       if (data?.outfits?.length) {
         setOutfitSuggestions(data.outfits);
         setShowResults(true);
+        setProgressPercent(90);
+        setProgressStage("Creating virtual try-on...");
+
+        // Step 3: Generate try-on for first outfit
         if (styleProfile?.model_image_url && user) {
-          generateTryOn(data.outfits[0], 0);
+          await generateTryOn(data.outfits[0], 0);
         }
+        setProgressPercent(100);
       } else {
         toast.error("No outfits generated. Try adding more items.");
       }
     } catch (err) {
-      console.error("Surprise me error:", err);
+      console.error("Style flow error:", err);
       toast.error("Failed to generate outfits. Please try again.");
     } finally {
-      setSurprising(false);
+      isSurprise ? setSurprising(false) : setStyling(false);
+      setProgressStage("");
+      setProgressPercent(0);
     }
   };
+
+  const handleStyleMe = () => handleStyleFlow(false);
+  const handleSurpriseMe = () => handleStyleFlow(true);
 
   const generateTryOn = async (outfit: OutfitSuggestion, idx: number) => {
     if (!styleProfile?.model_image_url || !user) return;
@@ -275,6 +260,7 @@ const HomeScreen = () => {
   const currentOccasion = occasions.find(o => o.label === selectedOccasion) || occasions[0];
   const CurrentOccIcon = currentOccasion.icon;
   const displayModelUrl = fullSizeModelUrl || styleProfile?.model_image_url || profile?.avatar_url;
+  const isProcessing = styling || surprising;
 
   return (
     <div className="min-h-screen pb-24 px-5 pt-8">
@@ -290,6 +276,33 @@ const HomeScreen = () => {
           </h1>
           <p className="text-sm text-muted-foreground mt-0.5">Let's find your perfect outfit today</p>
         </div>
+
+        {/* Progress Bar */}
+        <AnimatePresence>
+          {isProcessing && progressStage && (
+            <motion.div
+              initial={{ opacity: 0, y: -10 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -10 }}
+              className="glass-card-elevated p-4 space-y-3"
+            >
+              <div className="flex items-center gap-3">
+                <Loader2 size={18} className="text-primary animate-spin" />
+                <div className="flex-1">
+                  <p className="text-sm font-medium text-foreground">{progressStage}</p>
+                  <p className="text-[10px] text-muted-foreground">
+                    {progressPercent < 25 && "Reading your style profile..."}
+                    {progressPercent >= 25 && progressPercent < 75 && "AI is picking outfits & generating your model simultaneously"}
+                    {progressPercent >= 75 && progressPercent < 90 && "Almost there..."}
+                    {progressPercent >= 90 && "Finishing up virtual try-on"}
+                  </p>
+                </div>
+                <span className="text-xs font-bold text-primary">{progressPercent}%</span>
+              </div>
+              <Progress value={progressPercent} className="h-2" />
+            </motion.div>
+          )}
+        </AnimatePresence>
 
         {/* Split Layout: Controls Left, Model Right */}
         <div className="flex flex-col lg:flex-row gap-5">
@@ -402,7 +415,7 @@ const HomeScreen = () => {
             </div>
 
             {/* Style Me Button */}
-            <button onClick={handleStyleMe} disabled={styling || surprising} className="w-full py-4 rounded-2xl gradient-accent text-accent-foreground font-semibold text-base shadow-soft active:scale-[0.98] transition-transform flex items-center justify-center gap-2 disabled:opacity-60">
+            <button onClick={handleStyleMe} disabled={isProcessing} className="w-full py-4 rounded-2xl gradient-accent text-accent-foreground font-semibold text-base shadow-soft active:scale-[0.98] transition-transform flex items-center justify-center gap-2 disabled:opacity-60">
               {styling ? (
                 <>
                   <motion.div animate={{ rotate: 360 }} transition={{ repeat: Infinity, duration: 1.5, ease: "linear" }}>
@@ -416,7 +429,7 @@ const HomeScreen = () => {
             </button>
 
             {/* Surprise Me Button */}
-            <button onClick={handleSurpriseMe} disabled={styling || surprising} className="w-full py-4 rounded-2xl bg-foreground text-background font-semibold text-base shadow-soft active:scale-[0.98] transition-transform flex items-center justify-center gap-2 disabled:opacity-60">
+            <button onClick={handleSurpriseMe} disabled={isProcessing} className="w-full py-4 rounded-2xl bg-foreground text-background font-semibold text-base shadow-soft active:scale-[0.98] transition-transform flex items-center justify-center gap-2 disabled:opacity-60">
               {surprising ? (
                 <>
                   <motion.div animate={{ rotate: 360 }} transition={{ repeat: Infinity, duration: 1.5, ease: "linear" }}>
@@ -446,7 +459,7 @@ const HomeScreen = () => {
             </div>
           </div>
 
-          {/* RIGHT PANEL: AI Model (no hover effect) */}
+          {/* RIGHT PANEL: AI Model */}
           <div className="lg:w-[420px] flex-shrink-0 order-1 lg:order-2">
             <div className="sticky top-20">
               <div className="relative rounded-3xl overflow-hidden shadow-elevated bg-secondary">
