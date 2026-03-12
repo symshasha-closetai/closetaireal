@@ -1,6 +1,7 @@
-import { useState, useRef } from "react";
+import { useState, useRef, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { Camera, Upload, X, Sparkles } from "lucide-react";
+import { Progress } from "@/components/ui/progress";
 import AppHeader from "../components/AppHeader";
 import OutfitRatingCard from "../components/OutfitRatingCard";
 import { supabase } from "@/integrations/supabase/client";
