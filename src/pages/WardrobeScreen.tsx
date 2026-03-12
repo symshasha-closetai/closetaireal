@@ -7,6 +7,7 @@ import { toast } from "sonner";
 import AppHeader from "../components/AppHeader";
 import { compressImage } from "@/lib/imageCompression";
 import html2canvas from "html2canvas";
+import { precacheImages } from "@/lib/imageCache";
 
 type ClothingItem = {
   id: string;
