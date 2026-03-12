@@ -55,13 +55,36 @@ const findWardrobeMatch = (suggestion: Suggestion, wardrobeItems: WardrobeItem[]
 };
 
 const OutfitRatingCard = ({ image, imageBase64, result, wardrobeItems = [] }: Props) => {
+  const { user } = useAuth();
   const [activeTooltip, setActiveTooltip] = useState<string | null>(null);
   const [suggestionImages, setSuggestionImages] = useState<Record<number, string | null>>({});
   const [loadingImages, setLoadingImages] = useState<Record<number, boolean>>({});
   const [sharing, setSharing] = useState(false);
   const [downloading, setDownloading] = useState(false);
   const [showShareCard, setShowShareCard] = useState(false);
+  const [savedSuggestions, setSavedSuggestions] = useState<Set<string>>(new Set());
   const shareRef = useRef<HTMLDivElement>(null);
+
+  const handleSaveSuggestion = async (type: "wardrobe" | "shopping", s: Suggestion) => {
+    const key = `${type}-${s.item_name}`;
+    if (!user || savedSuggestions.has(key)) return;
+    try {
+      const { error } = await supabase.from("saved_suggestions" as any).insert({
+        user_id: user.id,
+        drip_score: result.drip_score,
+        killer_tag: result.killer_tag || null,
+        suggestion_type: type,
+        item_name: s.item_name,
+        category: s.category,
+        reason: s.reason,
+      } as any);
+      if (error) throw error;
+      setSavedSuggestions(prev => new Set(prev).add(key));
+      toast.success("Suggestion saved!");
+    } catch {
+      toast.error("Failed to save suggestion");
+    }
+  };
 
   const captureCard = useCallback(async (): Promise<Blob | null> => {
     setShowShareCard(true);
