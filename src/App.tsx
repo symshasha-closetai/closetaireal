@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, lazy, Suspense } from "react";
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
@@ -6,15 +6,16 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import { ThemeProvider } from "next-themes";
 import { AuthProvider, useAuth } from "./hooks/useAuth";
-import HomeScreen from "./pages/HomeScreen";
-import CameraScreen from "./pages/CameraScreen";
-import WardrobeScreen from "./pages/WardrobeScreen";
-import AuthScreen from "./pages/AuthScreen";
-import ProfileScreen from "./pages/ProfileScreen";
-import OnboardingScreen from "./pages/OnboardingScreen";
-import NotFound from "./pages/NotFound";
-import BottomNav from "./components/BottomNav";
 import SplashScreen from "./components/SplashScreen";
+
+const HomeScreen = lazy(() => import("./pages/HomeScreen"));
+const CameraScreen = lazy(() => import("./pages/CameraScreen"));
+const WardrobeScreen = lazy(() => import("./pages/WardrobeScreen"));
+const AuthScreen = lazy(() => import("./pages/AuthScreen"));
+const ProfileScreen = lazy(() => import("./pages/ProfileScreen"));
+const OnboardingScreen = lazy(() => import("./pages/OnboardingScreen"));
+const NotFound = lazy(() => import("./pages/NotFound"));
+const BottomNav = lazy(() => import("./components/BottomNav"));
 
 const queryClient = new QueryClient();
 
@@ -39,7 +40,14 @@ const AppRoutes = () => {
   if (loading) return null;
 
   return (
-    <>
+    <Suspense fallback={
+      <div className="min-h-screen flex items-center justify-center bg-background">
+        <div className="text-center space-y-3">
+          <div className="w-12 h-12 rounded-xl gradient-accent mx-auto animate-pulse" />
+          <p className="text-sm text-muted-foreground">Loading...</p>
+        </div>
+      </div>
+    }>
       <Routes>
         <Route path="/auth" element={user ? <Navigate to="/" replace /> : <AuthScreen />} />
         <Route path="/onboarding" element={
@@ -54,7 +62,7 @@ const AppRoutes = () => {
         <Route path="*" element={<NotFound />} />
       </Routes>
       {user && hasCompletedOnboarding !== false && <BottomNav />}
-    </>
+    </Suspense>
   );
 };
 
