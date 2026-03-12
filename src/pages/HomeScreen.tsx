@@ -100,22 +100,42 @@ const HomeScreen = () => {
   const [progressStage, setProgressStage] = useState<string>("");
   const [progressPercent, setProgressPercent] = useState(0);
 
+  // Cache helpers
+  const getCached = <T,>(key: string, ttlMs: number): T | null => {
+    try {
+      const raw = localStorage.getItem(key);
+      if (!raw) return null;
+      const { data, ts } = JSON.parse(raw);
+      if (Date.now() - ts > ttlMs) { localStorage.removeItem(key); return null; }
+      return data as T;
+    } catch { return null; }
+  };
+  const setCache = (key: string, data: any) => {
+    try { localStorage.setItem(key, JSON.stringify({ data, ts: Date.now() })); } catch {}
+  };
+
   useEffect(() => {
     if (user) {
+      const cacheKey = `wardrobe_cache_${user.id}`;
+      const cached = getCached<WardrobeItem[]>(cacheKey, 5 * 60 * 1000);
+      if (cached) {
+        setAllWardrobeItems(cached);
+        setWardrobeItems(cached.slice(0, 6));
+        setWardrobeCount(cached.length);
+      }
+      // Always fetch in background to keep fresh
       supabase
         .from("wardrobe")
         .select("id, image_url, type, name, color, material")
         .eq("user_id", user.id)
         .order("created_at", { ascending: false })
         .then(({ data }) => {
-          setAllWardrobeItems(data || []);
-          setWardrobeItems((data || []).slice(0, 6));
+          const items = data || [];
+          setAllWardrobeItems(items);
+          setWardrobeItems(items.slice(0, 6));
+          setWardrobeCount(items.length);
+          setCache(cacheKey, items);
         });
-      supabase
-        .from("wardrobe")
-        .select("id", { count: "exact", head: true })
-        .eq("user_id", user.id)
-        .then(({ count }) => setWardrobeCount(count || 0));
     }
   }, [user]);
 
