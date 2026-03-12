@@ -11,7 +11,7 @@ import SplashScreen from "./components/SplashScreen";
 const HomeScreen = lazy(() => import("./pages/HomeScreen"));
 const CameraScreen = lazy(() => import("./pages/CameraScreen"));
 const WardrobeScreen = lazy(() => import("./pages/WardrobeScreen"));
-const AuthScreen = lazy(() => import("./pages/AuthScreen"));
+import AuthScreen from "./pages/AuthScreen";
 const ProfileScreen = lazy(() => import("./pages/ProfileScreen"));
 const OnboardingScreen = lazy(() => import("./pages/OnboardingScreen"));
 const NotFound = lazy(() => import("./pages/NotFound"));
