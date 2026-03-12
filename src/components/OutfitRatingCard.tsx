@@ -483,12 +483,13 @@ const OutfitRatingCard = ({ image, imageBase64, result, wardrobeItems = [] }: Pr
             ].map(s => (
               <div key={s.label} style={{ textAlign: "center" }}>
                 <div style={{
-                  width: 50, height: 50, borderRadius: "50%",
+                  width: 54, height: 54, borderRadius: "50%",
                   border: `2px solid ${s.color}`,
                   display: "flex", alignItems: "center", justifyContent: "center",
                   margin: "0 auto",
+                  boxSizing: "border-box",
                 }}>
-                  <span style={{ fontSize: 16, fontWeight: 500, color: "#fff" }}>
+                  <span style={{ fontSize: 17, fontWeight: 500, color: "#fff", lineHeight: "1", display: "block", textAlign: "center" }}>
                     {Number.isInteger(s.score) ? s.score : s.score.toFixed(1)}
                   </span>
                 </div>
