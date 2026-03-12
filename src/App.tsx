@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, lazy, Suspense } from "react";
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
@@ -6,15 +6,16 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import { ThemeProvider } from "next-themes";
 import { AuthProvider, useAuth } from "./hooks/useAuth";
-import HomeScreen from "./pages/HomeScreen";
-import CameraScreen from "./pages/CameraScreen";
-import WardrobeScreen from "./pages/WardrobeScreen";
-import AuthScreen from "./pages/AuthScreen";
-import ProfileScreen from "./pages/ProfileScreen";
-import OnboardingScreen from "./pages/OnboardingScreen";
-import NotFound from "./pages/NotFound";
-import BottomNav from "./components/BottomNav";
 import SplashScreen from "./components/SplashScreen";
+
+const HomeScreen = lazy(() => import("./pages/HomeScreen"));
+const CameraScreen = lazy(() => import("./pages/CameraScreen"));
+const WardrobeScreen = lazy(() => import("./pages/WardrobeScreen"));
+const AuthScreen = lazy(() => import("./pages/AuthScreen"));
+const ProfileScreen = lazy(() => import("./pages/ProfileScreen"));
+const OnboardingScreen = lazy(() => import("./pages/OnboardingScreen"));
+const NotFound = lazy(() => import("./pages/NotFound"));
+const BottomNav = lazy(() => import("./components/BottomNav"));
 
 const queryClient = new QueryClient();
 
