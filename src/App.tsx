@@ -8,14 +8,14 @@ import { ThemeProvider } from "next-themes";
 import { AuthProvider, useAuth } from "./hooks/useAuth";
 
 
-const HomeScreen = lazy(() => import("./pages/HomeScreen"));
+import HomeScreen from "./pages/HomeScreen";
 const CameraScreen = lazy(() => import("./pages/CameraScreen"));
 const WardrobeScreen = lazy(() => import("./pages/WardrobeScreen"));
 import AuthScreen from "./pages/AuthScreen";
 const ProfileScreen = lazy(() => import("./pages/ProfileScreen"));
 const OnboardingScreen = lazy(() => import("./pages/OnboardingScreen"));
 const NotFound = lazy(() => import("./pages/NotFound"));
-const BottomNav = lazy(() => import("./components/BottomNav"));
+import BottomNav from "./components/BottomNav";
 
 const queryClient = new QueryClient();
 
