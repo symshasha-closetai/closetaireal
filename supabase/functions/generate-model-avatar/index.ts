@@ -72,14 +72,13 @@ serve(async (req) => {
     if (facePhotoUrl) {
       try {
         console.log("Starting face-swap with face photo:", facePhotoUrl);
-        const swapRes = await fetch("https://api.replicate.com/v1/predictions", {
+        const swapRes = await fetch("https://api.replicate.com/v1/models/yan-ops/face_swap/predictions", {
           method: "POST",
           headers: {
             "Authorization": `Bearer ${replicateKey}`,
             "Content-Type": "application/json",
           },
           body: JSON.stringify({
-            version: "d1d6ea8c8be89d664a07a457526f7128109dee7030fdac424788d762c71ed111",
             input: {
               input_image: imageUrl,
               swap_image: facePhotoUrl,
