@@ -300,40 +300,6 @@ const OutfitRatingCard = ({ image, imageBase64, result, wardrobeItems = [] }: Pr
           </motion.div>
         )}
 
-        {/* Sub-scores */}
-        <div className="relative">
-          <div className="flex justify-around">
-            {subScores.map((s) => (
-              <button key={s.key} onClick={() => toggleTooltip(s.key)} className="focus:outline-none active:scale-95 transition-transform">
-                <ScoreRing score={s.score} label={s.label} size={56} strokeColor={s.strokeColor} />
-              </button>
-            ))}
-          </div>
-          <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 1.5 }} className="flex items-center justify-center gap-1 mt-2">
-            <Info size={9} className="text-muted-foreground/40" />
-            <span className="text-[9px] text-muted-foreground/40">Tap for details</span>
-          </motion.div>
-        </div>
-
-        {/* Sub-score Tooltip */}
-        <AnimatePresence>
-          {activeTooltip && !["drip", "confidence"].includes(activeTooltip) && (
-            <motion.div
-              initial={{ opacity: 0, y: -8 }}
-              animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0, y: -8 }}
-              className="bg-card border border-border/50 rounded-xl p-3 relative shadow-sm"
-            >
-              <button onClick={() => setActiveTooltip(null)} className="absolute top-2 right-2">
-                <X size={12} className="text-muted-foreground" />
-              </button>
-              <p className="text-xs font-medium text-foreground capitalize mb-1">{activeTooltip}</p>
-              <p className="text-xs text-muted-foreground leading-relaxed">
-                {subScores.find(s => s.key === activeTooltip)?.reason || "No detailed reasoning available."}
-              </p>
-            </motion.div>
-          )}
-        </AnimatePresence>
 
         {/* Advice */}
         {result.advice && (
