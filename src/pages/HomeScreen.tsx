@@ -198,7 +198,14 @@ const HomeScreen = () => {
       if (data?.error) { toast.error(data.error); return; }
 
       if (data?.outfits?.length) {
-        setOutfitSuggestions(data.outfits);
+        // Normalize scores to 1-10 range
+        const normalizedOutfits = data.outfits.map((o: OutfitSuggestion) => {
+          let s = Number(o.score) || 5;
+          if (s > 10) s = s / 10; // Convert 0-100 scale to 0-10
+          s = Math.max(1, Math.min(10, Math.round(s * 10) / 10)); // Clamp 1-10, 1 decimal
+          return { ...o, score: s };
+        });
+        setOutfitSuggestions(normalizedOutfits);
         setShowResults(true);
         setProgressPercent(90);
         setProgressStage("Creating virtual try-on...");

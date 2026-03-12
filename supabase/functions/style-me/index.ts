@@ -70,8 +70,15 @@ For each outfit, also provide a "reasoning" object with structured analysis acro
 - "body_type": How this outfit flatters the user's body type (1 sentence)
 - "skin_tone": How these colors complement the user's skin tone (1 sentence)
 
+CRITICAL SCORING RULES:
+- "score" MUST be a number between 1.0 and 10.0 (e.g. 6.5, 7.8, 8.2, 9.0)
+- NEVER return a score above 10. NEVER use a percentage scale (0-100).
+- NEVER return a score below 1.0.
+- Base the score on how well the outfit matches: color harmony, fabric suitability, occasion fit, body type flattery, skin tone complement, and season appropriateness.
+- A score of 10 means absolutely perfect match across ALL dimensions. 7-8 is a good match. 5-6 is average. Below 5 means poor match.
+
 Return ONLY valid JSON (no markdown) with this structure:
-{"outfits":[{"name":"string","top_id":"string or null","bottom_id":"string or null","shoes_id":"string or null","accessories":["string"],"score":number,"explanation":"string","reasoning":{"season":"string","mood":"string","time_of_day":"string","color_combination":"string","body_type":"string","skin_tone":"string"}}]}`;
+{"outfits":[{"name":"string","top_id":"string or null","bottom_id":"string or null","shoes_id":"string or null","accessories":["string"],"score":"number between 1.0 and 10.0","explanation":"string","reasoning":{"season":"string","mood":"string","time_of_day":"string","color_combination":"string","body_type":"string","skin_tone":"string"}}]}`;
 
     const userPrompt = `Wardrobe items:\n${wardrobeDesc}\n\nOccasion: ${occasion}\nTime of day: ${timeOfDay}${weatherInfo}\nProfile: ${profileDesc}${bodyAnalysis}${faceAnalysis}\n\nSuggest 3-5 outfits. Return JSON only.`;
 

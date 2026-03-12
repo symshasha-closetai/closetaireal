@@ -190,7 +190,7 @@ const OutfitRatingCard = ({ image, imageBase64, result, wardrobeItems = [] }: Pr
         
         {/* ClosetAI branding */}
         <div className="absolute top-4 left-4 z-10">
-          <span className="text-[10px] tracking-[0.2em] font-light text-white/80 drop-shadow-md">
+          <span className="text-[10px] tracking-[0.2em] font-medium text-white/90 drop-shadow-md bg-black/40 rounded-lg px-2.5 py-1">
             ClosetAI
           </span>
         </div>
@@ -426,7 +426,7 @@ const OutfitRatingCard = ({ image, imageBase64, result, wardrobeItems = [] }: Pr
             
             {/* Brand */}
             <div style={{ position: "absolute", top: 14, left: 18 }}>
-              <span style={{ fontSize: 10, letterSpacing: 5, color: "rgba(255,255,255,0.6)", fontWeight: 300 }}>
+              <span style={{ fontSize: 10, letterSpacing: 5, color: "rgba(255,255,255,0.9)", fontWeight: 500, background: "rgba(0,0,0,0.5)", borderRadius: 8, padding: "4px 10px" }}>
                 ClosetAI
               </span>
             </div>
@@ -508,7 +508,7 @@ const OutfitRatingCard = ({ image, imageBase64, result, wardrobeItems = [] }: Pr
 
           {/* CTA */}
           <div style={{ padding: "8px 20px 18px", textAlign: "center" }}>
-            <p style={{ fontSize: 9, color: "rgba(255,255,255,0.25)", letterSpacing: 4, textTransform: "uppercase" }}>
+            <p style={{ fontSize: 10, color: "rgba(255,255,255,0.55)", letterSpacing: 4, textTransform: "uppercase", fontWeight: 500 }}>
               closetaireal.lovable.app
             </p>
           </div>
