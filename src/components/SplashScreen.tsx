@@ -1,5 +1,5 @@
 import { motion } from "framer-motion";
-import logo from "@/assets/closetai-logo.png";
+import logo from "@/assets/closetai-logo.webp";
 
 const SplashScreen = () => {
   return (
