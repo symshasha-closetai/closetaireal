@@ -69,7 +69,7 @@ const OutfitRatingCard = ({ image, imageBase64, result, wardrobeItems = [] }: Pr
     const key = `${type}-${s.item_name}`;
     if (!user || savedSuggestions.has(key)) return;
     try {
-      const { error } = await supabase.from("saved_suggestions" as any).insert({
+      const suggestionData = {
         user_id: user.id,
         drip_score: result.drip_score,
         killer_tag: result.killer_tag || null,
@@ -77,10 +77,17 @@ const OutfitRatingCard = ({ image, imageBase64, result, wardrobeItems = [] }: Pr
         item_name: s.item_name,
         category: s.category,
         reason: s.reason,
-      } as any);
+      };
+      const { data, error } = await supabase.from("saved_suggestions" as any).insert(suggestionData as any).select().single();
       if (error) throw error;
       setSavedSuggestions(prev => new Set(prev).add(key));
-      toast.success("Suggestion saved!");
+      // Sync to localStorage
+      try {
+        const cached = JSON.parse(localStorage.getItem("saved-suggestions") || "[]");
+        cached.unshift(data);
+        localStorage.setItem("saved-suggestions", JSON.stringify(cached));
+      } catch {}
+      toast.success("Suggestion saved!", { duration: 2000 });
     } catch {
       toast.error("Failed to save suggestion");
     }
