@@ -514,36 +514,6 @@ const ProfileScreen = () => {
               )}
             </div>
 
-            {/* Outfit Check History from DB */}
-            <div className="space-y-3">
-              <h3 className="text-xs uppercase tracking-[0.15em] text-foreground/50 flex items-center gap-2">
-                <Clock size={12} /> Outfit Check History
-              </h3>
-              {historyLoading ? (
-                <div className="flex justify-center py-6"><Loader2 className="w-5 h-5 animate-spin text-muted-foreground" /></div>
-              ) : dailyRatings.length === 0 ? (
-                <p className="text-xs text-muted-foreground py-4 text-center">No outfit ratings yet.</p>
-              ) : (
-                <div className="space-y-2">
-                  {dailyRatings.map((r) => (
-                    <div key={r.id} className="glass-card p-3 flex items-center gap-3">
-                      {r.image_url && (
-                        <img src={r.image_url} alt="" className="w-10 h-10 rounded-lg object-cover flex-shrink-0" />
-                      )}
-                      <div className="flex-1 min-w-0">
-                        <div className="flex items-center justify-between">
-                          <span className="text-sm font-medium text-foreground">{r.score}/10</span>
-                          <span className="text-[10px] text-muted-foreground">{new Date(r.created_at).toLocaleDateString()}</span>
-                        </div>
-                        {r.ai_feedback && (
-                          <p className="text-[11px] text-muted-foreground truncate mt-0.5">{r.ai_feedback}</p>
-                        )}
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              )}
-            </div>
 
             {/* Saved Outfits */}
             <div className="space-y-3">
