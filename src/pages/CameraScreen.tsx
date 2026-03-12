@@ -27,112 +27,142 @@ export type RatingResult = {
   shopping_suggestions: { item_name: string; category: string; reason: string; image_prompt?: string }[];
 };
 
+// Persist drip analysis state across navigation
+type DripState = {
+  image: string | null;
+  imageBase64: string | null;
+  analyzing: boolean;
+  progress: number;
+  stage: string;
+  result: RatingResult | null;
+  wardrobeItems: any[];
+};
+
+const globalDripState: DripState = {
+  image: null,
+  imageBase64: null,
+  analyzing: false,
+  progress: 0,
+  stage: "",
+  result: null,
+  wardrobeItems: [],
+};
+
+let globalListeners: Set<() => void> = new Set();
+const notifyListeners = () => globalListeners.forEach((fn) => fn());
+
+const updateGlobal = (patch: Partial<DripState>) => {
+  Object.assign(globalDripState, patch);
+  notifyListeners();
+};
+
 // Save drip card to localStorage history
 const saveDripToHistory = (image: string, result: RatingResult) => {
   try {
     const existing = JSON.parse(localStorage.getItem("drip-history") || "[]");
     const entry = {
       id: `drip-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`,
-      image, // This will be the share card image once captured, or the outfit photo
+      image,
       score: result.drip_score,
       killerTag: result.killer_tag || "",
       praiseLine: result.praise_line || "",
       timestamp: Date.now(),
     };
-    // Keep max 20 entries
     const updated = [entry, ...existing].slice(0, 20);
     localStorage.setItem("drip-history", JSON.stringify(updated));
   } catch { /* quota */ }
 };
 
-const CameraScreen = () => {
-  const { user, styleProfile } = useAuth();
-  const [image, setImage] = useState<string | null>(null);
-  const [imageBase64, setImageBase64] = useState<string | null>(null);
-  const [analyzing, setAnalyzing] = useState(false);
-  const [analysisProgress, setAnalysisProgress] = useState(0);
-  const [analysisStage, setAnalysisStage] = useState("");
-  const [result, setResult] = useState<RatingResult | null>(null);
-  const [wardrobeItems, setWardrobeItems] = useState<any[]>([]);
-  const fileRef = useRef<HTMLInputElement>(null);
-  const cameraFileRef = useRef<HTMLInputElement>(null);
-  const abortControllerRef = useRef<AbortController | null>(null);
+// Run analysis globally so it survives navigation
+let activeAbort: AbortController | null = null;
 
-  const toBase64 = (file: File): Promise<string> =>
-    new Promise((resolve, reject) => {
-      const reader = new FileReader();
+const runAnalysis = async (file: File, userId: string | undefined, styleProfile: any) => {
+  activeAbort = new AbortController();
+  updateGlobal({ analyzing: true, progress: 10, stage: "Reading your outfit..." });
+
+  try {
+    const reader = new FileReader();
+    const base64Promise = new Promise<string>((resolve, reject) => {
       reader.onload = () => resolve((reader.result as string).split(",")[1]);
       reader.onerror = reject;
       reader.readAsDataURL(file);
     });
+    const imageBase64 = await base64Promise;
 
-  const toDataUrl = (file: File): Promise<string> =>
-    new Promise((resolve, reject) => {
-      const reader = new FileReader();
-      reader.onload = () => resolve(reader.result as string);
-      reader.onerror = reject;
-      reader.readAsDataURL(file);
+    if (activeAbort?.signal.aborted) return;
+    updateGlobal({ progress: 30, stage: "Fetching wardrobe..." });
+
+    let fetchedWardrobe: any[] = [];
+    if (userId) {
+      const { data } = await supabase.from("wardrobe").select("id, name, type, color").eq("user_id", userId);
+      fetchedWardrobe = data || [];
+      updateGlobal({ wardrobeItems: fetchedWardrobe });
+    }
+
+    if (activeAbort?.signal.aborted) return;
+    updateGlobal({ progress: 50, stage: "Analyzing your style..." });
+
+    const { data, error } = await supabase.functions.invoke("rate-outfit", {
+      body: { imageBase64, wardrobeItems: fetchedWardrobe, styleProfile: styleProfile || undefined },
     });
+
+    if (activeAbort?.signal.aborted) return;
+    updateGlobal({ progress: 90, stage: "Almost done..." });
+
+    if (error) throw error;
+    if (data?.error) { toast.error(data.error); updateGlobal({ analyzing: false, progress: 0, stage: "" }); return; }
+    if (data?.result) {
+      updateGlobal({ progress: 100, result: data.result, analyzing: false, progress: 0, stage: "" });
+      saveDripToHistory(globalDripState.image || "", data.result);
+    }
+  } catch (err: any) {
+    if (err?.name === "AbortError" || activeAbort?.signal.aborted) return;
+    console.error("Rating error:", err);
+    toast.error("Failed to analyze outfit. Please try again.");
+    updateGlobal({ analyzing: false, progress: 0, stage: "" });
+  } finally {
+    activeAbort = null;
+  }
+};
+
+const CameraScreen = () => {
+  const { user, styleProfile } = useAuth();
+  const [, forceUpdate] = useState(0);
+  const fileRef = useRef<HTMLInputElement>(null);
+  const cameraFileRef = useRef<HTMLInputElement>(null);
+
+  // Subscribe to global state changes
+  useEffect(() => {
+    const listener = () => forceUpdate((n) => n + 1);
+    globalListeners.add(listener);
+    return () => { globalListeners.delete(listener); };
+  }, []);
+
+  const { image, imageBase64, analyzing, progress, stage, result, wardrobeItems } = globalDripState;
 
   const handleUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
     const url = URL.createObjectURL(file);
-    const dataUrl = await toDataUrl(file);
-    setImage(url);
-    setImageBase64(dataUrl);
-    setResult(null);
-    await analyzeOutfit(file);
-  };
-
-  const analyzeOutfit = async (file: File) => {
-    setAnalyzing(true);
-    setAnalysisProgress(10);
-    setAnalysisStage("Reading your outfit...");
-    abortControllerRef.current = new AbortController();
-    try {
-      const imageBase64 = await toBase64(file);
-      setAnalysisProgress(30);
-      setAnalysisStage("Fetching wardrobe...");
-      let fetchedWardrobe: any[] = [];
-      if (user) {
-        const { data } = await supabase.from("wardrobe").select("id, name, type, color, material, image_url").eq("user_id", user.id);
-        fetchedWardrobe = data || [];
-        setWardrobeItems(fetchedWardrobe);
-      }
-      setAnalysisProgress(50);
-      setAnalysisStage("Analyzing your style...");
-      const { data, error } = await supabase.functions.invoke("rate-outfit", {
-        body: { imageBase64, wardrobeItems: fetchedWardrobe, styleProfile: styleProfile || undefined },
-      });
-      if (abortControllerRef.current?.signal.aborted) return;
-      setAnalysisProgress(90);
-      setAnalysisStage("Almost done...");
-      if (error) throw error;
-      if (data?.error) { toast.error(data.error); return; }
-      if (data?.result) {
-        setAnalysisProgress(100);
-        setResult(data.result);
-        saveDripToHistory(URL.createObjectURL(file), data.result);
-      }
-    } catch (err: any) {
-      if (err?.name === "AbortError" || abortControllerRef.current?.signal.aborted) return;
-      console.error("Rating error:", err);
-      toast.error("Failed to analyze outfit. Please try again.");
-    } finally {
-      setAnalyzing(false);
-      setAnalysisProgress(0);
-      setAnalysisStage("");
-      abortControllerRef.current = null;
-    }
+    const dataUrl = await new Promise<string>((resolve, reject) => {
+      const r = new FileReader();
+      r.onload = () => resolve(r.result as string);
+      r.onerror = reject;
+      r.readAsDataURL(file);
+    });
+    updateGlobal({ image: url, imageBase64: dataUrl, result: null });
+    runAnalysis(file, user?.id, styleProfile);
   };
 
   const cancelAnalysis = () => {
-    if (abortControllerRef.current) abortControllerRef.current.abort();
-    setAnalyzing(false); setImage(null); setImageBase64(null); setResult(null);
+    if (activeAbort) activeAbort.abort();
+    activeAbort = null;
+    updateGlobal({ analyzing: false, image: null, imageBase64: null, result: null, progress: 0, stage: "" });
   };
 
-  const clearImage = () => { setImage(null); setImageBase64(null); setResult(null); };
+  const clearImage = () => {
+    updateGlobal({ image: null, imageBase64: null, result: null });
+  };
 
   return (
     <div className="min-h-screen pb-24 px-5 pt-14">
@@ -181,8 +211,8 @@ const CameraScreen = () => {
                         <Sparkles size={36} className="text-accent drop-shadow-[0_0_12px_hsl(var(--accent))]" />
                       </motion.div>
                       <div className="w-full space-y-2">
-                        <Progress value={analysisProgress} className="h-2" />
-                        <p className="text-xs font-medium text-foreground drop-shadow-sm text-center">{analysisStage}</p>
+                        <Progress value={progress} className="h-2" />
+                        <p className="text-xs font-medium text-foreground drop-shadow-sm text-center">{stage}</p>
                       </div>
                     </div>
                   </div>
