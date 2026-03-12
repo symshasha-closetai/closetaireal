@@ -176,11 +176,14 @@ const CameraScreen = () => {
                     <X size={14} /> Cancel
                   </button>
                   <div className="absolute inset-0 bg-background/40 backdrop-blur-sm flex items-center justify-center">
-                    <div className="flex flex-col items-center gap-3">
+                    <div className="flex flex-col items-center gap-4 w-full max-w-[200px]">
                       <motion.div animate={{ rotate: 360 }} transition={{ repeat: Infinity, duration: 1.5, ease: "linear" }}>
                         <Sparkles size={36} className="text-accent drop-shadow-[0_0_12px_hsl(var(--accent))]" />
                       </motion.div>
-                      <p className="text-sm font-medium text-foreground drop-shadow-sm">Analyzing your style...</p>
+                      <div className="w-full space-y-2">
+                        <Progress value={analysisProgress} className="h-2" />
+                        <p className="text-xs font-medium text-foreground drop-shadow-sm text-center">{analysisStage}</p>
+                      </div>
                     </div>
                   </div>
                 </div>

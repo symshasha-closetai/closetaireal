@@ -805,6 +805,19 @@ const HomeScreen = () => {
 
                 {/* Action Buttons */}
                 <div className="space-y-3">
+                  {/* Save Outfit Button */}
+                  <button
+                    onClick={() => handleSaveOutfit(outfit, selectedOutfitIdx!)}
+                    disabled={savedOutfitIds.has(selectedOutfitIdx!)}
+                    className="w-full py-3 rounded-2xl border border-border/40 text-foreground font-medium text-sm flex items-center justify-center gap-2 active:scale-[0.98] transition-transform disabled:opacity-60"
+                  >
+                    {savedOutfitIds.has(selectedOutfitIdx!) ? (
+                      <><BookmarkCheck size={16} className="text-primary" /> Outfit Saved</>
+                    ) : (
+                      <><Bookmark size={16} /> Save Outfit</>
+                    )}
+                  </button>
+
                   {!outfit.tryon_image && generatingTryOnIdx === selectedOutfitIdx ? (
                     <div className="w-full py-8 rounded-2xl bg-secondary flex flex-col items-center justify-center gap-3">
                       <div className="relative w-24 h-32">
