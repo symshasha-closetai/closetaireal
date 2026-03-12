@@ -12,8 +12,8 @@ serve(async (req) => {
     const { imageBase64, wardrobeItems, styleProfile } = await req.json();
     if (!imageBase64) return new Response(JSON.stringify({ error: "No image provided" }), { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } });
 
-    const apiKey = Deno.env.get("LOVABLE_API_KEY");
-    if (!apiKey) throw new Error("LOVABLE_API_KEY not configured");
+    const apiKey = Deno.env.get("GOOGLE_AI_API_KEY");
+    if (!apiKey) throw new Error("GOOGLE_AI_API_KEY not configured");
 
     const wardrobeDesc = wardrobeItems?.length
       ? `User's wardrobe contains: ${wardrobeItems.map((i: any) => `${i.name || i.type} (id: ${i.id}, ${i.type}, ${i.color || "unknown"} color)`).join(", ")}`
@@ -61,37 +61,34 @@ SCORING METHODOLOGY:
 - PERSONALIZED SUGGESTIONS: If user profile data is available, ALL suggestions MUST reference the user's specific body type, skin tone, face shape, gender, and preferred styles. Be hyper-specific with brand-style descriptions. Reference current 2025-2026 fashion trends.
 - Provide up to 5 wardrobe_suggestions (from user's wardrobe if available) and up to 10 shopping_suggestions. More suggestions = more value. Each shopping suggestion must have a unique, detailed image_prompt for generating a product photo.`;
 
-    const response = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
-      method: "POST",
-      headers: {
-        "Authorization": `Bearer ${apiKey}`,
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
-        model: "google/gemini-2.5-flash",
-        messages: [
-          { role: "system", content: systemPrompt },
-          {
-            role: "user",
-            content: [
-              { type: "text", text: "Analyze this outfit. Provide a comprehensive style score with weighted breakdown, confidence rating, a creative killer tag, and actionable improvement suggestions. If the user has wardrobe items, suggest swaps from their wardrobe too. Make all suggestions personalized to their body/style profile. Return JSON only." },
-              { type: "image_url", image_url: { url: `data:image/jpeg;base64,${imageBase64}` } },
-            ],
-          },
-        ],
-      }),
-    });
+    const response = await fetch(
+      `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-05-20:generateContent?key=${apiKey}`,
+      {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          contents: [
+            {
+              role: "user",
+              parts: [
+                { text: systemPrompt + "\n\nAnalyze this outfit. Provide a comprehensive style score with weighted breakdown, confidence rating, a creative killer tag, and actionable improvement suggestions. If the user has wardrobe items, suggest swaps from their wardrobe too. Make all suggestions personalized to their body/style profile. Return JSON only." },
+                { inlineData: { mimeType: "image/jpeg", data: imageBase64 } },
+              ],
+            },
+          ],
+        }),
+      }
+    );
 
     if (!response.ok) {
       if (response.status === 429) return new Response(JSON.stringify({ error: "Rate limited, try again shortly" }), { status: 429, headers: { ...corsHeaders, "Content-Type": "application/json" } });
-      if (response.status === 402) return new Response(JSON.stringify({ error: "AI credits exhausted, please try later" }), { status: 402, headers: { ...corsHeaders, "Content-Type": "application/json" } });
       const errText = await response.text();
-      console.error("AI gateway error:", response.status, errText);
-      throw new Error(`AI gateway error: ${response.status}`);
+      console.error("Gemini API error:", response.status, errText);
+      throw new Error(`Gemini API error: ${response.status}`);
     }
 
     const data = await response.json();
-    const content = data.choices?.[0]?.message?.content || "{}";
+    const content = data.candidates?.[0]?.content?.parts?.[0]?.text || "{}";
 
     let result = null;
     try {

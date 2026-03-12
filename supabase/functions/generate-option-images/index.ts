@@ -8,34 +8,48 @@ const corsHeaders = {
 
 const prompts: Record<string, Record<string, string>> = {
   body_type: {
-    Hourglass: "Ultra-realistic high-resolution photograph of a real person with hourglass body type, balanced bust and hips with clearly defined waist, wearing fitted neutral clothing, full body standing pose, professional studio lighting, photorealistic skin texture, sharp focus, clean white studio background, shot on Canon EOS R5",
-    Pear: "Ultra-realistic high-resolution photograph of a real person with pear body type, hips visibly wider than shoulders, wearing fitted neutral clothing, full body standing pose, professional studio lighting, photorealistic skin texture, sharp focus, clean white studio background, shot on Canon EOS R5",
-    Rectangle: "Ultra-realistic high-resolution photograph of a real person with rectangle body type, even proportions and straight silhouette, wearing fitted neutral clothing, full body standing pose, professional studio lighting, photorealistic skin texture, sharp focus, clean white studio background, shot on Canon EOS R5",
-    Apple: "Ultra-realistic high-resolution photograph of a real person with apple body type, broader midsection with slimmer legs, wearing fitted neutral clothing, full body standing pose, professional studio lighting, photorealistic skin texture, sharp focus, clean white studio background, shot on Canon EOS R5",
-    "Inverted Triangle": "Ultra-realistic high-resolution photograph of a real person with inverted triangle body type, broad shoulders narrower hips, wearing fitted neutral clothing, full body standing pose, professional studio lighting, photorealistic skin texture, sharp focus, clean white studio background, shot on Canon EOS R5",
-    Athletic: "Ultra-realistic high-resolution photograph of a real person with athletic body type, muscular well-defined build, wearing fitted neutral clothing, full body standing pose, professional studio lighting, photorealistic skin texture, sharp focus, clean white studio background, shot on Canon EOS R5",
-    Slim: "Ultra-realistic high-resolution photograph of a real person with slim body type, lean frame narrow build, wearing fitted neutral clothing, full body standing pose, professional studio lighting, photorealistic skin texture, sharp focus, clean white studio background, shot on Canon EOS R5",
-    "Plus Size": "Ultra-realistic high-resolution photograph of a real person with plus size body type, fuller curvier figure, wearing fitted neutral clothing, full body standing pose, professional studio lighting, photorealistic skin texture, sharp focus, clean white studio background, shot on Canon EOS R5",
+    Hourglass: "Ultra-realistic high-resolution photograph of a real person with hourglass body type, balanced bust and hips with clearly defined waist, wearing fitted neutral clothing, full body standing pose, professional studio lighting, photorealistic skin texture, sharp focus, clean white studio background",
+    Pear: "Ultra-realistic high-resolution photograph of a real person with pear body type, hips visibly wider than shoulders, wearing fitted neutral clothing, full body standing pose, professional studio lighting, photorealistic skin texture, sharp focus, clean white studio background",
+    Rectangle: "Ultra-realistic high-resolution photograph of a real person with rectangle body type, even proportions and straight silhouette, wearing fitted neutral clothing, full body standing pose, professional studio lighting, photorealistic skin texture, sharp focus, clean white studio background",
+    Apple: "Ultra-realistic high-resolution photograph of a real person with apple body type, broader midsection with slimmer legs, wearing fitted neutral clothing, full body standing pose, professional studio lighting, photorealistic skin texture, sharp focus, clean white studio background",
+    "Inverted Triangle": "Ultra-realistic high-resolution photograph of a real person with inverted triangle body type, broad shoulders narrower hips, wearing fitted neutral clothing, full body standing pose, professional studio lighting, photorealistic skin texture, sharp focus, clean white studio background",
+    Athletic: "Ultra-realistic high-resolution photograph of a real person with athletic body type, muscular well-defined build, wearing fitted neutral clothing, full body standing pose, professional studio lighting, photorealistic skin texture, sharp focus, clean white studio background",
+    Slim: "Ultra-realistic high-resolution photograph of a real person with slim body type, lean frame narrow build, wearing fitted neutral clothing, full body standing pose, professional studio lighting, photorealistic skin texture, sharp focus, clean white studio background",
+    "Plus Size": "Ultra-realistic high-resolution photograph of a real person with plus size body type, fuller curvier figure, wearing fitted neutral clothing, full body standing pose, professional studio lighting, photorealistic skin texture, sharp focus, clean white studio background",
   },
   style: {
-    Casual: "Ultra-realistic high-resolution fashion photograph of a single complete casual outfit on a person, relaxed jeans with t-shirt and sneakers, full body shot, professional studio lighting, photorealistic fabric textures, sharp focus, clean white studio background, shot on Canon EOS R5",
-    Formal: "Ultra-realistic high-resolution fashion photograph of a single complete formal outfit on a person, sharp tailored suit with dress shoes, full body shot, professional studio lighting, photorealistic fabric textures, sharp focus, clean white studio background, shot on Canon EOS R5",
-    Streetwear: "Ultra-realistic high-resolution fashion photograph of a single complete streetwear outfit on a person, oversized hoodie with cargo pants and chunky sneakers, full body shot, professional studio lighting, photorealistic fabric textures, sharp focus, clean white studio background, shot on Canon EOS R5",
-    Minimalist: "Ultra-realistic high-resolution fashion photograph of a single complete minimalist outfit on a person, clean simple neutral toned clothing with basic shapes, full body shot, professional studio lighting, photorealistic fabric textures, sharp focus, clean white studio background, shot on Canon EOS R5",
-    Bohemian: "Ultra-realistic high-resolution fashion photograph of a single complete bohemian outfit on a person, flowing maxi dress with layered jewelry and sandals, full body shot, professional studio lighting, photorealistic fabric textures, sharp focus, clean white studio background, shot on Canon EOS R5",
-    Classic: "Ultra-realistic high-resolution fashion photograph of a single complete classic outfit on a person, timeless blazer with chinos and oxford shoes, full body shot, professional studio lighting, photorealistic fabric textures, sharp focus, clean white studio background, shot on Canon EOS R5",
-    Sporty: "Ultra-realistic high-resolution fashion photograph of a single complete sporty outfit on a person, athletic tracksuit with trainers, full body shot, professional studio lighting, photorealistic fabric textures, sharp focus, clean white studio background, shot on Canon EOS R5",
-    Gym: "Ultra-realistic high-resolution fashion photograph of a single complete gym workout outfit on a person, compression leggings, performance tank top, training shoes, full body shot, professional studio lighting, photorealistic fabric textures, sharp focus, clean white studio background, shot on Canon EOS R5",
+    Casual: "Ultra-realistic fashion photograph of a complete casual outfit on a person, relaxed jeans with t-shirt and sneakers, full body shot, professional studio lighting, photorealistic fabric textures, sharp focus, clean white studio background",
+    Formal: "Ultra-realistic fashion photograph of a complete formal outfit on a person, sharp tailored suit with dress shoes, full body shot, professional studio lighting, photorealistic fabric textures, sharp focus, clean white studio background",
+    Streetwear: "Ultra-realistic fashion photograph of a complete streetwear outfit on a person, oversized hoodie with cargo pants and chunky sneakers, full body shot, professional studio lighting, photorealistic fabric textures, sharp focus, clean white studio background",
+    Minimalist: "Ultra-realistic fashion photograph of a complete minimalist outfit on a person, clean simple neutral toned clothing, full body shot, professional studio lighting, photorealistic fabric textures, sharp focus, clean white studio background",
+    Bohemian: "Ultra-realistic fashion photograph of a complete bohemian outfit on a person, flowing maxi dress with layered jewelry and sandals, full body shot, professional studio lighting, photorealistic fabric textures, sharp focus, clean white studio background",
+    Classic: "Ultra-realistic fashion photograph of a complete classic outfit on a person, timeless blazer with chinos and oxford shoes, full body shot, professional studio lighting, photorealistic fabric textures, sharp focus, clean white studio background",
+    Sporty: "Ultra-realistic fashion photograph of a complete sporty outfit on a person, athletic tracksuit with trainers, full body shot, professional studio lighting, photorealistic fabric textures, sharp focus, clean white studio background",
+    Gym: "Ultra-realistic fashion photograph of a complete gym workout outfit on a person, compression leggings performance tank top training shoes, full body shot, professional studio lighting, photorealistic fabric textures, sharp focus, clean white studio background",
   },
   face_shape: {
-    Oval: "Ultra-realistic high-resolution close-up portrait photograph of a real person with an oval face shape, slightly longer than wide with balanced proportions, clear skin, neutral expression, professional studio lighting, photorealistic skin texture, sharp focus, clean white background, shot on Canon EOS R5",
-    Round: "Ultra-realistic high-resolution close-up portrait photograph of a real person with a round face shape, equal width and length with soft cheekbones, clear skin, neutral expression, professional studio lighting, photorealistic skin texture, sharp focus, clean white background, shot on Canon EOS R5",
-    Square: "Ultra-realistic high-resolution close-up portrait photograph of a real person with a square face shape, strong defined jawline and angular features, clear skin, neutral expression, professional studio lighting, photorealistic skin texture, sharp focus, clean white background, shot on Canon EOS R5",
-    Heart: "Ultra-realistic high-resolution close-up portrait photograph of a real person with a heart face shape, wide forehead tapering to narrow chin, clear skin, neutral expression, professional studio lighting, photorealistic skin texture, sharp focus, clean white background, shot on Canon EOS R5",
-    Oblong: "Ultra-realistic high-resolution close-up portrait photograph of a real person with an oblong face shape, longer face with straight cheeks, clear skin, neutral expression, professional studio lighting, photorealistic skin texture, sharp focus, clean white background, shot on Canon EOS R5",
-    Diamond: "Ultra-realistic high-resolution close-up portrait photograph of a real person with a diamond face shape, narrow forehead and chin with wide cheekbones, clear skin, neutral expression, professional studio lighting, photorealistic skin texture, sharp focus, clean white background, shot on Canon EOS R5",
+    Oval: "Ultra-realistic close-up portrait photograph of a real person with an oval face shape, slightly longer than wide with balanced proportions, clear skin, neutral expression, professional studio lighting, photorealistic skin texture, sharp focus, clean white background",
+    Round: "Ultra-realistic close-up portrait photograph of a real person with a round face shape, equal width and length with soft cheekbones, clear skin, neutral expression, professional studio lighting, photorealistic skin texture, sharp focus, clean white background",
+    Square: "Ultra-realistic close-up portrait photograph of a real person with a square face shape, strong defined jawline and angular features, clear skin, neutral expression, professional studio lighting, photorealistic skin texture, sharp focus, clean white background",
+    Heart: "Ultra-realistic close-up portrait photograph of a real person with a heart face shape, wide forehead tapering to narrow chin, clear skin, neutral expression, professional studio lighting, photorealistic skin texture, sharp focus, clean white background",
+    Oblong: "Ultra-realistic close-up portrait photograph of a real person with an oblong face shape, longer face with straight cheeks, clear skin, neutral expression, professional studio lighting, photorealistic skin texture, sharp focus, clean white background",
+    Diamond: "Ultra-realistic close-up portrait photograph of a real person with a diamond face shape, narrow forehead and chin with wide cheekbones, clear skin, neutral expression, professional studio lighting, photorealistic skin texture, sharp focus, clean white background",
   },
 };
+
+async function waitForPrediction(predictionUrl: string, apiKey: string, maxWait = 120000): Promise<any> {
+  const start = Date.now();
+  while (Date.now() - start < maxWait) {
+    const res = await fetch(predictionUrl, { headers: { "Authorization": `Bearer ${apiKey}` } });
+    const prediction = await res.json();
+    if (prediction.status === "succeeded") return prediction;
+    if (prediction.status === "failed" || prediction.status === "canceled") {
+      throw new Error(`Prediction ${prediction.status}: ${prediction.error || "unknown"}`);
+    }
+    await new Promise(r => setTimeout(r, 2000));
+  }
+  throw new Error("Prediction timed out");
+}
 
 serve(async (req) => {
   if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
@@ -46,15 +60,15 @@ serve(async (req) => {
       return new Response(JSON.stringify({ error: "category and label required" }), { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } });
     }
 
-    const lovableApiKey = Deno.env.get("LOVABLE_API_KEY");
-    if (!lovableApiKey) throw new Error("LOVABLE_API_KEY not configured");
+    const replicateKey = Deno.env.get("REPLICATE_API_KEY");
+    if (!replicateKey) throw new Error("REPLICATE_API_KEY not configured");
 
     const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
     const supabaseKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
     const supabase = createClient(supabaseUrl, supabaseKey);
 
     const cachePath = `option-images/${category}/${label.toLowerCase().replace(/\s+/g, "-")}${gender ? `-${gender}` : ""}.png`;
-    
+
     // Check cache
     const { data: existingFile } = await supabase.storage.from("wardrobe").download(cachePath);
     if (existingFile && existingFile.size > 0) {
@@ -67,45 +81,39 @@ serve(async (req) => {
       prompt = prompt.replace("a real person", `a ${gender} person`).replace("a person", `a ${gender} person`);
     }
 
-    const response = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
+    const createRes = await fetch("https://api.replicate.com/v1/models/black-forest-labs/flux-schnell/predictions", {
       method: "POST",
       headers: {
-        "Authorization": `Bearer ${lovableApiKey}`,
+        "Authorization": `Bearer ${replicateKey}`,
         "Content-Type": "application/json",
       },
       body: JSON.stringify({
-        model: "google/gemini-2.5-flash-image",
-        messages: [{ role: "user", content: prompt }],
-        modalities: ["image", "text"],
+        input: {
+          prompt,
+          num_outputs: 1,
+          aspect_ratio: "1:1",
+          output_format: "png",
+          output_quality: 90,
+        },
       }),
     });
 
-    if (!response.ok) {
-      if (response.status === 429) return new Response(JSON.stringify({ error: "Rate limited, please try again later" }), { status: 429, headers: { ...corsHeaders, "Content-Type": "application/json" } });
-      if (response.status === 402) return new Response(JSON.stringify({ error: "AI credits exhausted" }), { status: 402, headers: { ...corsHeaders, "Content-Type": "application/json" } });
-      const errText = await response.text();
-      console.error("AI gateway error:", response.status, errText);
-      throw new Error(`AI gateway error: ${response.status}`);
+    if (!createRes.ok) {
+      if (createRes.status === 429) return new Response(JSON.stringify({ error: "Rate limited, please try again later" }), { status: 429, headers: { ...corsHeaders, "Content-Type": "application/json" } });
+      const errText = await createRes.text();
+      console.error("Replicate error:", createRes.status, errText);
+      throw new Error(`Replicate error: ${createRes.status}`);
     }
 
-    const data = await response.json();
-    const images = data.choices?.[0]?.message?.images;
-    const imageDataUrl = images?.[0]?.image_url?.url;
+    const prediction = await createRes.json();
+    const result = await waitForPrediction(prediction.urls.get, replicateKey);
+    const imageUrl = Array.isArray(result.output) ? result.output[0] : result.output;
+    if (!imageUrl) throw new Error("No image generated");
 
-    if (!imageDataUrl) {
-      console.error("No image in response:", JSON.stringify(data).slice(0, 500));
-      return new Response(JSON.stringify({ error: "No image generated" }), { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } });
-    }
-
-    // Extract base64 from data URL
-    const b64Match = imageDataUrl.match(/^data:image\/[^;]+;base64,(.+)$/);
-    if (!b64Match) {
-      throw new Error("Invalid image data URL format");
-    }
-    const imageB64 = b64Match[1];
-
-    const binaryData = Uint8Array.from(atob(imageB64), c => c.charCodeAt(0));
-    await supabase.storage.from("wardrobe").upload(cachePath, binaryData, { contentType: "image/png", upsert: true });
+    // Download and cache to storage
+    const imgRes = await fetch(imageUrl);
+    const imgBytes = new Uint8Array(await imgRes.arrayBuffer());
+    await supabase.storage.from("wardrobe").upload(cachePath, imgBytes, { contentType: "image/png", upsert: true });
     const { data: publicUrlData } = supabase.storage.from("wardrobe").getPublicUrl(cachePath);
 
     return new Response(JSON.stringify({ imageUrl: publicUrlData.publicUrl }), { headers: { ...corsHeaders, "Content-Type": "application/json" } });

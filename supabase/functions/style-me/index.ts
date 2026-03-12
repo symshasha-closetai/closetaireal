@@ -10,8 +10,8 @@ serve(async (req) => {
 
   try {
     const { wardrobeItems, occasion, timeOfDay, weather, styleProfile, surpriseMe, gender } = await req.json();
-    const apiKey = Deno.env.get("LOVABLE_API_KEY");
-    if (!apiKey) throw new Error("LOVABLE_API_KEY not configured");
+    const apiKey = Deno.env.get("GOOGLE_AI_API_KEY");
+    if (!apiKey) throw new Error("GOOGLE_AI_API_KEY not configured");
 
     const wardrobeDesc = wardrobeItems.map((i: any) =>
       `ID:${i.id} - ${i.name || i.type} (${i.type}, color: ${i.color || "unknown"}, material: ${i.material || "unknown"})`
@@ -30,7 +30,7 @@ serve(async (req) => {
       ? `\n\n## SURPRISE ME MODE:\nThe user wants you to pick the BEST possible outfit without any occasion/time/weather constraints. Choose the most stylish, versatile, and flattering combination from their wardrobe. Pick an occasion that suits the outfit best and mention it. Be creative and bold!`
       : "";
 
-     const systemPrompt = `You are an expert fashion stylist AI with deep knowledge of color theory, fabric science, and seasonal dressing. Given the user's wardrobe items, occasion, time of day, weather, body profile, and face analysis, suggest 3-5 complete outfit combinations using ONLY items from their wardrobe.${surpriseInstruction}
+    const systemPrompt = `You are an expert fashion stylist AI with deep knowledge of color theory, fabric science, and seasonal dressing. Given the user's wardrobe items, occasion, time of day, weather, body profile, and face analysis, suggest 3-5 complete outfit combinations using ONLY items from their wardrobe.${surpriseInstruction}
 
 ## COLOR RULES (Critical — apply rigorously):
 - **Complementary**: Pair opposites on the color wheel (navy + burnt orange, burgundy + olive).
@@ -75,31 +75,28 @@ Return ONLY valid JSON (no markdown) with this structure:
 
     const userPrompt = `Wardrobe items:\n${wardrobeDesc}\n\nOccasion: ${occasion}\nTime of day: ${timeOfDay}${weatherInfo}\nProfile: ${profileDesc}${bodyAnalysis}${faceAnalysis}\n\nSuggest 3-5 outfits. Return JSON only.`;
 
-    const response = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
-      method: "POST",
-      headers: {
-        "Authorization": `Bearer ${apiKey}`,
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
-        model: "google/gemini-2.5-flash",
-        messages: [
-          { role: "system", content: systemPrompt },
-          { role: "user", content: userPrompt },
-        ],
-      }),
-    });
+    const response = await fetch(
+      `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-05-20:generateContent?key=${apiKey}`,
+      {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          contents: [
+            { role: "user", parts: [{ text: systemPrompt + "\n\n" + userPrompt }] },
+          ],
+        }),
+      }
+    );
 
     if (!response.ok) {
       if (response.status === 429) return new Response(JSON.stringify({ error: "Rate limited — please try again in a minute." }), { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } });
-      if (response.status === 402) return new Response(JSON.stringify({ error: "AI credits exhausted. Please try again later or top up your credits." }), { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } });
       const errText = await response.text();
-      console.error("AI gateway error:", response.status, errText);
-      throw new Error(`AI gateway error: ${response.status}`);
+      console.error("Gemini API error:", response.status, errText);
+      throw new Error(`Gemini API error: ${response.status}`);
     }
 
     const data = await response.json();
-    const content = data.choices?.[0]?.message?.content || "{}";
+    const content = data.candidates?.[0]?.content?.parts?.[0]?.text || "{}";
 
     let outfits = [];
     try {

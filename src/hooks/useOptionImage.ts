@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { supabase } from "@/integrations/supabase/client";
 
 const CACHE_TTL = 7 * 24 * 60 * 60 * 1000; // 7 days
@@ -10,7 +10,7 @@ export const useOptionImage = (category: string, label: string, gender?: string 
   useEffect(() => {
     let cancelled = false;
 
-    const loadImage = async () => {
+    const loadCached = async () => {
       const genderSuffix = gender ? `-${gender}` : "";
       const cacheKey = `option-img-${category}-${label}${genderSuffix}`;
       try {
@@ -38,22 +38,28 @@ export const useOptionImage = (category: string, label: string, gender?: string 
         }
       } catch {}
 
-      setLoading(true);
-      try {
-        const { data, error } = await supabase.functions.invoke("generate-option-images", {
-          body: { category, label, gender: gender || null },
-        });
-        if (!error && data?.imageUrl && !cancelled) {
-          setImageUrl(data.imageUrl);
-          localStorage.setItem(cacheKey, JSON.stringify({ url: data.imageUrl, ts: Date.now() }));
-        }
-      } catch {}
-      if (!cancelled) setLoading(false);
+      // No cached image found — do NOT auto-generate
     };
 
-    loadImage();
+    loadCached();
     return () => { cancelled = true; };
   }, [category, label, gender]);
 
-  return { imageUrl, loading };
+  const generate = useCallback(async () => {
+    setLoading(true);
+    const genderSuffix = gender ? `-${gender}` : "";
+    const cacheKey = `option-img-${category}-${label}${genderSuffix}`;
+    try {
+      const { data, error } = await supabase.functions.invoke("generate-option-images", {
+        body: { category, label, gender: gender || null },
+      });
+      if (!error && data?.imageUrl) {
+        setImageUrl(data.imageUrl);
+        localStorage.setItem(cacheKey, JSON.stringify({ url: data.imageUrl, ts: Date.now() }));
+      }
+    } catch {}
+    setLoading(false);
+  }, [category, label, gender]);
+
+  return { imageUrl, loading, generate };
 };
