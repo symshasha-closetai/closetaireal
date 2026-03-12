@@ -667,6 +667,7 @@ const ProfileScreen = () => {
                 </div>
               )}
             </div>
+            </div>
           </TabsContent>
         </Tabs>
 
