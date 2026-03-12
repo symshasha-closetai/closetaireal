@@ -512,7 +512,41 @@ const ProfileScreen = () => {
           </TabsContent>
 
           {/* === HISTORY TAB === */}
-          <TabsContent value="history" className="space-y-5 mt-4">
+          <TabsContent value="history" className="mt-4">
+            <div
+              ref={pullRef}
+              className="space-y-5"
+              onTouchStart={(e) => {
+                if (pullRef.current && pullRef.current.scrollTop <= 0) {
+                  touchStartY.current = e.touches[0].clientY;
+                  setIsPulling(true);
+                }
+              }}
+              onTouchMove={(e) => {
+                if (!isPulling || isRefreshing) return;
+                const delta = e.touches[0].clientY - touchStartY.current;
+                if (delta > 0) setPullDistance(Math.min(delta * 0.5, 100));
+              }}
+              onTouchEnd={() => {
+                if (pullDistance >= PULL_THRESHOLD && !isRefreshing) {
+                  handlePullRefresh();
+                }
+                setPullDistance(0);
+                setIsPulling(false);
+              }}
+            >
+              {/* Pull indicator */}
+              <div className="flex justify-center overflow-hidden transition-all" style={{ height: pullDistance > 10 ? Math.min(pullDistance, 50) : 0 }}>
+                <div className="flex items-center gap-2 text-xs text-muted-foreground py-1">
+                  {isRefreshing ? (
+                    <><Loader2 size={14} className="animate-spin" /> Syncing...</>
+                  ) : pullDistance >= PULL_THRESHOLD ? (
+                    <><RefreshCw size={14} /> Release to refresh</>
+                  ) : (
+                    <><RefreshCw size={14} style={{ transform: `rotate(${pullDistance * 3}deg)` }} /> Pull to refresh</>
+                  )}
+                </div>
+              </div>
             {/* Drip History */}
             <div className="space-y-3">
               <div className="flex items-center justify-between">
