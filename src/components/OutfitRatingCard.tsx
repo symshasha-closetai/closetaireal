@@ -157,9 +157,10 @@ const OutfitRatingCard = ({ image, imageBase64, result, wardrobeItems = [] }: Pr
       const { data, error } = await supabase.functions.invoke("generate-suggestion-image", {
         body: { imagePrompt: prompt },
       });
-      if (!error && data?.imageBase64) {
-        setSuggestionImages(prev => ({ ...prev, [idx]: data.imageBase64 }));
-        try { localStorage.setItem(cacheKey, JSON.stringify({ url: data.imageBase64, ts: Date.now() })); } catch { /* quota */ }
+      const imgUrl = data?.imageUrl || data?.imageBase64;
+      if (!error && imgUrl) {
+        setSuggestionImages(prev => ({ ...prev, [idx]: imgUrl }));
+        try { localStorage.setItem(cacheKey, JSON.stringify({ url: imgUrl, ts: Date.now() })); } catch { /* quota */ }
       } else {
         setSuggestionImages(prev => ({ ...prev, [idx]: null }));
       }
