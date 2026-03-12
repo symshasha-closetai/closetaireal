@@ -483,29 +483,6 @@ const OutfitRatingCard = ({ image, imageBase64, result, wardrobeItems = [] }: Pr
           {/* Separator */}
           <div style={{ height: 1, background: "linear-gradient(90deg, transparent, rgba(201,169,110,0.2), rgba(168,168,168,0.2), transparent)", margin: "0 24px" }} />
 
-          {/* Sub-scores */}
-          <div style={{ display: "flex", justifyContent: "space-around", padding: "20px 20px 14px", textAlign: "center" }}>
-            {[
-              { label: "Color", score: result.color_score, color: "#8B9A7B" },
-              { label: "Style", score: result.style_score, color: "#C9A96E" },
-              { label: "Fit", score: result.fit_score, color: "#B08B8B" },
-            ].map(s => (
-              <div key={s.label} style={{ textAlign: "center" }}>
-                <div style={{
-                  width: 54, height: 54, borderRadius: "50%",
-                  border: `2px solid ${s.color}`,
-                  display: "flex", alignItems: "center", justifyContent: "center",
-                  margin: "0 auto",
-                  boxSizing: "border-box",
-                }}>
-                  <span style={{ fontSize: 17, fontWeight: 500, color: "#fff", lineHeight: "1", display: "block", textAlign: "center" }}>
-                    {Number.isInteger(s.score) ? s.score : s.score.toFixed(1)}
-                  </span>
-                </div>
-                <span style={{ fontSize: 8, color: "rgba(255,255,255,0.4)", fontWeight: 500, marginTop: 6, display: "block", textTransform: "uppercase", letterSpacing: 2 }}>{s.label}</span>
-              </div>
-            ))}
-          </div>
 
           {/* Praise line */}
           {result.praise_line && (
