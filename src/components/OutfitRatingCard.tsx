@@ -250,7 +250,7 @@ const OutfitRatingCard = ({ image, imageBase64, result, wardrobeItems = [] }: Pr
                 <X size={12} className="text-muted-foreground" />
               </button>
               <p className="text-xs font-medium text-foreground capitalize mb-1">
-                {activeTooltip === "drip" ? "Style Score Analysis" : "Confidence Analysis"}
+                {activeTooltip === "drip" ? "Drip Analysis" : "Confidence Analysis"}
               </p>
               <p className="text-xs text-muted-foreground leading-relaxed">
                 {mainScores.find(s => s.key === activeTooltip)?.reason || "No detailed reasoning available."}
