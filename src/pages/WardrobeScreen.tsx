@@ -7,6 +7,7 @@ import { toast } from "sonner";
 import AppHeader from "../components/AppHeader";
 import { compressImage } from "@/lib/imageCompression";
 import html2canvas from "html2canvas";
+import { precacheImages } from "@/lib/imageCache";
 
 type ClothingItem = {
   id: string;
@@ -95,7 +96,12 @@ const WardrobeScreen = () => {
       .eq("user_id", user.id)
       .order("created_at", { ascending: false });
     if (error) toast.error("Failed to load wardrobe");
-    else setItems((data as ClothingItem[]) || []);
+    else {
+      const wardrobeItems = (data as ClothingItem[]) || [];
+      setItems(wardrobeItems);
+      // Precache all wardrobe images for offline/fast access
+      precacheImages(wardrobeItems.map((i) => i.image_url).filter(Boolean));
+    }
     setLoading(false);
   };
 
