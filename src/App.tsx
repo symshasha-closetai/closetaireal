@@ -1,4 +1,4 @@
-import { lazy, Suspense } from "react";
+import { useState, useEffect, lazy, Suspense } from "react";
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
@@ -6,7 +6,7 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import { ThemeProvider } from "next-themes";
 import { AuthProvider, useAuth } from "./hooks/useAuth";
-
+import SplashScreen from "./components/SplashScreen";
 
 import HomeScreen from "./pages/HomeScreen";
 const CameraScreen = lazy(() => import("./pages/CameraScreen"));
@@ -67,6 +67,14 @@ const AppRoutes = () => {
 };
 
 const App = () => {
+  const [showSplash, setShowSplash] = useState(true);
+
+  useEffect(() => {
+    const timer = setTimeout(() => setShowSplash(false), 1200);
+    return () => clearTimeout(timer);
+  }, []);
+
+  if (showSplash) return <SplashScreen />;
 
   return (
     <ThemeProvider attribute="class" defaultTheme="light" enableSystem={false}>

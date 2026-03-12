@@ -16,53 +16,34 @@ serve(async (req) => {
     if (!apiKey) throw new Error("GOOGLE_AI_API_KEY not configured");
 
     const wardrobeDesc = wardrobeItems?.length
-      ? `User's wardrobe contains: ${wardrobeItems.map((i: any) => `${i.name || i.type} (id: ${i.id}, ${i.type}, ${i.color || "unknown"} color)`).join(", ")}`
-      : "No wardrobe data available";
+      ? `User's wardrobe: ${wardrobeItems.slice(0, 15).map((i: any) => `${i.name || i.type} (${i.type}, ${i.color || "?"})`).join(", ")}`
+      : "";
 
     let profileContext = "";
     if (styleProfile) {
       const parts = [];
       if (styleProfile.gender) parts.push(`Gender: ${styleProfile.gender}`);
-      if (styleProfile.body_type) parts.push(`Body type: ${styleProfile.body_type}`);
-      if (styleProfile.skin_tone) parts.push(`Skin tone: ${styleProfile.skin_tone}`);
-      if (styleProfile.face_shape) parts.push(`Face shape: ${styleProfile.face_shape}`);
-      if (styleProfile.style_type) parts.push(`Preferred styles: ${styleProfile.style_type}`);
-      if (parts.length > 0) profileContext = `\n\nUser's profile: ${parts.join(", ")}`;
-      if (styleProfile.ai_body_analysis) profileContext += `\nDetailed body analysis: ${JSON.stringify(styleProfile.ai_body_analysis)}`;
-      if (styleProfile.ai_face_analysis) profileContext += `\nDetailed face analysis: ${JSON.stringify(styleProfile.ai_face_analysis)}`;
+      if (styleProfile.body_type) parts.push(`Body: ${styleProfile.body_type}`);
+      if (styleProfile.skin_tone) parts.push(`Skin: ${styleProfile.skin_tone}`);
+      if (styleProfile.style_type) parts.push(`Styles: ${styleProfile.style_type}`);
+      if (parts.length > 0) profileContext = ` Profile: ${parts.join(", ")}.`;
     }
 
-    const systemPrompt = `You are a world-class fashion stylist and AI outfit analyst. You combine expert fashion knowledge with Gen Z cultural awareness to deliver sharp, credible, and shareable outfit analysis. ${wardrobeDesc}${profileContext}
+    const systemPrompt = `Fashion stylist AI. ${wardrobeDesc}${profileContext}
 
-Return ONLY valid JSON (no markdown) with this exact structure:
+Return ONLY valid JSON:
 {"drip_score":number,"drip_reason":"string","confidence_rating":number,"confidence_reason":"string","killer_tag":"string","color_score":number,"color_reason":"string","style_score":number,"style_reason":"string","fit_score":number,"fit_reason":"string","occasion":"string","advice":"string","praise_line":"string","wardrobe_suggestions":[{"item_name":"string","category":"string","reason":"string","wardrobe_item_id":"string or null"}],"shopping_suggestions":[{"item_name":"string","category":"string","reason":"string","image_prompt":"string"}]}
 
-SCORING METHODOLOGY:
-- drip_score: Weighted composite as a decimal (e.g. 8.5, 7.6). Range 0-10. Calculated from:
-  • Color Harmony (25%): How well colors complement each other and the wearer
-  • Style Impact (20%): Visual coherence, trend awareness, and personal expression
-  • Fit & Silhouette (25%): How garments drape, proportion balance, tailoring quality
-  • Occasion Match (20%): Appropriateness and intentionality for the setting
-  • Accessories Balance (10%): Complementary accessories, jewelry, bags, shoes coordination
-- drip_reason: 2-3 sentences explaining the score. Reference specific elements — color combinations, silhouette choices, styling details. Be analytical and credible.
-
-- confidence_rating: How confident and powerful the person appears in this outfit, as a decimal. Range 0-10. Based on: outfit boldness, how well it suits them, posture cues, overall energy projected.
-- confidence_reason: 2-3 sentences explaining the confidence rating. Be specific about what projects confidence or could improve it.
-
-- killer_tag: A 1-3 word creative, catchy tag that captures the outfit's vibe. Think editorial fashion meets Gen Z shareability. Examples: "Effortless Chic", "Main Character", "Vibe Curator", "Golden Hour", "Certified Stunner", "Icon Mode", "Plot Twist", "Walk of Fame", "Mic Drop Moment", "Slay Architect". With appropriate emojis. Must be universally understood — no regional slang.
-
-- praise_line: A one-liner that's stylish, shareable, and screenshot-worthy. Use proper grammar and capitalization. Allow tasteful emojis (1-2 max). Examples: "Serving festive elegance ✨", "Main character energy, no auditions needed.", "Fit check: passed with distinction.", "The outfit said everything without saying a word." Keep it refined but relatable.
-
-- color_score, style_score, fit_score: integers 1-10 with clear reasoning.
-- color_reason, style_reason, fit_reason: 1-2 sentences each explaining the sub-score.
-- occasion: Brief occasion descriptor (e.g. "Casual Brunch", "Evening Out", "Street Style").
-- advice: Professional stylist-grade advice. 2-3 sentences with specific, actionable suggestions. Reference current 2025-2026 trends when relevant.
-
-- PERSONALIZED SUGGESTIONS: If user profile data is available, ALL suggestions MUST reference the user's specific body type, skin tone, face shape, gender, and preferred styles. Be hyper-specific with brand-style descriptions. Reference current 2025-2026 fashion trends.
-- Provide up to 5 wardrobe_suggestions (from user's wardrobe if available) and up to 10 shopping_suggestions. More suggestions = more value. Each shopping suggestion must have a unique, detailed image_prompt for generating a product photo.`;
+Rules:
+- All scores 0-10 decimals. drip_score = Color(25%)+Style(20%)+Fit(25%)+Occasion(20%)+Accessories(10%)
+- killer_tag: 1-3 word catchy tag with emoji
+- praise_line: one stylish shareable line
+- reasons: 1-2 sentences each
+- Up to 3 wardrobe_suggestions, up to 5 shopping_suggestions
+- Each shopping suggestion needs image_prompt for product photo`;
 
     const response = await fetch(
-      `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${apiKey}`,
+      `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-lite:generateContent?key=${apiKey}`,
       {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -71,7 +52,7 @@ SCORING METHODOLOGY:
             {
               role: "user",
               parts: [
-                { text: systemPrompt + "\n\nAnalyze this outfit. Provide a comprehensive style score with weighted breakdown, confidence rating, a creative killer tag, and actionable improvement suggestions. If the user has wardrobe items, suggest swaps from their wardrobe too. Make all suggestions personalized to their body/style profile. Return JSON only." },
+                { text: systemPrompt + "\n\nAnalyze this outfit. Return JSON only." },
                 { inlineData: { mimeType: "image/jpeg", data: imageBase64 } },
               ],
             },
