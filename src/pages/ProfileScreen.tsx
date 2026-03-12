@@ -381,7 +381,7 @@ const ProfileScreen = () => {
         </motion.div>
 
         {/* Tabs */}
-        <Tabs defaultValue="personal" className="w-full" onValueChange={(v) => { if (v === "history") loadDailyRatings(); }}>
+        <Tabs defaultValue="personal" className="w-full" onValueChange={(v) => { if (v === "history") syncHistoryFromDb(); }}>
           <TabsList className="w-full grid grid-cols-4 bg-secondary/50 rounded-xl h-9">
             <TabsTrigger value="personal" className="text-[11px] rounded-lg data-[state=active]:bg-card data-[state=active]:shadow-sm">Personal</TabsTrigger>
             <TabsTrigger value="personality" className="text-[11px] rounded-lg data-[state=active]:bg-card data-[state=active]:shadow-sm">Body</TabsTrigger>
