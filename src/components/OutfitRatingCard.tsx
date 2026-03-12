@@ -447,7 +447,7 @@ const OutfitRatingCard = ({ image, imageBase64, result, wardrobeItems = [] }: Pr
                     }}>{result.drip_score}</span>
                     <span style={{ fontSize: 13, color: "rgba(255,255,255,0.3)", fontWeight: 400 }}>/10</span>
                   </div>
-                  <p style={{ fontSize: 9, color: "rgba(201,169,110,0.6)", textTransform: "uppercase", letterSpacing: 3, marginTop: 2, fontWeight: 500 }}>Style Score</p>
+                  <p style={{ fontSize: 9, color: "rgba(201,169,110,0.6)", textTransform: "uppercase", letterSpacing: 3, marginTop: 2, fontWeight: 500 }}>Drip</p>
                 </div>
 
                 {result.killer_tag && (
