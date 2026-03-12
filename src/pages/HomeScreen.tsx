@@ -9,6 +9,7 @@ import { toast } from "sonner";
 import ScoreRing from "../components/ScoreRing";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Progress } from "@/components/ui/progress";
+import { precacheImages } from "@/lib/imageCache";
 
 
 const occasions = [
