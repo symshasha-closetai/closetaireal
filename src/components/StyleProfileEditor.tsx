@@ -260,7 +260,7 @@ export const useStyleProfileActions = () => {
       });
 
       await refreshProfile();
-      toast.success("Style profile updated & model regenerated! ✨");
+      toast.success("Style profile updated & model regenerated! ✨", { duration: 2000 });
     } catch (err) {
       console.error(err);
       toast.error("Failed to update style profile");
