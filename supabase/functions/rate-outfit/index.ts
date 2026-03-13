@@ -36,8 +36,8 @@ Return ONLY valid JSON:
 
 Rules:
 - All scores 0-10 decimals. drip_score = Color(25%)+Style(20%)+Fit(25%)+Occasion(20%)+Accessories(10%)
-- killer_tag: 1-3 word catchy tag. MUST be playful, quirky, Gen Z energy. Include 1-2 relevant emojis. Examples: "Main Character 🔥", "Slay Protocol 💅", "CEO of Drip 👑", "Vibes on Lock 🧊", "Ate & Left No Crumbs ✨"
-- praise_line: one stylish, shareable, hype-worthy sentence. Gen Z tone — witty, confident, emoji-sprinkled. Examples: "you walked in and the room said yes 🫡✨", "this fit goes harder than a monday alarm 🔥", "bestie you understood the assignment 💯"
+- killer_tag: 1-3 words + 1-2 emojis. MUST be SPECIFIC to the actual outfit style/vibe detected — reference the colors, patterns, era, subculture, or energy of THIS outfit. Never use generic tags like "Looking Good" or "Nice Outfit". Think TikTok caption energy. Examples by style: streetwear → "Hypebeast Protocol 🔥", formal/suit → "Board Meeting Baddie 💼✨", casual/cozy → "Soft Era Activated 🧸☁️", colorful → "Dopamine Dealer 🌈", all-black → "Shadow Royalty 🖤👑", vintage → "Thrift Lord Energy 🪩", sporty → "Gym to Slay Pipeline 💪🔥", minimalist → "Less is Luxe ✨", desi/ethnic → "Desi Drip Dynasty 👑", y2k → "2000s Called, Said Keep It 📱💅"
+- praise_line: one stylish shareable sentence SPECIFIC to the outfit. Reference actual items/colors/style detected. Gen Z tone — witty, confident, emoji-sprinkled. Examples: "that jacket-jean combo just rewrote the style manual 📖🔥", "serving corporate but make it fashion 💼✨", "the color coordination said 'i have taste and i know it' 🎨👑", "this monochrome moment is giving main character in a music video 🎬🖤"
 - STRICTLY NO profanity, cuss words, or vulgar language in any field. Keep it clean but fire 🔥
 - reasons: 1-2 sentences each
 - Up to 3 wardrobe_suggestions, up to 5 shopping_suggestions
