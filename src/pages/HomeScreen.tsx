@@ -311,7 +311,9 @@ const HomeScreen = () => {
   const handleStyleMe = () => handleStyleFlow(false);
   const handleSurpriseMe = () => handleStyleFlow(true);
 
+  const isUUID = (s: string) => /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(s);
   const getItemById = (id?: string) => allWardrobeItems.find(i => i.id === id);
+  const getItemLabel = (wi: WardrobeItem) => (wi.name && !isUUID(wi.name)) ? wi.name : wi.type;
   const isProcessing = styling || surprising;
 
   return (
