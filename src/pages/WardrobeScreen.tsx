@@ -145,14 +145,63 @@ const WardrobeScreen = () => {
     setAnalyzing(true);
     setDetectedItems([]);
     setSelectedDetected([]);
+
+    const tryAnalyze = async (base64: string, mimeType?: string): Promise<DetectedItem[]> => {
+      const { data, error } = await supabase.functions.invoke("analyze-clothing", {
+        body: { imageBase64: base64, ...(mimeType ? { mimeType } : {}) },
+      });
+      if (error) {
+        const msg = typeof error === "object" && "message" in error ? (error as any).message : String(error);
+        throw new Error(msg);
+      }
+      if (data?.error) {
+        if (data.retryable) throw new Error(`retryable:${data.error}`);
+        throw new Error(data.error);
+      }
+      return data?.items || [];
+    };
+
     try {
-      const { base64 } = await compressImage(file);
-      const { data, error } = await supabase.functions.invoke("analyze-clothing", { body: { imageBase64: base64 } });
-      if (error) throw error;
-      const detected = data?.items || [];
-      if (detected.length === 0) { toast.info("No clothing items detected."); setAddMode("manual"); }
+      let detected: DetectedItem[] = [];
+      // Attempt 1: compressed image
+      try {
+        const { base64 } = await compressImage(file);
+        detected = await tryAnalyze(base64);
+      } catch (err1: any) {
+        const msg1 = err1?.message || "";
+        // If rate-limited, show specific message and stop
+        if (msg1.includes("Rate limited") || msg1.includes("retryable")) {
+          toast.error("Server is busy — please try again in a moment.");
+          setAddMode("manual");
+          setAnalyzing(false);
+          return;
+        }
+        // Attempt 2: retry with original file
+        console.warn("Compressed analysis failed, retrying with original:", msg1);
+        try {
+          const originalBase64 = await new Promise<string>((resolve, reject) => {
+            const reader = new FileReader();
+            reader.onload = () => resolve((reader.result as string).split(",")[1]);
+            reader.onerror = reject;
+            reader.readAsDataURL(file);
+          });
+          detected = await tryAnalyze(originalBase64, file.type || "image/jpeg");
+        } catch (err2: any) {
+          const msg2 = err2?.message || "";
+          if (msg2.includes("Rate limited") || msg2.includes("retryable")) {
+            toast.error("Server is busy — please try again in a moment.");
+          } else {
+            toast.error("Couldn't analyze this image. Try a clearer photo or add manually.");
+          }
+          setAddMode("manual");
+          setAnalyzing(false);
+          return;
+        }
+      }
+
+      if (detected.length === 0) { toast.info("No clothing items detected. You can add manually."); setAddMode("manual"); }
       else { setDetectedItems(detected); setSelectedDetected(detected.map((_: DetectedItem, i: number) => i)); toast.success(`Found ${detected.length} item(s)!`); }
-    } catch { toast.error("AI analysis failed."); setAddMode("manual"); }
+    } catch { toast.error("Something went wrong. Try again or add manually."); setAddMode("manual"); }
     finally { setAnalyzing(false); }
   };
 
