@@ -281,11 +281,14 @@ const ProfileScreen = () => {
     finally { setDeleting(false); }
   };
 
-  const deleteDripEntry = (id: string) => {
+  const deleteDripEntry = async (id: string, dbId?: string) => {
     const updated = dripHistory.filter(e => e.id !== id);
     setDripHistory(updated);
-    saveDripHistory(updated);
     if (viewingCard?.id === id) setViewingCard(null);
+    // Delete from DB if we have a dbId
+    if (dbId && user) {
+      await supabase.from("drip_history" as any).delete().eq("id", dbId);
+    }
     toast.success("Entry deleted");
   };
 
