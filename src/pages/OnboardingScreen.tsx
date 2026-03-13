@@ -8,13 +8,20 @@ import { toast } from "sonner";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useOptionImage } from "@/hooks/useOptionImage";
 
-const genderOptions = [
+// Define types and data
+type GenderOption = { label: string; emoji: string; desc: string };
+type BodyType = { label: string; desc: string; emoji: string };
+type SkinTone = { label: string; color: string };
+type FaceShape = { label: string; desc: string };
+type StyleOption = { label: string; desc: string };
+
+const genderOptions: GenderOption[] = [
   { label: "Male", emoji: "👨", desc: "Male body composition" },
   { label: "Female", emoji: "👩", desc: "Female body composition" },
   { label: "Other", emoji: "🧑", desc: "Non-binary / prefer not to say" },
 ];
 
-const bodyTypes = [
+const bodyTypes: BodyType[] = [
   { label: "Hourglass", desc: "Balanced bust & hips, defined waist", emoji: "⏳" },
   { label: "Pear", desc: "Hips wider than shoulders", emoji: "🍐" },
   { label: "Rectangle", desc: "Even proportions, straight silhouette", emoji: "▬" },
@@ -25,7 +32,7 @@ const bodyTypes = [
   { label: "Plus Size", desc: "Fuller, curvier figure", emoji: "🌸" },
 ];
 
-const skinTones = [
+const skinTones: SkinTone[] = [
   { label: "Fair", color: "#F5DEB3" },
   { label: "Light", color: "#F0C8A0" },
   { label: "Medium", color: "#D4A574" },
@@ -34,7 +41,7 @@ const skinTones = [
   { label: "Deep", color: "#5C3D2E" },
 ];
 
-const faceShapes = [
+const faceShapes: FaceShape[] = [
   { label: "Oval", desc: "Slightly longer than wide" },
   { label: "Round", desc: "Equal width & length" },
   { label: "Square", desc: "Strong jawline" },
@@ -43,7 +50,7 @@ const faceShapes = [
   { label: "Diamond", desc: "Narrow forehead & chin" },
 ];
 
-const styleOptions = [
+const styleOptions: StyleOption[] = [
   { label: "Casual", desc: "Relaxed & comfortable" },
   { label: "Formal", desc: "Sharp & polished" },
   { label: "Streetwear", desc: "Urban & trendy" },
@@ -86,13 +93,8 @@ const OnboardingScreen = () => {
   const { user, refreshProfile } = useAuth();
   const navigate = useNavigate();
 
-  // Steps: 0=Gender+Photos, 1=Body(conditional), 2=Style, 3=ModelGen+Done
   const [step, setStep] = useState(0);
-
-  // Gender state
   const [gender, setGender] = useState<string | null>(null);
-
-  // Photo state
   const [facePreview, setFacePreview] = useState<string | null>(null);
   const [bodyPreview, setBodyPreview] = useState<string | null>(null);
   const [faceFile, setFaceFile] = useState<File | null>(null);
@@ -102,19 +104,11 @@ const OnboardingScreen = () => {
   const [analyzing, setAnalyzing] = useState(false);
   const [analysisResult, setAnalysisResult] = useState<AnalysisResult | null>(null);
   const [photosProvided, setPhotosProvided] = useState(false);
-
-  // Manual selection state
   const [bodyType, setBodyType] = useState<string | null>(null);
   const [skinTone, setSkinTone] = useState<string | null>(null);
   const [faceShape, setFaceShape] = useState<string | null>(null);
-
-  // Style state
   const [selectedStyles, setSelectedStyles] = useState<string[]>([]);
-
-  // Final state
   const [saving, setSaving] = useState(false);
-  const [generatingModel, setGeneratingModel] = useState(false);
-  const [modelImageUrl, setModelImageUrl] = useState<string | null>(null);
 
   const faceInputRef = useRef<HTMLInputElement>(null);
   const bodyInputRef = useRef<HTMLInputElement>(null);
@@ -217,7 +211,7 @@ const OnboardingScreen = () => {
     setSelectedStyles(prev => prev.includes(s) ? prev.filter(x => x !== s) : [...prev, s]);
   };
 
-  const generateModelAndFinish = async () => {
+  const saveAndFinish = async () => {
     if (!user) return;
     setSaving(true);
 
@@ -231,30 +225,6 @@ const OnboardingScreen = () => {
         style_type: selectedStyles.join(",") || null,
       }, { onConflict: "user_id" });
 
-      setGeneratingModel(true);
-      const genderDesc = gender ? `${gender} ` : "";
-      const modelDesc = analysisResult?.model_description || 
-        `A ${genderDesc}person with ${skinTone || "medium"} skin tone, ${bodyType || "average"} body type, ${faceShape || "oval"} face shape. Standing pose, full body.`;
-
-      const { data: spData } = await supabase.from("style_profiles").select("face_photo_url, body_photo_url").eq("user_id", user.id).single();
-
-      const { data, error } = await supabase.functions.invoke("generate-model-avatar", {
-        body: { 
-          modelDescription: modelDesc, 
-          userId: user.id,
-          gender,
-          facePhotoUrl: spData?.face_photo_url || null,
-          bodyPhotoUrl: spData?.body_photo_url || null,
-        },
-      });
-
-      if (error) {
-        console.error("Model generation error:", error);
-      } else if (data?.imageUrl) {
-        setModelImageUrl(data.imageUrl);
-      }
-
-      setGeneratingModel(false);
       await refreshProfile();
       toast.success("Your AI stylist is ready! 🎨");
       navigate("/", { replace: true });
@@ -265,7 +235,6 @@ const OnboardingScreen = () => {
       navigate("/", { replace: true });
     } finally {
       setSaving(false);
-      setGeneratingModel(false);
     }
   };
 
@@ -588,31 +557,24 @@ const OnboardingScreen = () => {
             </motion.div>
           )}
 
-          {/* Step 3: Generating Model + Done */}
+          {/* Step 3: Done */}
           {step === 3 && (
             <motion.div key="done" custom={1} variants={slideVariants} initial="enter" animate="center" exit="exit" transition={{ duration: 0.3 }} className="flex-1 flex flex-col items-center justify-center gap-6">
-              {generatingModel || saving ? (
+              {saving ? (
                 <>
                   <motion.div animate={{ rotate: 360 }} transition={{ repeat: Infinity, duration: 2, ease: "linear" }}>
                     <Sparkles size={40} className="text-primary" />
                   </motion.div>
                   <h1 className="font-display text-2xl font-semibold text-foreground text-center">
-                    {generatingModel ? "Creating Your AI Model..." : "Setting up your profile..."}
+                    Setting up your profile...
                   </h1>
-                  <p className="text-sm text-muted-foreground text-center max-w-xs">
-                    {generatingModel ? "Generating a personalized fashion avatar based on your features" : "Almost done!"}
-                  </p>
+                  <p className="text-sm text-muted-foreground text-center max-w-xs">Almost done!</p>
                   <div className="w-48 h-1.5 bg-secondary rounded-full overflow-hidden">
-                    <motion.div className="h-full gradient-accent rounded-full" initial={{ width: "0%" }} animate={{ width: "100%" }} transition={{ duration: 12, ease: "linear" }} />
+                    <motion.div className="h-full gradient-accent rounded-full" initial={{ width: "0%" }} animate={{ width: "100%" }} transition={{ duration: 3, ease: "linear" }} />
                   </div>
                 </>
               ) : (
                 <>
-                  {modelImageUrl && (
-                    <div className="w-48 h-64 rounded-2xl overflow-hidden shadow-elevated">
-                      <img src={modelImageUrl} alt="Your AI Model" className="w-full h-full object-cover" />
-                    </div>
-                  )}
                   <motion.div initial={{ scale: 0 }} animate={{ scale: 1 }} transition={{ type: "spring", delay: 0.2 }} className="w-20 h-20 rounded-full gradient-accent flex items-center justify-center shadow-elevated">
                     <Sparkles size={36} className="text-accent-foreground" />
                   </motion.div>
@@ -648,7 +610,7 @@ const OnboardingScreen = () => {
                   setStep(2);
                 } else if (step === 2) {
                   setStep(3);
-                  generateModelAndFinish();
+                  saveAndFinish();
                 }
               }}
               disabled={step === 2 && selectedStyles.length === 0}

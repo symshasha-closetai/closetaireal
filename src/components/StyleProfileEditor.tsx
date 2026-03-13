@@ -88,30 +88,10 @@ export const BodyProfileSection = ({
 
   return (
     <div className="space-y-4">
-      {/* AI Model Preview */}
-      <div className="glass-card-elevated p-4 space-y-3">
-        <h3 className="text-sm font-semibold text-foreground flex items-center gap-2">
-          <Sparkles size={16} className="text-primary" /> AI Model
-        </h3>
-        {modelImageUrl ? (
-          <button type="button" onClick={() => onPreview(modelImageUrl)}
-            className="w-full h-48 rounded-xl overflow-hidden bg-secondary focus:outline-none active:scale-[0.98] transition-transform">
-            <img src={modelImageUrl} alt="AI Model" className="w-full h-full object-cover object-top" />
-          </button>
-        ) : (
-          <div className="w-full h-32 rounded-xl bg-secondary flex flex-col items-center justify-center gap-2">
-            <div className="w-16 h-16 rounded-full bg-muted flex items-center justify-center">
-              <User size={28} className="text-muted-foreground" />
-            </div>
-            <p className="text-xs text-muted-foreground">No model generated yet</p>
-          </div>
-        )}
-      </div>
-
       {/* Re-upload Photos */}
       <div className="glass-card p-4 space-y-3">
-        <h3 className="text-sm font-semibold text-foreground">Re-upload Photos</h3>
-        <p className="text-xs text-muted-foreground">Upload new photos to re-run AI analysis</p>
+        <h3 className="text-sm font-semibold text-foreground">Upload Photos for AI Analysis</h3>
+        <p className="text-xs text-muted-foreground">Upload photos to run AI body & skin tone analysis</p>
         <div className="flex gap-2">
           <label className="flex-1 py-2.5 rounded-xl bg-secondary text-secondary-foreground text-xs font-medium cursor-pointer text-center active:scale-95 transition-transform">
             <Camera size={14} className="inline mr-1" /> Face
@@ -220,7 +200,6 @@ export const useStyleProfileActions = () => {
     styleProfile?.style_type?.split(",").filter(Boolean) || []
   );
   const [saving, setSaving] = useState(false);
-  const [regenerating, setRegenerating] = useState(false);
   const [reanalyzing, setReanalyzing] = useState(false);
   const [refreshingIllustrations, setRefreshingIllustrations] = useState(false);
 
@@ -243,30 +222,13 @@ export const useStyleProfileActions = () => {
         style_type: selectedStyles.join(",") || null,
       }, { onConflict: "user_id" });
 
-      setRegenerating(true);
-      const genderDesc = gender ? `${gender} ` : "";
-      const modelDesc = `A ${genderDesc}person with ${skinTone || "medium"} skin tone, ${bodyType || "average"} body type, ${faceShape || "oval"} face shape. Standing pose, full body.`;
-
-      const { data: spData } = await supabase.from("style_profiles").select("face_photo_url, body_photo_url").eq("user_id", user.id).single();
-
-      await supabase.functions.invoke("generate-model-avatar", {
-        body: {
-          modelDescription: modelDesc,
-          userId: user.id,
-          gender: gender || null,
-          facePhotoUrl: spData?.face_photo_url || null,
-          bodyPhotoUrl: spData?.body_photo_url || null,
-        },
-      });
-
       await refreshProfile();
-      toast.success("Style profile updated & model regenerated! ✨", { duration: 2000 });
+      toast.success("Style profile updated! ✨", { duration: 2000 });
     } catch (err) {
       console.error(err);
       toast.error("Failed to update style profile");
     } finally {
       setSaving(false);
-      setRegenerating(false);
     }
   };
 
@@ -375,7 +337,7 @@ export const useStyleProfileActions = () => {
   return {
     gender, setGender, bodyType, setBodyType, skinTone, setSkinTone,
     faceShape, setFaceShape, selectedStyles, toggleStyle,
-    saving, regenerating, reanalyzing, refreshingIllustrations,
+    saving, reanalyzing, refreshingIllustrations,
     modelImageUrl,
     handleSaveAndRegenerate, handleSaveStylesOnly,
     handleRefreshIllustrations, handleClearSuggestionCache, handleReuploadPhotos,
@@ -427,14 +389,12 @@ const StyleProfileEditor = () => {
       <StylePreferencesSection selectedStyles={actions.selectedStyles} toggleStyle={actions.toggleStyle}
         gender={actions.gender} onPreview={setPreviewImage} />
 
-      <button onClick={actions.handleSaveAndRegenerate} disabled={actions.saving || actions.regenerating}
+      <button onClick={actions.handleSaveAndRegenerate} disabled={actions.saving}
         className="w-full flex items-center justify-center gap-2 py-3 rounded-xl gradient-accent text-accent-foreground font-medium text-sm shadow-soft active:scale-[0.98] transition-transform disabled:opacity-60">
-        {actions.regenerating ? (
-          <><Loader2 size={16} className="animate-spin" /> Regenerating Model...</>
-        ) : actions.saving ? (
+        {actions.saving ? (
           <><Loader2 size={16} className="animate-spin" /> Saving...</>
         ) : (
-          <><RefreshCw size={16} /> Save & Regenerate Model</>
+          <><RefreshCw size={16} /> Save Profile</>
         )}
       </button>
     </div>
