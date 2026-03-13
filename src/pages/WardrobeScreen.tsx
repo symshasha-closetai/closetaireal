@@ -145,20 +145,71 @@ const WardrobeScreen = () => {
     setAnalyzing(true);
     setDetectedItems([]);
     setSelectedDetected([]);
+
+    const tryAnalyze = async (base64: string, mimeType?: string): Promise<DetectedItem[]> => {
+      const { data, error } = await supabase.functions.invoke("analyze-clothing", {
+        body: { imageBase64: base64, ...(mimeType ? { mimeType } : {}) },
+      });
+      if (error) {
+        const msg = typeof error === "object" && "message" in error ? (error as any).message : String(error);
+        throw new Error(msg);
+      }
+      if (data?.error) {
+        if (data.retryable) throw new Error(`retryable:${data.error}`);
+        throw new Error(data.error);
+      }
+      return data?.items || [];
+    };
+
     try {
-      const { base64 } = await compressImage(file);
-      const { data, error } = await supabase.functions.invoke("analyze-clothing", { body: { imageBase64: base64 } });
-      if (error) throw error;
-      const detected = data?.items || [];
-      if (detected.length === 0) { toast.info("No clothing items detected."); setAddMode("manual"); }
+      let detected: DetectedItem[] = [];
+      // Attempt 1: compressed image
+      try {
+        const { base64 } = await compressImage(file);
+        detected = await tryAnalyze(base64);
+      } catch (err1: any) {
+        const msg1 = err1?.message || "";
+        // If rate-limited, show specific message and stop
+        if (msg1.includes("Rate limited") || msg1.includes("retryable")) {
+          toast.error("Server is busy — please try again in a moment.");
+          setAddMode("manual");
+          setAnalyzing(false);
+          return;
+        }
+        // Attempt 2: retry with original file
+        console.warn("Compressed analysis failed, retrying with original:", msg1);
+        try {
+          const originalBase64 = await new Promise<string>((resolve, reject) => {
+            const reader = new FileReader();
+            reader.onload = () => resolve((reader.result as string).split(",")[1]);
+            reader.onerror = reject;
+            reader.readAsDataURL(file);
+          });
+          detected = await tryAnalyze(originalBase64, file.type || "image/jpeg");
+        } catch (err2: any) {
+          const msg2 = err2?.message || "";
+          if (msg2.includes("Rate limited") || msg2.includes("retryable")) {
+            toast.error("Server is busy — please try again in a moment.");
+          } else {
+            toast.error("Couldn't analyze this image. Try a clearer photo or add manually.");
+          }
+          setAddMode("manual");
+          setAnalyzing(false);
+          return;
+        }
+      }
+
+      if (detected.length === 0) { toast.info("No clothing items detected. You can add manually."); setAddMode("manual"); }
       else { setDetectedItems(detected); setSelectedDetected(detected.map((_: DetectedItem, i: number) => i)); toast.success(`Found ${detected.length} item(s)!`); }
-    } catch { toast.error("AI analysis failed."); setAddMode("manual"); }
+    } catch { toast.error("Something went wrong. Try again or add manually."); setAddMode("manual"); }
     finally { setAnalyzing(false); }
   };
 
   const processQueue = useCallback(async () => {
     if (bgProcessingRef.current || bgQueueRef.current.length === 0 || !user) return;
     bgProcessingRef.current = true;
+    let totalSuccess = 0;
+    let totalFailed = 0;
     while (bgQueueRef.current.length > 0) {
       const job = bgQueueRef.current[0];
       try {
@@ -175,7 +226,8 @@ const WardrobeScreen = () => {
           } catch {}
           if (!imageUrl) {
             const path = `${user.id}/${Date.now()}-${i}.jpg`;
-            await supabase.storage.from("wardrobe").upload(path, compressedBlob, { contentType: "image/jpeg" });
+            const { error: uploadErr } = await supabase.storage.from("wardrobe").upload(path, compressedBlob, { contentType: "image/jpeg" });
+            if (uploadErr) { console.error("Upload failed:", uploadErr); totalFailed++; setBgJob(prev => ({ ...prev, completedItems: prev.completedItems + 1 })); continue; }
             const { data: { publicUrl } } = supabase.storage.from("wardrobe").getPublicUrl(path);
             imageUrl = publicUrl;
           }
@@ -184,15 +236,33 @@ const WardrobeScreen = () => {
             .insert({ user_id: user.id, image_url: imageUrl, type: item.type, name: item.name, color: item.color, material: item.material, quality: item.quality, brand: item.brand } as any)
             .select("id, image_url, type, color, material, name, brand, quality, season, style")
             .single();
-          if (!insertError && insertData) setItems((prev) => [insertData as ClothingItem, ...prev]);
+          if (insertError || !insertData) {
+            console.error("Insert failed:", insertError);
+            totalFailed++;
+          } else {
+            setItems((prev) => [insertData as ClothingItem, ...prev]);
+            totalSuccess++;
+          }
           setBgJob(prev => ({ ...prev, completedItems: prev.completedItems + 1 }));
         }
-      } catch { toast.error("Some items failed to save"); }
+      } catch (err) {
+        console.error("Queue job error:", err);
+        totalFailed += job.selected.length;
+      }
       bgQueueRef.current.shift();
     }
     setBgJob({ totalItems: 0, completedItems: 0, active: false });
     bgProcessingRef.current = false;
-    toast.success("All items added to wardrobe!");
+    setActiveCategory("All");
+    if (totalFailed === 0 && totalSuccess > 0) {
+      toast.success(`${totalSuccess} item${totalSuccess > 1 ? "s" : ""} added to wardrobe!`);
+    } else if (totalSuccess > 0) {
+      toast.warning(`${totalSuccess} added, ${totalFailed} failed to save.`);
+    } else if (totalFailed > 0) {
+      toast.error("Failed to save items. Please try again.");
+    }
+    // Refresh from backend to ensure UI matches reality
+    fetchItems();
   }, [user, styleProfile]);
 
   const handleSaveDetected = async () => {
