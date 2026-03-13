@@ -24,17 +24,7 @@ type DripHistoryEntry = {
   killerTag: string;
   praiseLine: string;
   timestamp: number;
-};
-
-const getDripHistory = (): DripHistoryEntry[] => {
-  try {
-    const raw = localStorage.getItem("drip-history");
-    return raw ? JSON.parse(raw) : [];
-  } catch { return []; }
-};
-
-const saveDripHistory = (entries: DripHistoryEntry[]) => {
-  try { localStorage.setItem("drip-history", JSON.stringify(entries)); } catch { /* quota */ }
+  dbId?: string; // DB row id for deletion
 };
 
 // --- Suggest Me Section ---
@@ -93,7 +83,7 @@ const ProfileScreen = () => {
   const [previewImage, setPreviewImage] = useState<string | null>(null);
 
   // History
-  const [dripHistory, setDripHistory] = useState<DripHistoryEntry[]>(() => getDripHistory());
+  const [dripHistory, setDripHistory] = useState<DripHistoryEntry[]>([]);
   const [savedOutfits, setSavedOutfits] = useState<any[]>(() => {
     try { return JSON.parse(localStorage.getItem("saved-outfits") || "[]"); } catch { return []; }
   });
@@ -115,7 +105,6 @@ const ProfileScreen = () => {
   const handlePullRefresh = async () => {
     setIsRefreshing(true);
     await syncHistoryFromDb();
-    setDripHistory(getDripHistory());
     setIsRefreshing(false);
     toast.success("History synced", { duration: 1500 });
   };
@@ -198,14 +187,29 @@ const ProfileScreen = () => {
   const syncHistoryFromDb = async () => {
     if (!user) return;
     setHistoryLoading(true);
-    const [outfitsRes, suggestionsRes] = await Promise.all([
+    const [outfitsRes, suggestionsRes, dripRes] = await Promise.all([
       supabase.from("saved_outfits" as any).select("*").eq("user_id", user.id).order("created_at", { ascending: false }).limit(50),
       supabase.from("saved_suggestions" as any).select("*").eq("user_id", user.id).order("created_at", { ascending: false }).limit(50),
+      supabase.from("drip_history" as any).select("*").eq("user_id", user.id).order("created_at", { ascending: false }).limit(50),
     ]);
     const outfits = outfitsRes.data || [];
     const suggestions = suggestionsRes.data || [];
     setSavedOutfits(outfits);
     setSavedSuggestions(suggestions);
+
+    // Map drip_history DB rows to DripHistoryEntry
+    const dripRows = (dripRes.data || []) as any[];
+    const dripEntries: DripHistoryEntry[] = dripRows.map((r: any) => ({
+      id: r.id,
+      image: r.image_url || "",
+      score: Number(r.score) || 0,
+      killerTag: r.killer_tag || "",
+      praiseLine: r.praise_line || "",
+      timestamp: new Date(r.created_at).getTime(),
+      dbId: r.id,
+    }));
+    setDripHistory(dripEntries);
+
     try {
       localStorage.setItem("saved-outfits", JSON.stringify(outfits));
       localStorage.setItem("saved-suggestions", JSON.stringify(suggestions));
@@ -283,6 +287,7 @@ const ProfileScreen = () => {
         supabase.from("daily_ratings").delete().eq("user_id", user.id),
         supabase.from("style_profiles").delete().eq("user_id", user.id),
         supabase.from("profiles").delete().eq("user_id", user.id),
+        supabase.from("drip_history" as any).delete().eq("user_id", user.id),
       ]);
       localStorage.removeItem("drip-history");
       await signOut();
@@ -292,11 +297,14 @@ const ProfileScreen = () => {
     finally { setDeleting(false); }
   };
 
-  const deleteDripEntry = (id: string) => {
+  const deleteDripEntry = async (id: string, dbId?: string) => {
     const updated = dripHistory.filter(e => e.id !== id);
     setDripHistory(updated);
-    saveDripHistory(updated);
     if (viewingCard?.id === id) setViewingCard(null);
+    // Delete from DB if we have a dbId
+    if (dbId && user) {
+      await supabase.from("drip_history" as any).delete().eq("id", dbId);
+    }
     toast.success("Entry deleted");
   };
 
@@ -362,8 +370,8 @@ const ProfileScreen = () => {
                   className="flex items-center gap-2 px-4 py-2 rounded-full border border-white/20 text-white/70 text-xs tracking-wider">
                   <Share2 size={14} /> Share
                 </button>
-                <button onClick={() => deleteDripEntry(viewingCard.id)}
-                  className="flex items-center gap-2 px-4 py-2 rounded-full border border-red-500/30 text-red-400 text-xs tracking-wider">
+                <button onClick={() => deleteDripEntry(viewingCard.id, viewingCard.dbId)}
+                  className="flex items-center gap-2 px-4 py-2 rounded-full border border-destructive/30 text-destructive text-xs tracking-wider">
                   <Trash2 size={14} /> Delete
                 </button>
               </div>
@@ -699,7 +707,11 @@ const ProfileScreen = () => {
                   <Sparkles size={12} /> Drip History
                 </h3>
                 {dripHistory.length > 0 && (
-                  <button onClick={() => { setDripHistory([]); saveDripHistory([]); toast.success("Drip history cleared", { duration: 2000 }); }}
+                  <button onClick={async () => {
+                    if (user) await supabase.from("drip_history" as any).delete().eq("user_id", user.id);
+                    setDripHistory([]);
+                    toast.success("Drip history cleared", { duration: 2000 });
+                  }}
                     className="text-[10px] text-destructive/60 font-medium">Clear All</button>
                 )}
               </div>
@@ -717,7 +729,7 @@ const ProfileScreen = () => {
                         <p className="text-[10px] font-medium text-white">{entry.score}/10</p>
                         <p className="text-[8px] text-white/50 truncate">{entry.killerTag}</p>
                       </div>
-                      <button onClick={(e) => { e.stopPropagation(); deleteDripEntry(entry.id); }}
+                      <button onClick={(e) => { e.stopPropagation(); deleteDripEntry(entry.id, entry.dbId); }}
                         className="absolute top-1 right-1 w-5 h-5 rounded-full bg-black/50 flex items-center justify-center opacity-70 group-hover:opacity-100 transition-opacity">
                         <X size={10} className="text-white" />
                       </button>
