@@ -691,7 +691,11 @@ const ProfileScreen = () => {
                   <Sparkles size={12} /> Drip History
                 </h3>
                 {dripHistory.length > 0 && (
-                  <button onClick={() => { setDripHistory([]); saveDripHistory([]); toast.success("Drip history cleared", { duration: 2000 }); }}
+                  <button onClick={async () => {
+                    if (user) await supabase.from("drip_history" as any).delete().eq("user_id", user.id);
+                    setDripHistory([]);
+                    toast.success("Drip history cleared", { duration: 2000 });
+                  }}
                     className="text-[10px] text-destructive/60 font-medium">Clear All</button>
                 )}
               </div>
