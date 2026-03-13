@@ -369,8 +369,8 @@ const ProfileScreen = () => {
                   className="flex items-center gap-2 px-4 py-2 rounded-full border border-white/20 text-white/70 text-xs tracking-wider">
                   <Share2 size={14} /> Share
                 </button>
-                <button onClick={() => deleteDripEntry(viewingCard.id)}
-                  className="flex items-center gap-2 px-4 py-2 rounded-full border border-red-500/30 text-red-400 text-xs tracking-wider">
+                <button onClick={() => deleteDripEntry(viewingCard.id, viewingCard.dbId)}
+                  className="flex items-center gap-2 px-4 py-2 rounded-full border border-destructive/30 text-destructive text-xs tracking-wider">
                   <Trash2 size={14} /> Delete
                 </button>
               </div>
