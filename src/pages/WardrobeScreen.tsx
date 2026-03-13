@@ -208,6 +208,8 @@ const WardrobeScreen = () => {
   const processQueue = useCallback(async () => {
     if (bgProcessingRef.current || bgQueueRef.current.length === 0 || !user) return;
     bgProcessingRef.current = true;
+    let totalSuccess = 0;
+    let totalFailed = 0;
     while (bgQueueRef.current.length > 0) {
       const job = bgQueueRef.current[0];
       try {
@@ -224,7 +226,8 @@ const WardrobeScreen = () => {
           } catch {}
           if (!imageUrl) {
             const path = `${user.id}/${Date.now()}-${i}.jpg`;
-            await supabase.storage.from("wardrobe").upload(path, compressedBlob, { contentType: "image/jpeg" });
+            const { error: uploadErr } = await supabase.storage.from("wardrobe").upload(path, compressedBlob, { contentType: "image/jpeg" });
+            if (uploadErr) { console.error("Upload failed:", uploadErr); totalFailed++; setBgJob(prev => ({ ...prev, completedItems: prev.completedItems + 1 })); continue; }
             const { data: { publicUrl } } = supabase.storage.from("wardrobe").getPublicUrl(path);
             imageUrl = publicUrl;
           }
@@ -233,15 +236,33 @@ const WardrobeScreen = () => {
             .insert({ user_id: user.id, image_url: imageUrl, type: item.type, name: item.name, color: item.color, material: item.material, quality: item.quality, brand: item.brand } as any)
             .select("id, image_url, type, color, material, name, brand, quality, season, style")
             .single();
-          if (!insertError && insertData) setItems((prev) => [insertData as ClothingItem, ...prev]);
+          if (insertError || !insertData) {
+            console.error("Insert failed:", insertError);
+            totalFailed++;
+          } else {
+            setItems((prev) => [insertData as ClothingItem, ...prev]);
+            totalSuccess++;
+          }
           setBgJob(prev => ({ ...prev, completedItems: prev.completedItems + 1 }));
         }
-      } catch { toast.error("Some items failed to save"); }
+      } catch (err) {
+        console.error("Queue job error:", err);
+        totalFailed += job.selected.length;
+      }
       bgQueueRef.current.shift();
     }
     setBgJob({ totalItems: 0, completedItems: 0, active: false });
     bgProcessingRef.current = false;
-    toast.success("All items added to wardrobe!");
+    setActiveCategory("All");
+    if (totalFailed === 0 && totalSuccess > 0) {
+      toast.success(`${totalSuccess} item${totalSuccess > 1 ? "s" : ""} added to wardrobe!`);
+    } else if (totalSuccess > 0) {
+      toast.warning(`${totalSuccess} added, ${totalFailed} failed to save.`);
+    } else if (totalFailed > 0) {
+      toast.error("Failed to save items. Please try again.");
+    }
+    // Refresh from backend to ensure UI matches reality
+    fetchItems();
   }, [user, styleProfile]);
 
   const handleSaveDetected = async () => {

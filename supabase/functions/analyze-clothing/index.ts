@@ -9,7 +9,7 @@ serve(async (req) => {
   if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
 
   try {
-    const { imageBase64 } = await req.json();
+    const { imageBase64, mimeType } = await req.json();
     if (!imageBase64) {
       return new Response(JSON.stringify({ error: "No image provided" }), {
         status: 400,
@@ -33,6 +33,8 @@ For each item found, return a JSON array of objects with these fields:
 Return ONLY valid JSON array, no markdown, no explanation. Example:
 [{"name":"White Cotton T-Shirt","type":"Tops","color":"White","material":"Cotton","quality":"Mid-range","brand":null},{"name":"Blue Slim Jeans","type":"Bottoms","color":"Blue","material":"Denim","quality":"Premium","brand":"Levi's"}]`;
 
+    const resolvedMime = mimeType || "image/jpeg";
+
     const response = await fetch(
       `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${apiKey}`,
       {
@@ -44,7 +46,7 @@ Return ONLY valid JSON array, no markdown, no explanation. Example:
               role: "user",
               parts: [
                 { text: systemPrompt + "\n\nAnalyze this image and identify all clothing items and accessories. Return JSON array only." },
-                { inlineData: { mimeType: "image/jpeg", data: imageBase64 } },
+                { inlineData: { mimeType: resolvedMime, data: imageBase64 } },
               ],
             },
           ],
@@ -53,10 +55,22 @@ Return ONLY valid JSON array, no markdown, no explanation. Example:
     );
 
     if (!response.ok) {
-      if (response.status === 429) return new Response(JSON.stringify({ error: "Rate limited, try again shortly" }), { status: 429, headers: { ...corsHeaders, "Content-Type": "application/json" } });
       const errText = await response.text();
       console.error("Gemini API error:", response.status, errText);
-      throw new Error(`Gemini API error: ${response.status}`);
+
+      if (response.status === 429) {
+        return new Response(JSON.stringify({ error: "Rate limited, try again shortly", retryable: true }), {
+          status: 429, headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
+      if (response.status === 400) {
+        return new Response(JSON.stringify({ error: "Could not process this image. Try a different photo.", retryable: false }), {
+          status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
+      return new Response(JSON.stringify({ error: "Temporary issue — please try again.", retryable: true }), {
+        status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
     }
 
     const data = await response.json();
@@ -66,6 +80,7 @@ Return ONLY valid JSON array, no markdown, no explanation. Example:
     try {
       const cleaned = content.replace(/```json\n?/g, "").replace(/```\n?/g, "").trim();
       items = JSON.parse(cleaned);
+      if (!Array.isArray(items)) items = [];
     } catch {
       console.error("Failed to parse AI response:", content);
       items = [];
@@ -76,7 +91,7 @@ Return ONLY valid JSON array, no markdown, no explanation. Example:
     });
   } catch (error) {
     console.error("Error in analyze-clothing:", error);
-    return new Response(JSON.stringify({ error: error.message }), {
+    return new Response(JSON.stringify({ error: error.message, retryable: true }), {
       status: 500,
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     });

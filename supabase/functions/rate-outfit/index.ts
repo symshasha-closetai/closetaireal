@@ -36,8 +36,9 @@ Return ONLY valid JSON:
 
 Rules:
 - All scores 0-10 decimals. drip_score = Color(25%)+Style(20%)+Fit(25%)+Occasion(20%)+Accessories(10%)
-- killer_tag: 1-3 word catchy tag with emoji
-- praise_line: one stylish shareable line
+- killer_tag: 1-3 word catchy tag. MUST be playful, quirky, Gen Z energy. Include 1-2 relevant emojis. Examples: "Main Character 🔥", "Slay Protocol 💅", "CEO of Drip 👑", "Vibes on Lock 🧊", "Ate & Left No Crumbs ✨"
+- praise_line: one stylish, shareable, hype-worthy sentence. Gen Z tone — witty, confident, emoji-sprinkled. Examples: "you walked in and the room said yes 🫡✨", "this fit goes harder than a monday alarm 🔥", "bestie you understood the assignment 💯"
+- STRICTLY NO profanity, cuss words, or vulgar language in any field. Keep it clean but fire 🔥
 - reasons: 1-2 sentences each
 - Up to 3 wardrobe_suggestions, up to 5 shopping_suggestions
 - Each shopping suggestion needs image_prompt for product photo`;

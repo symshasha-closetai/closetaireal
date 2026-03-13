@@ -512,9 +512,26 @@ const OutfitRatingCard = ({ image, imageBase64, result, wardrobeItems = [] }: Pr
             </div>
           </div>
 
+        {/* Sub-scores as text */}
+          <div style={{ display: "flex", justifyContent: "center", gap: 32, padding: "12px 24px 4px" }}>
+            {[
+              { label: "Color", score: result.color_score, color: "#8B9A7B" },
+              { label: "Style", score: result.style_score, color: "#C9A96E" },
+              { label: "Fit", score: result.fit_score, color: "#B08B8B" },
+            ].map((s) => (
+              <div key={s.label} style={{ textAlign: "center" }}>
+                <p style={{ fontSize: 18, fontWeight: 600, color: s.color, fontFamily: "'Inter', sans-serif" }}>
+                  {Number.isInteger(s.score) ? s.score : s.score.toFixed(1)}
+                </p>
+                <p style={{ fontSize: 8, textTransform: "uppercase", letterSpacing: 3, color: "rgba(255,255,255,0.35)", fontWeight: 500, marginTop: 2 }}>
+                  {s.label}
+                </p>
+              </div>
+            ))}
+          </div>
+
           {/* Separator */}
           <div style={{ height: 1, background: "linear-gradient(90deg, transparent, rgba(201,169,110,0.2), rgba(168,168,168,0.2), transparent)", margin: "0 24px" }} />
-
 
           {/* Praise line */}
           {result.praise_line && (
