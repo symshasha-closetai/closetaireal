@@ -5,6 +5,34 @@ const corsHeaders = {
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version",
 };
 
+async function callWithFallback(models: string[], apiKey: string, body: any): Promise<any> {
+  for (let i = 0; i < models.length; i++) {
+    const model = models[i];
+    const response = await fetch(
+      `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`,
+      { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) }
+    );
+    if (response.ok) return response.json();
+    if (response.status === 429 || response.status >= 500) {
+      console.warn(`Model ${model} returned ${response.status}, trying fallback...`);
+      if (i === models.length - 1) {
+        if (response.status === 429) {
+          return { _rateLimited: true };
+        }
+        const errText = await response.text();
+        throw new Error(`All models failed. Last: ${response.status} ${errText}`);
+      }
+      continue;
+    }
+    if (response.status === 400) {
+      return { _badRequest: true };
+    }
+    const errText = await response.text();
+    throw new Error(`Gemini API error: ${response.status} ${errText}`);
+  }
+  throw new Error("No models available");
+}
+
 serve(async (req) => {
   if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
 
@@ -35,45 +63,33 @@ Return ONLY valid JSON array, no markdown, no explanation. Example:
 
     const resolvedMime = mimeType || "image/jpeg";
 
-    const response = await fetch(
-      `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${apiKey}`,
+    const data = await callWithFallback(
+      ["gemini-2.0-flash", "gemini-2.5-flash"],
+      apiKey,
       {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          contents: [
-            {
-              role: "user",
-              parts: [
-                { text: systemPrompt + "\n\nAnalyze this image and identify all clothing items and accessories. Return JSON array only." },
-                { inlineData: { mimeType: resolvedMime, data: imageBase64 } },
-              ],
-            },
-          ],
-        }),
+        contents: [
+          {
+            role: "user",
+            parts: [
+              { text: systemPrompt + "\n\nAnalyze this image and identify all clothing items and accessories. Return JSON array only." },
+              { inlineData: { mimeType: resolvedMime, data: imageBase64 } },
+            ],
+          },
+        ],
       }
     );
 
-    if (!response.ok) {
-      const errText = await response.text();
-      console.error("Gemini API error:", response.status, errText);
-
-      if (response.status === 429) {
-        return new Response(JSON.stringify({ error: "Rate limited, try again shortly", retryable: true }), {
-          status: 429, headers: { ...corsHeaders, "Content-Type": "application/json" },
-        });
-      }
-      if (response.status === 400) {
-        return new Response(JSON.stringify({ error: "Could not process this image. Try a different photo.", retryable: false }), {
-          status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" },
-        });
-      }
-      return new Response(JSON.stringify({ error: "Temporary issue — please try again.", retryable: true }), {
-        status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" },
+    if (data._rateLimited) {
+      return new Response(JSON.stringify({ error: "Rate limited, try again shortly", retryable: true }), {
+        status: 429, headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+    if (data._badRequest) {
+      return new Response(JSON.stringify({ error: "Could not process this image. Try a different photo.", retryable: false }), {
+        status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
 
-    const data = await response.json();
     const content = data.candidates?.[0]?.content?.parts?.[0]?.text || "[]";
 
     let items;

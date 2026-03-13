@@ -5,6 +5,28 @@ const corsHeaders = {
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version",
 };
 
+async function callWithFallback(models: string[], apiKey: string, body: any): Promise<any> {
+  for (let i = 0; i < models.length; i++) {
+    const model = models[i];
+    const response = await fetch(
+      `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`,
+      { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) }
+    );
+    if (response.ok) return response.json();
+    if (response.status === 429 || response.status >= 500) {
+      console.warn(`Model ${model} returned ${response.status}, trying fallback...`);
+      if (i === models.length - 1) {
+        const errText = await response.text();
+        throw new Error(`All models failed. Last: ${response.status} ${errText}`);
+      }
+      continue;
+    }
+    const errText = await response.text();
+    throw new Error(`Gemini API error: ${response.status} ${errText}`);
+  }
+  throw new Error("No models available");
+}
+
 serve(async (req) => {
   if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
 
@@ -92,27 +114,16 @@ Return ONLY valid JSON (no markdown) with this structure:
 
     const userPrompt = `Wardrobe items:\n${wardrobeDesc}\n\nOccasion: ${occasion}\nTime of day: ${timeOfDay}${weatherInfo}\nProfile: ${profileDesc}${bodyAnalysis}${faceAnalysis}\n\nSuggest 3-5 outfits. Return JSON only.`;
 
-    const response = await fetch(
-      `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${apiKey}`,
+    const data = await callWithFallback(
+      ["gemini-2.5-flash-lite", "gemma-3-4b-it", "gemini-2.5-flash"],
+      apiKey,
       {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          contents: [
-            { role: "user", parts: [{ text: systemPrompt + "\n\n" + userPrompt }] },
-          ],
-        }),
+        contents: [
+          { role: "user", parts: [{ text: systemPrompt + "\n\n" + userPrompt }] },
+        ],
       }
     );
 
-    if (!response.ok) {
-      if (response.status === 429) return new Response(JSON.stringify({ error: "Rate limited — please try again in a minute." }), { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } });
-      const errText = await response.text();
-      console.error("Gemini API error:", response.status, errText);
-      throw new Error(`Gemini API error: ${response.status}`);
-    }
-
-    const data = await response.json();
     const content = data.candidates?.[0]?.content?.parts?.[0]?.text || "{}";
 
     let outfits = [];

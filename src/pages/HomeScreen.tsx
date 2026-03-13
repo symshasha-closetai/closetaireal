@@ -1,6 +1,6 @@
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { Sparkles, Camera, ChevronRight, X, Heart, GraduationCap, PartyPopper, Shirt, Palette, Music, Church, Briefcase, Sun, Moon, Sunset, CloudRain, Thermometer, CloudSun, Snowflake, Shuffle, Leaf, Smile, Droplet, User, Loader2, Bookmark, BookmarkCheck } from "lucide-react";
+import { Sparkles, Camera, ChevronRight, X, Heart, GraduationCap, PartyPopper, Shirt, Palette, Music, Church, Briefcase, Sun, Moon, Sunset, CloudRain, Thermometer, CloudSun, Snowflake, Shuffle, Leaf, Smile, Droplet, User, Loader2, Bookmark, BookmarkCheck, ImagePlus } from "lucide-react";
 import AppHeader from "../components/AppHeader";
 import { useAuth } from "../hooks/useAuth";
 import { useNavigate } from "react-router-dom";
@@ -9,7 +9,7 @@ import { toast } from "sonner";
 import ScoreRing from "../components/ScoreRing";
 import { Progress } from "@/components/ui/progress";
 import { precacheImages } from "@/lib/imageCache";
-
+import { compressImage } from "@/lib/imageCompression";
 
 const occasions = [
   { label: "Casual", icon: Shirt, color: "bg-blue-100 text-blue-600" },
@@ -23,9 +23,9 @@ const occasions = [
 ];
 
 const timeOfDay = [
-  { label: "Day", icon: Sun },
-  { label: "Evening", icon: Sunset },
-  { label: "Night", icon: Moon },
+  { label: "Day", icon: Sun, emoji: "☀️" },
+  { label: "Evening", icon: Sunset, emoji: "🌅" },
+  { label: "Night", icon: Moon, emoji: "🌙" },
 ];
 
 const weatherOptions = [
@@ -35,6 +35,26 @@ const weatherOptions = [
   { label: "Cold", icon: Snowflake, emoji: "❄️" },
   { label: "Rainy", icon: CloudRain, emoji: "🌧️" },
 ];
+
+// Daily killer tags that rotate by date seed
+const dailyTags = [
+  "Main Character Energy ✨", "Serving Looks 🔥", "Style Icon Mode 👑",
+  "Drip Certified 💧", "Fashion Forward 🚀", "Effortlessly Cool 😎",
+  "Vibe Check Passed ✅", "Outfit on Point 🎯", "Slay All Day 💅",
+  "Looking Fire Today 🔥", "Street Style King 👑", "Aesthetic Queen 🌸",
+  "Clean Fit Era 🧊", "Bold & Beautiful 💫", "Trendsetter Alert 🚨",
+  "Fit Goes Hard 💪", "Mood: Unstoppable 🌟", "Style Game Strong 💯",
+  "Dressed to Impress 🎩", "Outfit of the Day 📸", "Giving Everything 🌈",
+  "Chic & Sleek ✨", "Fashion Moment 🎬", "Stunner Status 💎",
+  "Walk With Confidence 🦋", "Drip Don't Stop 🌊", "Today's Lewk 👀",
+  "Fit Check: 10/10 💯", "Pure Elegance 🪷", "Style Supreme 🏆",
+];
+
+const getDailyTag = () => {
+  const now = new Date();
+  const seed = now.getFullYear() * 10000 + (now.getMonth() + 1) * 100 + now.getDate();
+  return dailyTags[seed % dailyTags.length];
+};
 
 type WardrobeItem = {
   id: string;
@@ -93,6 +113,44 @@ const HomeScreen = () => {
   const [showResults, setShowResults] = useState(false);
   const [selectedOutfitIdx, setSelectedOutfitIdx] = useState<number | null>(null);
   const [savedOutfitIds, setSavedOutfitIds] = useState<Set<number>>(new Set());
+
+  // Today's Look photo
+  const [todayPhoto, setTodayPhoto] = useState<string | null>(null);
+  const [uploadingPhoto, setUploadingPhoto] = useState(false);
+  const photoFileRef = useRef<HTMLInputElement>(null);
+
+  useEffect(() => {
+    if (user) {
+      // Load today's photo from localStorage cache
+      const cached = localStorage.getItem(`today-look-${user.id}`);
+      if (cached) {
+        try {
+          const { url, date } = JSON.parse(cached);
+          if (date === new Date().toDateString()) setTodayPhoto(url);
+          else localStorage.removeItem(`today-look-${user.id}`);
+        } catch {}
+      }
+    }
+  }, [user]);
+
+  const handleTodayPhotoUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file || !user) return;
+    setUploadingPhoto(true);
+    try {
+      const { blob } = await compressImage(file);
+      const path = `${user.id}/today-look-${Date.now()}.jpg`;
+      const { error: uploadError } = await supabase.storage.from("wardrobe").upload(path, blob, { upsert: true, contentType: "image/jpeg" });
+      if (uploadError) throw uploadError;
+      const { data: { publicUrl } } = supabase.storage.from("wardrobe").getPublicUrl(path);
+      setTodayPhoto(publicUrl);
+      localStorage.setItem(`today-look-${user.id}`, JSON.stringify({ url: publicUrl, date: new Date().toDateString() }));
+      toast.success("Looking great! 🔥");
+    } catch {
+      toast.error("Failed to upload photo");
+    }
+    setUploadingPhoto(false);
+  };
 
   const handleSaveOutfit = async (outfit: OutfitSuggestion, idx: number) => {
     if (!user || savedOutfitIds.has(idx)) return;
@@ -258,7 +316,7 @@ const HomeScreen = () => {
 
   return (
     <div className="min-h-screen pb-24 px-5 pt-8">
-      <input type="file" accept="image/*" capture="user" className="hidden" />
+      <input type="file" accept="image/*" capture="user" ref={photoFileRef} className="hidden" onChange={handleTodayPhotoUpload} />
 
       <div className="max-w-5xl mx-auto space-y-5">
         <div><AppHeader /></div>
@@ -299,6 +357,44 @@ const HomeScreen = () => {
 
         {/* Controls */}
         <div className="space-y-4">
+          {/* Today's Look Card */}
+          <div className="glass-card-elevated overflow-hidden">
+            {todayPhoto ? (
+              <div className="relative">
+                <img src={todayPhoto} alt="Today's look" className="w-full aspect-[4/5] object-cover" />
+                <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-transparent to-black/20" />
+                <div className="absolute top-3 left-3">
+                  <span className="px-2.5 py-1 rounded-full bg-primary/90 text-primary-foreground text-[10px] font-semibold">Today's Look</span>
+                </div>
+                <button
+                  onClick={() => photoFileRef.current?.click()}
+                  disabled={uploadingPhoto}
+                  className="absolute top-3 right-3 w-8 h-8 rounded-full bg-foreground/30 backdrop-blur-sm flex items-center justify-center"
+                >
+                  <Camera size={14} className="text-white" />
+                </button>
+                <div className="absolute bottom-4 left-4 right-4">
+                  <p className="text-white font-semibold text-lg drop-shadow-lg">{getDailyTag()}</p>
+                  <p className="text-white/60 text-[10px] mt-0.5">{new Date().toLocaleDateString("en-US", { weekday: "long", month: "long", day: "numeric" })}</p>
+                </div>
+              </div>
+            ) : (
+              <button
+                onClick={() => photoFileRef.current?.click()}
+                disabled={uploadingPhoto}
+                className="w-full py-10 flex flex-col items-center gap-3 text-center"
+              >
+                <div className="w-16 h-16 rounded-full bg-secondary flex items-center justify-center">
+                  {uploadingPhoto ? <Loader2 size={24} className="text-primary animate-spin" /> : <ImagePlus size={24} className="text-muted-foreground" />}
+                </div>
+                <div>
+                  <p className="text-sm font-semibold text-foreground">Add Today's Look</p>
+                  <p className="text-[11px] text-muted-foreground mt-0.5">Snap your outfit & get a daily killer tag</p>
+                </div>
+              </button>
+            )}
+          </div>
+
           {/* My Wardrobe Card */}
           <div className="glass-card-elevated p-4">
             <div className="flex items-center justify-between mb-3">
@@ -361,44 +457,44 @@ const HomeScreen = () => {
             </div>
           </div>
 
-          {/* Time of Day */}
+          {/* Time of Day - Card style matching occasions */}
           <div className="glass-card p-4">
-            <h2 className="text-sm font-semibold text-foreground mb-2">Time of Day</h2>
-            <div className="flex gap-2">
+            <h2 className="text-base font-semibold text-foreground mb-3">Time of Day</h2>
+            <div className="flex gap-2 overflow-x-auto pb-2 no-scrollbar">
               {timeOfDay.map((t) => {
-                const TIcon = t.icon;
+                const isSelected = selectedTime === t.label;
                 return (
                   <button
                     key={t.label}
                     onClick={() => setSelectedTime(t.label)}
-                    className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-[11px] font-medium transition-all ${
-                      selectedTime === t.label ? "bg-foreground text-background" : "bg-secondary text-secondary-foreground"
+                    className={`flex flex-col items-center gap-1.5 px-4 py-2.5 rounded-xl flex-shrink-0 transition-all ${
+                      isSelected ? "gradient-accent shadow-soft" : "bg-secondary"
                     }`}
                   >
-                    <TIcon size={12} />
-                    {t.label}
+                    <span className="text-lg">{t.emoji}</span>
+                    <span className={`text-[10px] font-medium ${isSelected ? "text-accent-foreground" : "text-muted-foreground"}`}>{t.label}</span>
                   </button>
                 );
               })}
             </div>
           </div>
 
-          {/* Weather Selector */}
+          {/* Weather Selector - Card style matching occasions */}
           <div className="glass-card p-4">
-            <h2 className="text-sm font-semibold text-foreground mb-2">Weather</h2>
-            <div className="flex gap-2 overflow-x-auto no-scrollbar">
+            <h2 className="text-base font-semibold text-foreground mb-3">Weather</h2>
+            <div className="flex gap-2 overflow-x-auto pb-2 no-scrollbar">
               {weatherOptions.map((w) => {
                 const isSelected = selectedWeather === w.label;
                 return (
                   <button
                     key={w.label}
                     onClick={() => setSelectedWeather(w.label)}
-                    className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-[11px] font-medium transition-all flex-shrink-0 ${
-                      isSelected ? "bg-foreground text-background" : "bg-secondary text-secondary-foreground"
+                    className={`flex flex-col items-center gap-1.5 px-4 py-2.5 rounded-xl flex-shrink-0 transition-all ${
+                      isSelected ? "gradient-accent shadow-soft" : "bg-secondary"
                     }`}
                   >
-                    <span>{w.emoji}</span>
-                    {w.label}
+                    <span className="text-lg">{w.emoji}</span>
+                    <span className={`text-[10px] font-medium ${isSelected ? "text-accent-foreground" : "text-muted-foreground"}`}>{w.label}</span>
                   </button>
                 );
               })}

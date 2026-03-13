@@ -7,6 +7,7 @@ import OutfitRatingCard from "../components/OutfitRatingCard";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { toast } from "sonner";
+import { compressImage } from "@/lib/imageCompression";
 
 export type RatingResult = {
   drip_score: number;
@@ -56,21 +57,52 @@ const updateGlobal = (patch: Partial<DripState>) => {
   notifyListeners();
 };
 
-// Save drip card to localStorage history
-const saveDripToHistory = (image: string, result: RatingResult) => {
+// Save drip card to DB + localStorage cache
+const saveDripToHistory = async (image: string, result: RatingResult, userId?: string) => {
+  const entry = {
+    id: `drip-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`,
+    image,
+    score: result.drip_score,
+    killerTag: result.killer_tag || "",
+    praiseLine: result.praise_line || "",
+    timestamp: Date.now(),
+  };
+
+  // Save to localStorage as cache
   try {
     const existing = JSON.parse(localStorage.getItem("drip-history") || "[]");
-    const entry = {
-      id: `drip-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`,
-      image,
-      score: result.drip_score,
-      killerTag: result.killer_tag || "",
-      praiseLine: result.praise_line || "",
-      timestamp: Date.now(),
-    };
     const updated = [entry, ...existing].slice(0, 20);
     localStorage.setItem("drip-history", JSON.stringify(updated));
   } catch { /* quota */ }
+
+  // Save to DB if user is logged in
+  if (userId) {
+    try {
+      // Upload image to storage
+      let imageUrl: string | null = null;
+      try {
+        const response = await fetch(image);
+        const blob = await response.blob();
+        const path = `${userId}/drip-${Date.now()}.jpg`;
+        const { error: uploadErr } = await supabase.storage.from("wardrobe").upload(path, blob, { contentType: "image/jpeg" });
+        if (!uploadErr) {
+          const { data: { publicUrl } } = supabase.storage.from("wardrobe").getPublicUrl(path);
+          imageUrl = publicUrl;
+        }
+      } catch { /* storage upload failed, continue without image */ }
+
+      await supabase.from("drip_history" as any).insert({
+        user_id: userId,
+        image_url: imageUrl,
+        score: result.drip_score,
+        killer_tag: result.killer_tag || null,
+        praise_line: result.praise_line || null,
+        full_result: result as any,
+      } as any);
+    } catch (err) {
+      console.error("Failed to save drip to DB:", err);
+    }
+  }
 };
 
 // Run analysis globally so it survives navigation
@@ -113,7 +145,7 @@ const runAnalysis = async (file: File, userId: string | undefined, styleProfile:
     if (data?.error) { toast.error(data.error); updateGlobal({ analyzing: false, progress: 0, stage: "" }); return; }
     if (data?.result) {
       updateGlobal({ result: data.result, analyzing: false, progress: 0, stage: "" });
-      saveDripToHistory(globalDripState.image || "", data.result);
+      saveDripToHistory(globalDripState.image || "", data.result, userId);
     }
   } catch (err: any) {
     if (err?.name === "AbortError" || activeAbort?.signal.aborted) return;

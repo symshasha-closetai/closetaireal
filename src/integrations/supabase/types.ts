@@ -44,6 +44,39 @@ export type Database = {
         }
         Relationships: []
       }
+      drip_history: {
+        Row: {
+          created_at: string
+          full_result: Json | null
+          id: string
+          image_url: string | null
+          killer_tag: string | null
+          praise_line: string | null
+          score: number
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          full_result?: Json | null
+          id?: string
+          image_url?: string | null
+          killer_tag?: string | null
+          praise_line?: string | null
+          score: number
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          full_result?: Json | null
+          id?: string
+          image_url?: string | null
+          killer_tag?: string | null
+          praise_line?: string | null
+          score?: number
+          user_id?: string
+        }
+        Relationships: []
+      }
       outfits: {
         Row: {
           ai_explanation: string | null
