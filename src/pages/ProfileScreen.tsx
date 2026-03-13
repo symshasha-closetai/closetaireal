@@ -24,17 +24,7 @@ type DripHistoryEntry = {
   killerTag: string;
   praiseLine: string;
   timestamp: number;
-};
-
-const getDripHistory = (): DripHistoryEntry[] => {
-  try {
-    const raw = localStorage.getItem("drip-history");
-    return raw ? JSON.parse(raw) : [];
-  } catch { return []; }
-};
-
-const saveDripHistory = (entries: DripHistoryEntry[]) => {
-  try { localStorage.setItem("drip-history", JSON.stringify(entries)); } catch { /* quota */ }
+  dbId?: string; // DB row id for deletion
 };
 
 // --- Suggest Me Section ---
