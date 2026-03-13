@@ -581,7 +581,7 @@ const HomeScreen = () => {
                       <div className="flex gap-2 overflow-x-auto no-scrollbar">
                         {[top, bottom, shoes, ...accessoryItems].filter(Boolean).map((wi) => (
                           <div key={wi!.id} className="relative flex-shrink-0 w-14 h-14 rounded-xl overflow-hidden bg-secondary">
-                            <img src={wi!.image_url} alt={wi!.name || wi!.type} className="w-full h-full object-cover" />
+                            <img src={wi!.image_url} alt={getItemLabel(wi!)} className="w-full h-full object-cover" />
                           </div>
                         ))}
                       </div>
