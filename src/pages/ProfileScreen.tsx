@@ -728,7 +728,7 @@ const ProfileScreen = () => {
                         <p className="text-[10px] font-medium text-white">{entry.score}/10</p>
                         <p className="text-[8px] text-white/50 truncate">{entry.killerTag}</p>
                       </div>
-                      <button onClick={(e) => { e.stopPropagation(); deleteDripEntry(entry.id); }}
+                      <button onClick={(e) => { e.stopPropagation(); deleteDripEntry(entry.id, entry.dbId); }}
                         className="absolute top-1 right-1 w-5 h-5 rounded-full bg-black/50 flex items-center justify-center opacity-70 group-hover:opacity-100 transition-opacity">
                         <X size={10} className="text-white" />
                       </button>
