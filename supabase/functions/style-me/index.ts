@@ -49,7 +49,7 @@ serve(async (req) => {
     const weatherInfo = weather && weather !== "Any" ? `\nWeather conditions: ${weather}` : "";
 
     const surpriseInstruction = surpriseMe
-      ? `\n\n## SURPRISE ME MODE:\nThe user wants you to pick the BEST possible outfit without any occasion/time/weather constraints. Choose the most stylish, versatile, and flattering combination from their wardrobe. Pick an occasion that suits the outfit best and mention it. Be creative and bold!`
+      ? `\n\n## SURPRISE ME MODE:\nThe user wants you to pick the single BEST possible outfit without any occasion/time/weather constraints. Return EXACTLY 1 outfit — the most stylish, versatile, and flattering combination from their wardrobe. Pick an occasion that suits the outfit best and mention it. Be creative and bold!`
       : "";
 
     const systemPrompt = `You are an expert fashion stylist AI with deep knowledge of color theory, fabric science, and seasonal dressing. Given the user's wardrobe items, occasion, time of day, weather, body profile, and face analysis, suggest 3-5 complete outfit combinations using ONLY items from their wardrobe.${surpriseInstruction}
