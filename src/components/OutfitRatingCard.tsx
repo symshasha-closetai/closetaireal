@@ -201,7 +201,10 @@ const OutfitRatingCard = ({ image, imageBase64, result, wardrobeItems = [] }: Pr
       const imgUrl = data?.imageUrl || data?.imageBase64;
       if (!error && imgUrl) {
         setSuggestionImages(prev => ({ ...prev, [idx]: imgUrl }));
-        try { localStorage.setItem(cacheKey, JSON.stringify({ url: imgUrl, ts: Date.now() })); } catch { /* quota */ }
+        // Don't cache base64 data URLs in localStorage (too large)
+        if (imgUrl && !imgUrl.startsWith("data:")) {
+          try { localStorage.setItem(cacheKey, JSON.stringify({ url: imgUrl, ts: Date.now() })); } catch { /* quota */ }
+        }
       } else {
         setSuggestionImages(prev => ({ ...prev, [idx]: null }));
       }
