@@ -644,9 +644,9 @@ const HomeScreen = () => {
                       className="relative w-24 h-28 rounded-2xl overflow-hidden bg-secondary shadow-elevated border-2 border-background"
                       style={{ zIndex: allItems.length - i }}
                     >
-                      <img src={wi!.image_url} alt={wi!.name || wi!.type} className="w-full h-full object-cover" />
+                      <img src={wi!.image_url} alt={getItemLabel(wi!)} className="w-full h-full object-cover" />
                       <div className="absolute bottom-0 left-0 right-0 bg-foreground/50 backdrop-blur-sm px-1 py-0.5">
-                        <p className="text-[8px] text-primary-foreground truncate text-center font-medium">{wi!.type}</p>
+                        <p className="text-[8px] text-primary-foreground truncate text-center font-medium">{getItemLabel(wi!)}</p>
                       </div>
                     </motion.div>
                   ))}
