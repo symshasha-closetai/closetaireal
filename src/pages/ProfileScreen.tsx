@@ -187,14 +187,29 @@ const ProfileScreen = () => {
   const syncHistoryFromDb = async () => {
     if (!user) return;
     setHistoryLoading(true);
-    const [outfitsRes, suggestionsRes] = await Promise.all([
+    const [outfitsRes, suggestionsRes, dripRes] = await Promise.all([
       supabase.from("saved_outfits" as any).select("*").eq("user_id", user.id).order("created_at", { ascending: false }).limit(50),
       supabase.from("saved_suggestions" as any).select("*").eq("user_id", user.id).order("created_at", { ascending: false }).limit(50),
+      supabase.from("drip_history" as any).select("*").eq("user_id", user.id).order("created_at", { ascending: false }).limit(50),
     ]);
     const outfits = outfitsRes.data || [];
     const suggestions = suggestionsRes.data || [];
     setSavedOutfits(outfits);
     setSavedSuggestions(suggestions);
+
+    // Map drip_history DB rows to DripHistoryEntry
+    const dripRows = (dripRes.data || []) as any[];
+    const dripEntries: DripHistoryEntry[] = dripRows.map((r: any) => ({
+      id: r.id,
+      image: r.image_url || "",
+      score: Number(r.score) || 0,
+      killerTag: r.killer_tag || "",
+      praiseLine: r.praise_line || "",
+      timestamp: new Date(r.created_at).getTime(),
+      dbId: r.id,
+    }));
+    setDripHistory(dripEntries);
+
     try {
       localStorage.setItem("saved-outfits", JSON.stringify(outfits));
       localStorage.setItem("saved-suggestions", JSON.stringify(suggestions));
