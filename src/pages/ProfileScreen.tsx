@@ -105,7 +105,6 @@ const ProfileScreen = () => {
   const handlePullRefresh = async () => {
     setIsRefreshing(true);
     await syncHistoryFromDb();
-    setDripHistory(getDripHistory());
     setIsRefreshing(false);
     toast.success("History synced", { duration: 1500 });
   };
