@@ -287,6 +287,7 @@ const ProfileScreen = () => {
         supabase.from("daily_ratings").delete().eq("user_id", user.id),
         supabase.from("style_profiles").delete().eq("user_id", user.id),
         supabase.from("profiles").delete().eq("user_id", user.id),
+        supabase.from("drip_history" as any).delete().eq("user_id", user.id),
       ]);
       localStorage.removeItem("drip-history");
       await signOut();
