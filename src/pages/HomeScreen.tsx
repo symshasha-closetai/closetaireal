@@ -121,14 +121,21 @@ const HomeScreen = () => {
 
   useEffect(() => {
     if (user) {
-      // Load today's photo from localStorage cache
+      // Load today's photo — reset daily
       const cached = localStorage.getItem(`today-look-${user.id}`);
       if (cached) {
         try {
           const { url, date } = JSON.parse(cached);
-          if (date === new Date().toDateString()) setTodayPhoto(url);
-          else localStorage.removeItem(`today-look-${user.id}`);
-        } catch {}
+          const today = new Date().toDateString();
+          if (date === today) {
+            setTodayPhoto(url);
+          } else {
+            localStorage.removeItem(`today-look-${user.id}`);
+            setTodayPhoto(null);
+          }
+        } catch {
+          localStorage.removeItem(`today-look-${user.id}`);
+        }
       }
     }
   }, [user]);

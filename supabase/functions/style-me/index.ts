@@ -112,7 +112,8 @@ CRITICAL SCORING RULES:
 Return ONLY valid JSON (no markdown) with this structure:
 {"outfits":[{"name":"string","top_id":"string or null","bottom_id":"string or null","shoes_id":"string or null","accessories":["string"],"score":"number between 1.0 and 10.0","explanation":"string","reasoning":{"season":"string","mood":"string","time_of_day":"string","color_combination":"string","body_type":"string","skin_tone":"string"},"score_breakdown":{"color":"number 1-10","occasion":"number 1-10","season":"number 1-10","body_type":"number 1-10","skin_tone":"number 1-10","fabric":"number 1-10"}}]}`;
 
-    const userPrompt = `Wardrobe items:\n${wardrobeDesc}\n\nOccasion: ${occasion}\nTime of day: ${timeOfDay}${weatherInfo}\nProfile: ${profileDesc}${bodyAnalysis}${faceAnalysis}\n\nSuggest 3-5 outfits. Return JSON only.`;
+    const outfitCount = surpriseMe ? "1" : "3-5";
+    const userPrompt = `Wardrobe items:\n${wardrobeDesc}\n\nOccasion: ${occasion}\nTime of day: ${timeOfDay}${weatherInfo}\nProfile: ${profileDesc}${bodyAnalysis}${faceAnalysis}\n\nSuggest ${outfitCount} outfit${surpriseMe ? "" : "s"}. Return JSON only.`;
 
     const data = await callWithFallback(
       ["gemini-2.5-flash-lite", "gemma-3-4b-it", "gemini-2.5-flash"],

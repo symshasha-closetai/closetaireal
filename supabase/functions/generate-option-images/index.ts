@@ -37,7 +37,7 @@ const prompts: Record<string, Record<string, string>> = {
   },
 };
 
-async function waitForPrediction(predictionUrl: string, apiKey: string, maxWait = 120000): Promise<any> {
+async function waitForPrediction(predictionUrl: string, apiKey: string, maxWait = 60000): Promise<any> {
   const start = Date.now();
   while (Date.now() - start < maxWait) {
     const res = await fetch(predictionUrl, { headers: { "Authorization": `Bearer ${apiKey}` } });
@@ -46,7 +46,7 @@ async function waitForPrediction(predictionUrl: string, apiKey: string, maxWait 
     if (prediction.status === "failed" || prediction.status === "canceled") {
       throw new Error(`Prediction ${prediction.status}: ${prediction.error || "unknown"}`);
     }
-    await new Promise(r => setTimeout(r, 2000));
+    await new Promise(r => setTimeout(r, 1000));
   }
   throw new Error("Prediction timed out");
 }
