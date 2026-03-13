@@ -83,7 +83,7 @@ const ProfileScreen = () => {
   const [previewImage, setPreviewImage] = useState<string | null>(null);
 
   // History
-  const [dripHistory, setDripHistory] = useState<DripHistoryEntry[]>(() => getDripHistory());
+  const [dripHistory, setDripHistory] = useState<DripHistoryEntry[]>([]);
   const [savedOutfits, setSavedOutfits] = useState<any[]>(() => {
     try { return JSON.parse(localStorage.getItem("saved-outfits") || "[]"); } catch { return []; }
   });
