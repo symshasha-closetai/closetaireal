@@ -121,14 +121,21 @@ const HomeScreen = () => {
 
   useEffect(() => {
     if (user) {
-      // Load today's photo from localStorage cache
+      // Load today's photo — reset daily
       const cached = localStorage.getItem(`today-look-${user.id}`);
       if (cached) {
         try {
           const { url, date } = JSON.parse(cached);
-          if (date === new Date().toDateString()) setTodayPhoto(url);
-          else localStorage.removeItem(`today-look-${user.id}`);
-        } catch {}
+          const today = new Date().toDateString();
+          if (date === today) {
+            setTodayPhoto(url);
+          } else {
+            localStorage.removeItem(`today-look-${user.id}`);
+            setTodayPhoto(null);
+          }
+        } catch {
+          localStorage.removeItem(`today-look-${user.id}`);
+        }
       }
     }
   }, [user]);
@@ -311,7 +318,9 @@ const HomeScreen = () => {
   const handleStyleMe = () => handleStyleFlow(false);
   const handleSurpriseMe = () => handleStyleFlow(true);
 
+  const isUUID = (s: string) => /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(s);
   const getItemById = (id?: string) => allWardrobeItems.find(i => i.id === id);
+  const getItemLabel = (wi: WardrobeItem) => (wi.name && !isUUID(wi.name)) ? wi.name : wi.type;
   const isProcessing = styling || surprising;
 
   return (
@@ -579,7 +588,7 @@ const HomeScreen = () => {
                       <div className="flex gap-2 overflow-x-auto no-scrollbar">
                         {[top, bottom, shoes, ...accessoryItems].filter(Boolean).map((wi) => (
                           <div key={wi!.id} className="relative flex-shrink-0 w-14 h-14 rounded-xl overflow-hidden bg-secondary">
-                            <img src={wi!.image_url} alt={wi!.name || wi!.type} className="w-full h-full object-cover" />
+                            <img src={wi!.image_url} alt={getItemLabel(wi!)} className="w-full h-full object-cover" />
                           </div>
                         ))}
                       </div>
@@ -642,9 +651,9 @@ const HomeScreen = () => {
                       className="relative w-24 h-28 rounded-2xl overflow-hidden bg-secondary shadow-elevated border-2 border-background"
                       style={{ zIndex: allItems.length - i }}
                     >
-                      <img src={wi!.image_url} alt={wi!.name || wi!.type} className="w-full h-full object-cover" />
+                      <img src={wi!.image_url} alt={getItemLabel(wi!)} className="w-full h-full object-cover" />
                       <div className="absolute bottom-0 left-0 right-0 bg-foreground/50 backdrop-blur-sm px-1 py-0.5">
-                        <p className="text-[8px] text-primary-foreground truncate text-center font-medium">{wi!.type}</p>
+                        <p className="text-[8px] text-primary-foreground truncate text-center font-medium">{getItemLabel(wi!)}</p>
                       </div>
                     </motion.div>
                   ))}
