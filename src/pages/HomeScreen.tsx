@@ -7,7 +7,6 @@ import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import ScoreRing from "../components/ScoreRing";
-import { Skeleton } from "@/components/ui/skeleton";
 import { Progress } from "@/components/ui/progress";
 import { precacheImages } from "@/lib/imageCache";
 
@@ -74,13 +73,12 @@ type OutfitSuggestion = {
   explanation: string;
   reasoning?: OutfitReasoning;
   score_breakdown?: ScoreBreakdown;
-  tryon_image?: string;
 };
 
 const HomeScreen = () => {
   const hour = new Date().getHours();
   const greeting = hour < 12 ? "Good morning" : hour < 18 ? "Good afternoon" : "Good evening";
-  const { profile, styleProfile, user } = useAuth();
+  const { profile, user } = useAuth();
   const displayName = profile?.name || "there";
   const navigate = useNavigate();
   const [wardrobeItems, setWardrobeItems] = useState<WardrobeItem[]>([]);
@@ -93,9 +91,6 @@ const HomeScreen = () => {
   const [surprising, setSurprising] = useState(false);
   const [outfitSuggestions, setOutfitSuggestions] = useState<OutfitSuggestion[]>([]);
   const [showResults, setShowResults] = useState(false);
-  const [fullSizeModelUrl, setFullSizeModelUrl] = useState<string | null>(null);
-  const [generatingModel, setGeneratingModel] = useState(false);
-  const [generatingTryOnIdx, setGeneratingTryOnIdx] = useState<number | null>(null);
   const [selectedOutfitIdx, setSelectedOutfitIdx] = useState<number | null>(null);
   const [savedOutfitIds, setSavedOutfitIds] = useState<Set<number>>(new Set());
 
@@ -116,14 +111,12 @@ const HomeScreen = () => {
         score: outfit.score,
         explanation: outfit.explanation,
         items: items as any,
-        tryon_image: outfit.tryon_image || null,
         score_breakdown: outfit.score_breakdown || null,
         reasoning: outfit.reasoning || null,
       };
       const { data, error } = await supabase.from("saved_outfits" as any).insert(outfitData as any).select().single();
       if (error) throw error;
       setSavedOutfitIds(prev => new Set(prev).add(idx));
-      // Sync to localStorage
       try {
         const cached = JSON.parse(localStorage.getItem("saved-outfits") || "[]");
         cached.unshift(data);
@@ -163,7 +156,6 @@ const HomeScreen = () => {
         setWardrobeItems(cached.slice(0, 6));
         setWardrobeCount(cached.length);
       }
-      // Always fetch in background to keep fresh
       supabase
         .from("wardrobe")
         .select("id, image_url, type, name, color, material")
@@ -175,7 +167,6 @@ const HomeScreen = () => {
           setWardrobeItems(items.slice(0, 6));
           setWardrobeCount(items.length);
           setCache(cacheKey, items);
-          // Precache wardrobe images in service worker
           precacheImages(items.map((i: any) => i.image_url).filter(Boolean));
         });
     }
@@ -195,37 +186,6 @@ const HomeScreen = () => {
     if (data) setCache(cacheKey, data);
     return data;
   }, [user]);
-
-  const generateModelAvatar = useCallback(async (sp: any) => {
-    if (!user || !styleProfile?.model_image_url) return null;
-    setGeneratingModel(true);
-    try {
-      const bodyAnalysis = sp?.ai_body_analysis as any;
-      const desc = bodyAnalysis
-        ? `${bodyAnalysis.body_type || ""} build, ${bodyAnalysis.skin_tone || ""} skin tone, ${bodyAnalysis.face_shape || ""} face`
-        : "average build";
-
-      const { data, error } = await supabase.functions.invoke("generate-model-avatar", {
-        body: {
-          modelDescription: desc,
-          userId: user.id,
-          occasion: selectedOccasion,
-          gender: sp?.gender || undefined,
-          facePhotoUrl: sp?.face_photo_url || sp?.body_photo_url || null,
-          bodyPhotoUrl: sp?.body_photo_url || null,
-        },
-      });
-      if (!error && data?.imageUrl) {
-        setFullSizeModelUrl(data.imageUrl);
-        return data.imageUrl;
-      }
-    } catch (err) {
-      console.error("Model avatar error:", err);
-    } finally {
-      setGeneratingModel(false);
-    }
-    return null;
-  }, [user, styleProfile, selectedOccasion]);
 
   const callStyleMe = useCallback(async (sp: any, isSurprise: boolean) => {
     return supabase.functions.invoke("style-me", {
@@ -251,21 +211,15 @@ const HomeScreen = () => {
     setProgressPercent(10);
 
     try {
-      // Step 1: Fetch style profile (needed by both parallel calls)
       const sp = await fetchStyleProfile();
-      setProgressStage("Generating outfits & AI model...");
-      setProgressPercent(25);
+      setProgressStage("Generating outfits...");
+      setProgressPercent(30);
 
-      // Step 2: Run style-me AND model avatar generation IN PARALLEL
-      const [styleResult, _modelResult] = await Promise.all([
-        callStyleMe(sp, isSurprise),
-        generateModelAvatar(sp),
-      ]);
+      const { data, error } = await callStyleMe(sp, isSurprise);
 
-      setProgressPercent(75);
+      setProgressPercent(80);
       setProgressStage("Preparing your results...");
 
-      const { data, error } = styleResult;
       if (error) {
         const msg = data?.error || (error as any)?.message || "Failed to generate outfits";
         toast.error(msg);
@@ -274,22 +228,14 @@ const HomeScreen = () => {
       if (data?.error) { toast.error(data.error); return; }
 
       if (data?.outfits?.length) {
-        // Normalize scores to 1-10 range
         const normalizedOutfits = data.outfits.map((o: OutfitSuggestion) => {
           let s = Number(o.score) || 5;
-          if (s > 10) s = s / 10; // Convert 0-100 scale to 0-10
-          s = Math.max(1, Math.min(10, Math.round(s * 10) / 10)); // Clamp 1-10, 1 decimal
+          if (s > 10) s = s / 10;
+          s = Math.max(1, Math.min(10, Math.round(s * 10) / 10));
           return { ...o, score: s };
         });
         setOutfitSuggestions(normalizedOutfits);
         setShowResults(true);
-        setProgressPercent(90);
-        setProgressStage("Creating virtual try-on...");
-
-        // Step 3: Generate try-on for first outfit
-        if (styleProfile?.model_image_url && user) {
-          await generateTryOn(data.outfits[0], 0);
-        }
         setProgressPercent(100);
       } else {
         toast.error("No outfits generated. Try adding more items.");
@@ -307,45 +253,7 @@ const HomeScreen = () => {
   const handleStyleMe = () => handleStyleFlow(false);
   const handleSurpriseMe = () => handleStyleFlow(true);
 
-  const generateTryOn = async (outfit: OutfitSuggestion, idx: number) => {
-    if (!styleProfile?.model_image_url || !user) return;
-    setGeneratingTryOnIdx(idx);
-    try {
-      const items = [outfit.top_id, outfit.bottom_id, outfit.shoes_id, ...(outfit.accessories || [])]
-        .map(id => allWardrobeItems.find(w => w.id === id))
-        .filter(Boolean);
-      const desc = items.map(i => `${i!.name || i!.type} (${i!.color || ""} ${i!.material || ""})`).join(", ");
-      const { data, error } = await supabase.functions.invoke("virtual-tryon", {
-        body: {
-          modelImageUrl: styleProfile.model_image_url,
-          outfitDescription: desc,
-          occasion: selectedOccasion,
-          userId: user.id,
-        },
-      });
-      if (error) {
-        const errorMsg = typeof data?.error === "string" ? data.error : "";
-        if (errorMsg.includes("Rate limited") || errorMsg.includes("credits")) {
-          toast.error("Try-on temporarily unavailable. Please try again later.");
-          return;
-        }
-      }
-      if (data?.imageUrl || data?.imageBase64) {
-        setOutfitSuggestions(prev =>
-          prev.map((o, i) => i === idx ? { ...o, tryon_image: data.imageUrl || data.imageBase64 } : o)
-        );
-      }
-    } catch (err) {
-      console.error("Try-on error:", err);
-    } finally {
-      setGeneratingTryOnIdx(null);
-    }
-  };
-
   const getItemById = (id?: string) => allWardrobeItems.find(i => i.id === id);
-  const currentOccasion = occasions.find(o => o.label === selectedOccasion) || occasions[0];
-  const CurrentOccIcon = currentOccasion.icon;
-  const displayModelUrl = fullSizeModelUrl || styleProfile?.model_image_url || profile?.avatar_url;
   const isProcessing = styling || surprising;
 
   return (
@@ -377,10 +285,9 @@ const HomeScreen = () => {
                 <div className="flex-1">
                   <p className="text-sm font-medium text-foreground">{progressStage}</p>
                   <p className="text-[10px] text-muted-foreground">
-                    {progressPercent < 25 && "Reading your style profile..."}
-                    {progressPercent >= 25 && progressPercent < 75 && "AI is picking outfits & generating your model simultaneously"}
-                    {progressPercent >= 75 && progressPercent < 90 && "Almost there..."}
-                    {progressPercent >= 90 && "Finishing up virtual try-on"}
+                    {progressPercent < 30 && "Reading your style profile..."}
+                    {progressPercent >= 30 && progressPercent < 80 && "AI is picking the best outfits for you"}
+                    {progressPercent >= 80 && "Almost there..."}
                   </p>
                 </div>
                 <span className="text-xs font-bold text-primary">{progressPercent}%</span>
@@ -390,215 +297,155 @@ const HomeScreen = () => {
           )}
         </AnimatePresence>
 
-        {/* Split Layout: Controls Left, Model Right */}
-        <div className="flex flex-col lg:flex-row gap-5">
-          {/* LEFT PANEL: Controls */}
-          <div className="flex-1 space-y-4 order-2 lg:order-1">
-            {/* My Wardrobe Card */}
-            <div className="glass-card-elevated p-4">
-              <div className="flex items-center justify-between mb-3">
-                <h2 className="text-base font-semibold text-foreground">My Wardrobe</h2>
-                <span className="px-2.5 py-0.5 rounded-full bg-primary/10 text-xs font-bold text-foreground">{wardrobeCount}</span>
-              </div>
-              {wardrobeItems.length > 0 ? (
-                <>
-                  <div className="grid grid-cols-4 gap-2 mb-3">
-                    {wardrobeItems.slice(0, 4).map((wi) => (
-                      <div key={wi.id} className="relative aspect-square rounded-xl overflow-hidden bg-secondary">
-                        <img src={wi.image_url} alt={wi.name || wi.type} className="w-full h-full object-cover" loading="lazy" />
-                        <div className="absolute bottom-0 left-0 right-0 bg-foreground/40 backdrop-blur-sm px-1 py-0.5">
-                          <p className="text-[8px] text-primary-foreground truncate text-center font-medium">{wi.type}</p>
-                        </div>
+        {/* Controls */}
+        <div className="space-y-4">
+          {/* My Wardrobe Card */}
+          <div className="glass-card-elevated p-4">
+            <div className="flex items-center justify-between mb-3">
+              <h2 className="text-base font-semibold text-foreground">My Wardrobe</h2>
+              <span className="px-2.5 py-0.5 rounded-full bg-primary/10 text-xs font-bold text-foreground">{wardrobeCount}</span>
+            </div>
+            {wardrobeItems.length > 0 ? (
+              <>
+                <div className="grid grid-cols-4 gap-2 mb-3">
+                  {wardrobeItems.slice(0, 4).map((wi) => (
+                    <div key={wi.id} className="relative aspect-square rounded-xl overflow-hidden bg-secondary">
+                      <img src={wi.image_url} alt={wi.name || wi.type} className="w-full h-full object-cover" loading="lazy" />
+                      <div className="absolute bottom-0 left-0 right-0 bg-foreground/40 backdrop-blur-sm px-1 py-0.5">
+                        <p className="text-[8px] text-primary-foreground truncate text-center font-medium">{wi.type}</p>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+                <div className="flex items-center justify-between">
+                  <div className="flex gap-3">
+                    {["Tops", "Bottoms", "Dresses", "Shoes"].map((cat) => (
+                      <div key={cat} className="flex items-center gap-1">
+                        <span className="text-[10px] text-muted-foreground">{cat}</span>
+                        <span className="text-[10px] font-bold text-foreground">{categoryCounts[cat] || 0}</span>
                       </div>
                     ))}
                   </div>
-                  <div className="flex items-center justify-between">
-                    <div className="flex gap-3">
-                      {["Tops", "Bottoms", "Dresses", "Shoes"].map((cat) => (
-                        <div key={cat} className="flex items-center gap-1">
-                          <span className="text-[10px] text-muted-foreground">{cat}</span>
-                          <span className="text-[10px] font-bold text-foreground">{categoryCounts[cat] || 0}</span>
-                        </div>
-                      ))}
-                    </div>
-                    <button onClick={() => navigate("/wardrobe")} className="flex items-center gap-0.5 text-xs font-medium text-primary">
-                      View all <ChevronRight size={14} />
-                    </button>
-                  </div>
-                </>
-              ) : (
-                <button onClick={() => navigate("/wardrobe")} className="w-full py-6 rounded-xl bg-secondary text-sm text-muted-foreground">
-                  Add your first clothing item →
-                </button>
-              )}
-            </div>
-
-            {/* Occasion Selector */}
-            <div className="glass-card p-4">
-              <h2 className="text-base font-semibold text-foreground mb-3">Pick an Occasion</h2>
-              <div className="flex gap-2 overflow-x-auto pb-2 no-scrollbar">
-                {occasions.map((occ) => {
-                  const OccIcon = occ.icon;
-                  const isSelected = selectedOccasion === occ.label;
-                  return (
-                    <button
-                      key={occ.label}
-                      onClick={() => setSelectedOccasion(occ.label)}
-                      className={`flex flex-col items-center gap-1.5 px-3 py-2 rounded-xl flex-shrink-0 transition-all ${
-                        isSelected ? "gradient-accent shadow-soft" : "bg-secondary"
-                      }`}
-                    >
-                      <OccIcon size={18} className={isSelected ? "text-accent-foreground" : "text-muted-foreground"} />
-                      <span className={`text-[10px] font-medium ${isSelected ? "text-accent-foreground" : "text-muted-foreground"}`}>{occ.label}</span>
-                    </button>
-                  );
-                })}
-              </div>
-            </div>
-
-            {/* Time of Day */}
-            <div className="glass-card p-4">
-              <h2 className="text-sm font-semibold text-foreground mb-2">Time of Day</h2>
-              <div className="flex gap-2">
-                {timeOfDay.map((t) => {
-                  const TIcon = t.icon;
-                  return (
-                    <button
-                      key={t.label}
-                      onClick={() => setSelectedTime(t.label)}
-                      className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-[11px] font-medium transition-all ${
-                        selectedTime === t.label ? "bg-foreground text-background" : "bg-secondary text-secondary-foreground"
-                      }`}
-                    >
-                      <TIcon size={12} />
-                      {t.label}
-                    </button>
-                  );
-                })}
-              </div>
-            </div>
-
-            {/* Weather Selector */}
-            <div className="glass-card p-4">
-              <h2 className="text-sm font-semibold text-foreground mb-2">Weather</h2>
-              <div className="flex gap-2 overflow-x-auto no-scrollbar">
-                {weatherOptions.map((w) => {
-                  const isSelected = selectedWeather === w.label;
-                  return (
-                    <button
-                      key={w.label}
-                      onClick={() => setSelectedWeather(w.label)}
-                      className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-[11px] font-medium transition-all flex-shrink-0 ${
-                        isSelected ? "bg-foreground text-background" : "bg-secondary text-secondary-foreground"
-                      }`}
-                    >
-                      <span>{w.emoji}</span>
-                      {w.label}
-                    </button>
-                  );
-                })}
-              </div>
-            </div>
-
-            {/* Style Me Button */}
-            <button onClick={handleStyleMe} disabled={isProcessing} className="w-full py-4 rounded-2xl gradient-accent text-accent-foreground font-semibold text-base shadow-soft active:scale-[0.98] transition-transform flex items-center justify-center gap-2 disabled:opacity-60">
-              {styling ? (
-                <>
-                  <motion.div animate={{ rotate: 360 }} transition={{ repeat: Infinity, duration: 1.5, ease: "linear" }}>
-                    <Sparkles size={20} />
-                  </motion.div>
-                  Styling...
-                </>
-              ) : (
-                <><Sparkles size={20} /> Style Me</>
-              )}
-            </button>
-
-            {/* Surprise Me Button */}
-            <button onClick={handleSurpriseMe} disabled={isProcessing} className="w-full py-4 rounded-2xl bg-foreground text-background font-semibold text-base shadow-soft active:scale-[0.98] transition-transform flex items-center justify-center gap-2 disabled:opacity-60">
-              {surprising ? (
-                <>
-                  <motion.div animate={{ rotate: 360 }} transition={{ repeat: Infinity, duration: 1.5, ease: "linear" }}>
-                    <Shuffle size={20} />
-                  </motion.div>
-                  Surprising...
-                </>
-              ) : (
-                <><Shuffle size={20} /> Surprise Me</>
-              )}
-            </button>
-
-            {/* Check Your Drip Score */}
-            <div className="glass-card p-4">
-              <div className="flex items-center gap-3">
-                <div className="w-10 h-10 rounded-full bg-secondary flex items-center justify-center">
-                  <Camera size={18} className="text-muted-foreground" />
+                  <button onClick={() => navigate("/wardrobe")} className="flex items-center gap-0.5 text-xs font-medium text-primary">
+                    View all <ChevronRight size={14} />
+                  </button>
                 </div>
-                <div className="flex-1">
-                  <h3 className="text-sm font-semibold text-foreground">Check Your Drip Score</h3>
-                  <p className="text-xs text-muted-foreground">Snap a photo and get AI feedback</p>
-                </div>
-                <button onClick={() => navigate("/camera")} className="px-4 py-2 rounded-full gradient-accent text-accent-foreground text-xs font-medium shadow-soft active:scale-95 transition-transform">
-                  <Camera size={14} className="inline mr-1" /> Check
-                </button>
-              </div>
+              </>
+            ) : (
+              <button onClick={() => navigate("/wardrobe")} className="w-full py-6 rounded-xl bg-secondary text-sm text-muted-foreground">
+                Add your first clothing item →
+              </button>
+            )}
+          </div>
+
+          {/* Occasion Selector */}
+          <div className="glass-card p-4">
+            <h2 className="text-base font-semibold text-foreground mb-3">Pick an Occasion</h2>
+            <div className="flex gap-2 overflow-x-auto pb-2 no-scrollbar">
+              {occasions.map((occ) => {
+                const OccIcon = occ.icon;
+                const isSelected = selectedOccasion === occ.label;
+                return (
+                  <button
+                    key={occ.label}
+                    onClick={() => setSelectedOccasion(occ.label)}
+                    className={`flex flex-col items-center gap-1.5 px-3 py-2 rounded-xl flex-shrink-0 transition-all ${
+                      isSelected ? "gradient-accent shadow-soft" : "bg-secondary"
+                    }`}
+                  >
+                    <OccIcon size={18} className={isSelected ? "text-accent-foreground" : "text-muted-foreground"} />
+                    <span className={`text-[10px] font-medium ${isSelected ? "text-accent-foreground" : "text-muted-foreground"}`}>{occ.label}</span>
+                  </button>
+                );
+              })}
             </div>
           </div>
 
-          {/* RIGHT PANEL: AI Model */}
-          <div className="lg:w-[420px] flex-shrink-0 order-1 lg:order-2">
-            <div className="sticky top-20">
-              <div className="relative rounded-3xl overflow-hidden shadow-elevated bg-secondary">
-                {displayModelUrl ? (
-                  <div className="relative">
-                    {generatingModel && (
-                      <div className="absolute inset-0 z-10 flex flex-col items-center justify-center gap-4 bg-background/70 backdrop-blur-sm">
-                        <div className="relative w-32 h-48">
-                          <Skeleton className="absolute inset-0 rounded-full w-16 h-16 mx-auto" />
-                          <Skeleton className="absolute top-16 left-1/2 -translate-x-1/2 w-20 h-24 rounded-xl" />
-                          <Skeleton className="absolute top-[120px] left-1/2 -translate-x-[26px] w-10 h-20 rounded-lg" />
-                          <Skeleton className="absolute top-[120px] left-1/2 translate-x-[0px] w-10 h-20 rounded-lg" />
-                        </div>
-                        <p className="text-xs text-muted-foreground animate-pulse">Generating your AI model...</p>
-                      </div>
-                    )}
-                    <img
-                      src={displayModelUrl}
-                      alt="Your AI Model"
-                      className="w-full h-[280px] lg:h-[600px] object-contain object-top"
-                    />
-                    <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-card via-card/60 to-transparent pt-16 pb-4 px-4">
-                      <div className="flex items-center justify-between">
-                        <div>
-                          <p className="text-sm font-semibold text-foreground">{selectedOccasion} Look</p>
-                          <p className="text-[11px] text-muted-foreground">{selectedTime} · {selectedWeather} · Your style, elevated</p>
-                        </div>
-                        <div className={`w-10 h-10 rounded-full flex items-center justify-center ${currentOccasion.color}`}>
-                          <CurrentOccIcon size={18} />
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-                ) : generatingModel ? (
-                  <div className="w-full h-[280px] lg:h-[600px] flex flex-col items-center justify-center gap-4">
-                    <div className="relative w-32 h-48">
-                      <Skeleton className="absolute inset-0 rounded-full w-16 h-16 mx-auto" />
-                      <Skeleton className="absolute top-16 left-1/2 -translate-x-1/2 w-20 h-24 rounded-xl" />
-                      <Skeleton className="absolute top-[120px] left-1/2 -translate-x-[26px] w-10 h-20 rounded-lg" />
-                      <Skeleton className="absolute top-[120px] left-1/2 translate-x-[0px] w-10 h-20 rounded-lg" />
-                    </div>
-                    <p className="text-xs text-muted-foreground animate-pulse">Generating your AI model...</p>
-                  </div>
-                ) : (
-                  <div className="w-full h-[280px] lg:h-[600px] flex items-center justify-center">
-                    <div className="text-center space-y-3">
-                      <CurrentOccIcon size={48} className="text-muted-foreground mx-auto" />
-                      <p className="text-sm text-muted-foreground">{selectedOccasion}</p>
-                      <p className="text-xs text-muted-foreground">Complete your profile to see your AI model</p>
-                    </div>
-                  </div>
-                )}
+          {/* Time of Day */}
+          <div className="glass-card p-4">
+            <h2 className="text-sm font-semibold text-foreground mb-2">Time of Day</h2>
+            <div className="flex gap-2">
+              {timeOfDay.map((t) => {
+                const TIcon = t.icon;
+                return (
+                  <button
+                    key={t.label}
+                    onClick={() => setSelectedTime(t.label)}
+                    className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-[11px] font-medium transition-all ${
+                      selectedTime === t.label ? "bg-foreground text-background" : "bg-secondary text-secondary-foreground"
+                    }`}
+                  >
+                    <TIcon size={12} />
+                    {t.label}
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+
+          {/* Weather Selector */}
+          <div className="glass-card p-4">
+            <h2 className="text-sm font-semibold text-foreground mb-2">Weather</h2>
+            <div className="flex gap-2 overflow-x-auto no-scrollbar">
+              {weatherOptions.map((w) => {
+                const isSelected = selectedWeather === w.label;
+                return (
+                  <button
+                    key={w.label}
+                    onClick={() => setSelectedWeather(w.label)}
+                    className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-[11px] font-medium transition-all flex-shrink-0 ${
+                      isSelected ? "bg-foreground text-background" : "bg-secondary text-secondary-foreground"
+                    }`}
+                  >
+                    <span>{w.emoji}</span>
+                    {w.label}
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+
+          {/* Style Me Button */}
+          <button onClick={handleStyleMe} disabled={isProcessing} className="w-full py-4 rounded-2xl gradient-accent text-accent-foreground font-semibold text-base shadow-soft active:scale-[0.98] transition-transform flex items-center justify-center gap-2 disabled:opacity-60">
+            {styling ? (
+              <>
+                <motion.div animate={{ rotate: 360 }} transition={{ repeat: Infinity, duration: 1.5, ease: "linear" }}>
+                  <Sparkles size={20} />
+                </motion.div>
+                Styling...
+              </>
+            ) : (
+              <><Sparkles size={20} /> Style Me</>
+            )}
+          </button>
+
+          {/* Surprise Me Button */}
+          <button onClick={handleSurpriseMe} disabled={isProcessing} className="w-full py-4 rounded-2xl bg-foreground text-background font-semibold text-base shadow-soft active:scale-[0.98] transition-transform flex items-center justify-center gap-2 disabled:opacity-60">
+            {surprising ? (
+              <>
+                <motion.div animate={{ rotate: 360 }} transition={{ repeat: Infinity, duration: 1.5, ease: "linear" }}>
+                  <Shuffle size={20} />
+                </motion.div>
+                Surprising...
+              </>
+            ) : (
+              <><Shuffle size={20} /> Surprise Me</>
+            )}
+          </button>
+
+          {/* Check Your Drip Score */}
+          <div className="glass-card p-4">
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 rounded-full bg-secondary flex items-center justify-center">
+                <Camera size={18} className="text-muted-foreground" />
               </div>
+              <div className="flex-1">
+                <h3 className="text-sm font-semibold text-foreground">Check Your Drip Score</h3>
+                <p className="text-xs text-muted-foreground">Snap a photo and get AI feedback</p>
+              </div>
+              <button onClick={() => navigate("/camera")} className="px-4 py-2 rounded-full gradient-accent text-accent-foreground text-xs font-medium shadow-soft active:scale-95 transition-transform">
+                <Camera size={14} className="inline mr-1" /> Check
+              </button>
             </div>
           </div>
         </div>
@@ -625,11 +472,6 @@ const HomeScreen = () => {
 
                 return (
                   <motion.div key={idx} initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: idx * 0.1 }} className="glass-card overflow-hidden cursor-pointer active:scale-[0.98] transition-transform" onClick={() => setSelectedOutfitIdx(idx)}>
-                    {outfit.tryon_image && (
-                      <div className="h-48 overflow-hidden">
-                        <img src={outfit.tryon_image} alt="Virtual try-on" className="w-full h-full object-cover object-top" />
-                      </div>
-                    )}
                     <div className="p-4 space-y-3">
                       <div className="flex items-center justify-between">
                         <h3 className="text-sm font-semibold text-foreground">{outfit.name}</h3>
@@ -711,13 +553,6 @@ const HomeScreen = () => {
                     </motion.div>
                   ))}
                 </div>
-
-                {/* Try-on image if available */}
-                {outfit.tryon_image && (
-                  <div className="rounded-2xl overflow-hidden shadow-elevated">
-                    <img src={outfit.tryon_image} alt="Virtual try-on" className="w-full h-72 object-cover object-top" />
-                  </div>
-                )}
 
                 {/* Score Section */}
                 <div className="glass-card-elevated p-5 space-y-4">
@@ -815,7 +650,6 @@ const HomeScreen = () => {
 
                 {/* Action Buttons */}
                 <div className="space-y-3">
-                  {/* Save Outfit Button */}
                   <button
                     onClick={() => handleSaveOutfit(outfit, selectedOutfitIdx!)}
                     disabled={savedOutfitIds.has(selectedOutfitIdx!)}
@@ -827,20 +661,6 @@ const HomeScreen = () => {
                       <><Bookmark size={16} /> Save Outfit</>
                     )}
                   </button>
-
-                  {!outfit.tryon_image && generatingTryOnIdx === selectedOutfitIdx ? (
-                    <div className="w-full py-8 rounded-2xl bg-secondary flex flex-col items-center justify-center gap-3">
-                      <div className="relative w-24 h-32">
-                        <Skeleton className="absolute inset-0 rounded-full w-12 h-12 mx-auto" />
-                        <Skeleton className="absolute top-12 left-1/2 -translate-x-1/2 w-16 h-16 rounded-xl" />
-                      </div>
-                      <p className="text-xs text-muted-foreground animate-pulse">Creating your virtual try-on...</p>
-                    </div>
-                  ) : !outfit.tryon_image && styleProfile?.model_image_url ? (
-                    <button onClick={() => generateTryOn(outfit, selectedOutfitIdx!)} className="w-full py-4 rounded-2xl gradient-accent text-accent-foreground font-semibold text-base shadow-soft active:scale-[0.98] transition-transform flex items-center justify-center gap-2">
-                      <Sparkles size={18} /> Generate Try-On Preview
-                    </button>
-                  ) : null}
                   <button onClick={() => setSelectedOutfitIdx(null)} className="w-full text-center text-sm text-muted-foreground font-medium py-2">
                     ← Try a Different Look
                   </button>

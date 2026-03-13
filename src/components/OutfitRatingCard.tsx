@@ -65,10 +65,19 @@ const OutfitRatingCard = ({ image, imageBase64, result, wardrobeItems = [] }: Pr
   const [savedSuggestions, setSavedSuggestions] = useState<Set<string>>(new Set());
   const shareRef = useRef<HTMLDivElement>(null);
 
-  const handleSaveSuggestion = async (type: "wardrobe" | "shopping", s: Suggestion) => {
+  const handleSaveSuggestion = async (type: "wardrobe" | "shopping", s: Suggestion, idx?: number) => {
     const key = `${type}-${s.item_name}`;
     if (!user || savedSuggestions.has(key)) return;
     try {
+      // Find the image URL for this suggestion
+      let imageUrl: string | null = null;
+      if (type === "shopping" && idx !== undefined && suggestionImages[idx]) {
+        imageUrl = suggestionImages[idx];
+      } else if (type === "wardrobe") {
+        const match = findWardrobeMatch(s, wardrobeItems);
+        if (match) imageUrl = match.image_url;
+      }
+
       const suggestionData = {
         user_id: user.id,
         drip_score: result.drip_score,
@@ -77,6 +86,7 @@ const OutfitRatingCard = ({ image, imageBase64, result, wardrobeItems = [] }: Pr
         item_name: s.item_name,
         category: s.category,
         reason: s.reason,
+        image: imageUrl,
       };
       const { data, error } = await supabase.from("saved_suggestions" as any).insert(suggestionData as any).select().single();
       if (error) throw error;
@@ -433,7 +443,7 @@ const OutfitRatingCard = ({ image, imageBase64, result, wardrobeItems = [] }: Pr
                     <p className="text-xs text-muted-foreground">{s.reason}</p>
                   </div>
                   <button
-                    onClick={() => handleSaveSuggestion("shopping", s)}
+                    onClick={() => handleSaveSuggestion("shopping", s, i)}
                     className="flex-shrink-0 self-center active:scale-90 transition-transform"
                   >
                     <Heart size={16} className={savedSuggestions.has(`shopping-${s.item_name}`) ? "fill-primary text-primary" : "text-muted-foreground"} />

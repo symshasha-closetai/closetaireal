@@ -1,6 +1,6 @@
 import { useState, useRef, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { ArrowLeft, Camera, LogOut, User, Save, Trash2, AlertTriangle, Loader2, Lock, X, Share2, Download, RefreshCw, RotateCcw, Clock, Sparkles, Shield, Send, MessageSquare, Bookmark, Heart, ShoppingBag } from "lucide-react";
+import { ArrowLeft, Camera, LogOut, User, Save, Trash2, AlertTriangle, Loader2, Lock, X, Share2, Download, RefreshCw, RotateCcw, Clock, Sparkles, Shield, Send, MessageSquare, Bookmark, Heart, ShoppingBag, Palette, Briefcase, Leaf, Droplet, Shirt, Smile, Sun } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "../hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
@@ -8,6 +8,7 @@ import { toast } from "sonner";
 import { compressImage } from "@/lib/imageCompression";
 import AppHeader from "../components/AppHeader";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
+import ScoreRing from "../components/ScoreRing";
 import {
   GenderPicker,
   BodyProfileSection,
@@ -18,7 +19,7 @@ import {
 // --- Drip History helpers ---
 type DripHistoryEntry = {
   id: string;
-  image: string; // base64 compressed PNG
+  image: string;
   score: number;
   killerTag: string;
   praiseLine: string;
@@ -91,7 +92,7 @@ const ProfileScreen = () => {
   const styleActions = useStyleProfileActions();
   const [previewImage, setPreviewImage] = useState<string | null>(null);
 
-  // History — loaded from localStorage first, then synced from DB
+  // History
   const [dripHistory, setDripHistory] = useState<DripHistoryEntry[]>(() => getDripHistory());
   const [savedOutfits, setSavedOutfits] = useState<any[]>(() => {
     try { return JSON.parse(localStorage.getItem("saved-outfits") || "[]"); } catch { return []; }
@@ -101,6 +102,7 @@ const ProfileScreen = () => {
   });
   const [historyLoading, setHistoryLoading] = useState(false);
   const [viewingCard, setViewingCard] = useState<DripHistoryEntry | null>(null);
+  const [viewingSavedOutfit, setViewingSavedOutfit] = useState<any>(null);
 
   // Pull-to-refresh
   const pullRef = useRef<HTMLDivElement>(null);
@@ -130,11 +132,9 @@ const ProfileScreen = () => {
       const styles = styleActions.selectedStyles;
       const items = wardrobeItems || [];
 
-      // Build a deterministic hash from wardrobe + preferences
       const sortedItems = [...items].sort((a, b) => JSON.stringify(a).localeCompare(JSON.stringify(b)));
       const currentHash = JSON.stringify({ items: sortedItems.map(i => ({ t: i.type, s: i.style, m: i.material, c: i.color, b: i.brand })), styles: [...styles].sort() });
 
-      // Check cache — only recompute if wardrobe/preferences changed
       const cached = localStorage.getItem("style-personality");
       if (cached) {
         try {
@@ -195,7 +195,6 @@ const ProfileScreen = () => {
     }
   }, [profile?.name]);
 
-  // Background sync from DB to localStorage on history tab open
   const syncHistoryFromDb = async () => {
     if (!user) return;
     setHistoryLoading(true);
@@ -256,9 +255,7 @@ const ProfileScreen = () => {
   const handleSavePersonal = async () => {
     if (!user) return;
     setSaving(true);
-    // Save name
     const { error } = await supabase.from("profiles").update({ name }).eq("user_id", user.id);
-    // Save gender to style_profiles
     await supabase.from("style_profiles").upsert({ user_id: user.id, gender: styleActions.gender || null }, { onConflict: "user_id" });
     if (error) { toast.error("Failed to update profile"); }
     else { await refreshProfile(); toast.success("Profile updated!", { duration: 2000 }); }
@@ -320,6 +317,16 @@ const ProfileScreen = () => {
     } catch { toast.info("Couldn't share"); }
   };
 
+  // Parse saved outfit data
+  const parseScoreBreakdown = (sb: any) => {
+    if (!sb) return null;
+    try { return typeof sb === "string" ? JSON.parse(sb) : sb; } catch { return null; }
+  };
+  const parseReasoning = (r: any) => {
+    if (!r) return null;
+    try { return typeof r === "string" ? JSON.parse(r) : r; } catch { return null; }
+  };
+
   return (
     <div className="min-h-screen pb-24 px-5 pt-6">
       <div className="max-w-lg mx-auto space-y-5">
@@ -362,6 +369,145 @@ const ProfileScreen = () => {
               </div>
             </motion.div>
           )}
+        </AnimatePresence>
+
+        {/* Fullscreen Saved Outfit Detail View */}
+        <AnimatePresence>
+          {viewingSavedOutfit && (() => {
+            const o = viewingSavedOutfit;
+            const sb = parseScoreBreakdown(o.score_breakdown);
+            const reasoning = parseReasoning(o.reasoning);
+
+            return (
+              <motion.div
+                key="saved-outfit-detail"
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                exit={{ opacity: 0 }}
+                className="fixed inset-0 z-[60] bg-background overflow-y-auto"
+              >
+                <div className="max-w-lg mx-auto px-5 py-6 space-y-5 pb-32">
+                  {/* Header */}
+                  <div className="flex items-center justify-between">
+                    <div className="flex gap-2">
+                      {o.occasion && <span className="px-2.5 py-1 rounded-full bg-secondary text-[10px] font-medium text-foreground">{o.occasion}</span>}
+                      <span className="px-2.5 py-1 rounded-full bg-secondary text-[10px] font-medium text-foreground">
+                        {new Date(o.created_at).toLocaleDateString()}
+                      </span>
+                    </div>
+                    <button onClick={() => setViewingSavedOutfit(null)} className="w-9 h-9 rounded-full bg-secondary flex items-center justify-center">
+                      <X size={18} className="text-foreground" />
+                    </button>
+                  </div>
+
+                  {/* Title + Score */}
+                  <div className="text-center space-y-3">
+                    <h2 className="font-display text-xl font-semibold text-foreground">{o.name}</h2>
+                    {o.score != null && (
+                      <div className="flex items-center justify-center gap-4">
+                        <ScoreRing score={o.score} maxScore={10} size={64} label="Match" strokeColor="hsl(var(--primary))" />
+                        <div>
+                          <p className="text-2xl font-bold text-foreground">{Number(o.score).toFixed(1)}/10</p>
+                          <p className="text-xs text-muted-foreground">Match Score</p>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Explanation */}
+                  {o.explanation && (
+                    <div className="glass-card p-4 space-y-2">
+                      <h3 className="text-sm font-semibold text-foreground">Why This Works</h3>
+                      <p className="text-xs text-muted-foreground leading-relaxed">{o.explanation}</p>
+                    </div>
+                  )}
+
+                  {/* Score Breakdown */}
+                  {sb && (
+                    <div className="glass-card p-4 space-y-3">
+                      <h3 className="text-sm font-semibold text-foreground">Score Breakdown</h3>
+                      <div className="space-y-2">
+                        {([
+                          { key: "color", label: "Color Harmony", icon: Palette },
+                          { key: "occasion", label: "Occasion Fit", icon: Briefcase },
+                          { key: "season", label: "Season", icon: Leaf },
+                          { key: "body_type", label: "Body Type", icon: User },
+                          { key: "skin_tone", label: "Skin Tone", icon: Droplet },
+                          { key: "fabric", label: "Fabric", icon: Shirt },
+                        ] as const).map(({ key, label, icon: Icon }) => {
+                          const val = Number(sb[key]) || 0;
+                          const clamped = Math.max(0, Math.min(10, val));
+                          if (clamped === 0) return null;
+                          return (
+                            <div key={key} className="flex items-center gap-2">
+                              <Icon size={12} className="text-primary flex-shrink-0" />
+                              <span className="text-[10px] text-foreground w-20 flex-shrink-0">{label}</span>
+                              <div className="flex-1 h-1.5 rounded-full bg-secondary overflow-hidden">
+                                <motion.div
+                                  initial={{ width: 0 }}
+                                  animate={{ width: `${clamped * 10}%` }}
+                                  transition={{ duration: 0.6, delay: 0.1 }}
+                                  className="h-full rounded-full bg-primary"
+                                />
+                              </div>
+                              <span className="text-[10px] font-semibold text-foreground w-8 text-right">{clamped.toFixed(1)}</span>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Reasoning Grid */}
+                  {reasoning && (
+                    <div className="grid grid-cols-2 gap-2.5">
+                      {reasoning.season && (
+                        <div className="flex items-start gap-2 p-3 rounded-xl bg-secondary">
+                          <Leaf size={14} className="text-primary mt-0.5 flex-shrink-0" />
+                          <div><p className="text-[10px] font-semibold text-foreground">Season</p><p className="text-[9px] text-muted-foreground leading-tight">{reasoning.season}</p></div>
+                        </div>
+                      )}
+                      {reasoning.mood && (
+                        <div className="flex items-start gap-2 p-3 rounded-xl bg-secondary">
+                          <Smile size={14} className="text-primary mt-0.5 flex-shrink-0" />
+                          <div><p className="text-[10px] font-semibold text-foreground">Mood</p><p className="text-[9px] text-muted-foreground leading-tight">{reasoning.mood}</p></div>
+                        </div>
+                      )}
+                      {reasoning.time_of_day && (
+                        <div className="flex items-start gap-2 p-3 rounded-xl bg-secondary">
+                          <Sun size={14} className="text-primary mt-0.5 flex-shrink-0" />
+                          <div><p className="text-[10px] font-semibold text-foreground">Time of Day</p><p className="text-[9px] text-muted-foreground leading-tight">{reasoning.time_of_day}</p></div>
+                        </div>
+                      )}
+                      {reasoning.color_combination && (
+                        <div className="flex items-start gap-2 p-3 rounded-xl bg-secondary">
+                          <Palette size={14} className="text-primary mt-0.5 flex-shrink-0" />
+                          <div><p className="text-[10px] font-semibold text-foreground">Colors</p><p className="text-[9px] text-muted-foreground leading-tight">{reasoning.color_combination}</p></div>
+                        </div>
+                      )}
+                      {reasoning.body_type && (
+                        <div className="flex items-start gap-2 p-3 rounded-xl bg-secondary">
+                          <User size={14} className="text-primary mt-0.5 flex-shrink-0" />
+                          <div><p className="text-[10px] font-semibold text-foreground">Body Type</p><p className="text-[9px] text-muted-foreground leading-tight">{reasoning.body_type}</p></div>
+                        </div>
+                      )}
+                      {reasoning.skin_tone && (
+                        <div className="flex items-start gap-2 p-3 rounded-xl bg-secondary">
+                          <Droplet size={14} className="text-primary mt-0.5 flex-shrink-0" />
+                          <div><p className="text-[10px] font-semibold text-foreground">Skin Tone</p><p className="text-[9px] text-muted-foreground leading-tight">{reasoning.skin_tone}</p></div>
+                        </div>
+                      )}
+                    </div>
+                  )}
+
+                  {/* Close */}
+                  <button onClick={() => setViewingSavedOutfit(null)} className="w-full text-center text-sm text-muted-foreground font-medium py-2">
+                    ← Back to History
+                  </button>
+                </div>
+              </motion.div>
+            );
+          })()}
         </AnimatePresence>
 
         <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }}>
@@ -487,14 +633,12 @@ const ProfileScreen = () => {
               </button>
             </div>
 
-            <button onClick={styleActions.handleSaveAndRegenerate} disabled={styleActions.saving || styleActions.regenerating}
+            <button onClick={styleActions.handleSaveAndRegenerate} disabled={styleActions.saving}
               className="w-full flex items-center justify-center gap-2 py-3 rounded-xl gradient-accent text-accent-foreground font-medium text-sm shadow-soft active:scale-[0.98] transition-transform disabled:opacity-60">
-              {styleActions.regenerating ? (
-                <><Loader2 size={16} className="animate-spin" /> Regenerating Model...</>
-              ) : styleActions.saving ? (
+              {styleActions.saving ? (
                 <><Loader2 size={16} className="animate-spin" /> Saving...</>
               ) : (
-                <><RefreshCw size={16} /> Save & Regenerate Model</>
+                <><Save size={16} /> Save Body Profile</>
               )}
             </button>
           </TabsContent>
@@ -547,6 +691,7 @@ const ProfileScreen = () => {
                   )}
                 </div>
               </div>
+
             {/* Drip History */}
             <div className="space-y-3">
               <div className="flex items-center justify-between">
@@ -582,7 +727,6 @@ const ProfileScreen = () => {
               )}
             </div>
 
-
             {/* Saved Outfits */}
             <div className="space-y-3">
               <div className="flex items-center justify-between">
@@ -602,7 +746,7 @@ const ProfileScreen = () => {
               ) : (
                 <div className="space-y-2">
                   {savedOutfits.map((o: any) => (
-                    <div key={o.id} className="glass-card p-3 flex items-center gap-3">
+                    <div key={o.id} className="glass-card p-3 flex items-center gap-3 cursor-pointer active:scale-[0.98] transition-transform" onClick={() => setViewingSavedOutfit(o)}>
                       <div className="w-10 h-10 rounded-lg bg-secondary flex items-center justify-center flex-shrink-0">
                         <Bookmark size={16} className="text-primary" />
                       </div>
@@ -613,7 +757,7 @@ const ProfileScreen = () => {
                         </div>
                         <p className="text-[11px] text-muted-foreground truncate mt-0.5">{o.occasion} • {new Date(o.created_at).toLocaleDateString()}</p>
                       </div>
-                      <button onClick={() => deleteSavedOutfit(o.id)}
+                      <button onClick={(e) => { e.stopPropagation(); deleteSavedOutfit(o.id); }}
                         className="flex-shrink-0 w-6 h-6 rounded-full bg-destructive/10 flex items-center justify-center">
                         <X size={10} className="text-destructive" />
                       </button>
@@ -643,13 +787,17 @@ const ProfileScreen = () => {
                 <div className="space-y-2">
                   {savedSuggestions.map((s: any) => (
                     <div key={s.id} className="glass-card p-3 flex items-center gap-3">
-                      <div className="w-10 h-10 rounded-lg bg-secondary flex items-center justify-center flex-shrink-0">
-                        {s.suggestion_type === "shopping" ? (
-                          <ShoppingBag size={16} className="text-primary" />
-                        ) : (
-                          <Heart size={16} className="text-primary" />
-                        )}
-                      </div>
+                      {s.image ? (
+                        <img src={s.image} alt={s.item_name} className="w-10 h-10 rounded-lg object-cover flex-shrink-0" />
+                      ) : (
+                        <div className="w-10 h-10 rounded-lg bg-secondary flex items-center justify-center flex-shrink-0">
+                          {s.suggestion_type === "shopping" ? (
+                            <ShoppingBag size={16} className="text-primary" />
+                          ) : (
+                            <Heart size={16} className="text-primary" />
+                          )}
+                        </div>
+                      )}
                       <div className="flex-1 min-w-0">
                         <div className="flex items-center justify-between">
                           <span className="text-sm font-medium text-foreground truncate">{s.item_name}</span>
