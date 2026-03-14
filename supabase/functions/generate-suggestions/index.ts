@@ -31,8 +31,12 @@ serve(async (req) => {
   if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
 
   try {
-    const { imageBase64, styleProfile } = await req.json();
-    if (!imageBase64) return new Response(JSON.stringify({ error: "No image provided" }), { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } });
+    const { imageBase64, wardrobeItems, styleProfile, type } = await req.json();
+    if (!imageBase64 || !type) {
+      return new Response(JSON.stringify({ error: "Missing imageBase64 or type" }), {
+        status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
 
     const apiKey = Deno.env.get("GOOGLE_AI_API_KEY");
     if (!apiKey) throw new Error("GOOGLE_AI_API_KEY not configured");
@@ -47,18 +51,37 @@ serve(async (req) => {
       if (parts.length > 0) profileContext = ` Profile: ${parts.join(", ")}.`;
     }
 
-    const systemPrompt = `Fashion stylist AI.${profileContext}
+    let prompt: string;
+
+    if (type === "wardrobe") {
+      const wardrobeDesc = wardrobeItems?.length
+        ? wardrobeItems.slice(0, 15).map((i: any) => `${i.name || i.type} (id:${i.id}, ${i.type}, ${i.color || "?"})`).join(", ")
+        : "";
+
+      prompt = `Fashion stylist AI.${profileContext} User's wardrobe: ${wardrobeDesc}
+
+Look at this outfit photo. Suggest up to 3 items FROM THE USER'S WARDROBE that would complement or improve this outfit.
 
 Return ONLY valid JSON:
-{"drip_score":number,"drip_reason":"string","confidence_rating":number,"confidence_reason":"string","killer_tag":"string","color_score":number,"color_reason":"string","style_score":number,"style_reason":"string","fit_score":number,"fit_reason":"string","occasion":"string","advice":"string","praise_line":"string"}
+{"suggestions":[{"item_name":"string","category":"string","reason":"string","wardrobe_item_id":"string"}]}
 
 Rules:
-- All scores 0-10 decimals. drip_score = Color(25%)+Style(20%)+Fit(25%)+Occasion(20%)+Accessories(10%)
-- killer_tag: 1-3 words + 1-2 emojis. MUST be SPECIFIC to the actual outfit style/vibe detected — reference the colors, patterns, era, subculture, or energy of THIS outfit. Never use generic tags like "Looking Good" or "Nice Outfit". Think TikTok caption energy. Examples by style: streetwear → "Hypebeast Protocol 🔥", formal/suit → "Board Meeting Baddie 💼✨", casual/cozy → "Soft Era Activated 🧸☁️", colorful → "Dopamine Dealer 🌈", all-black → "Shadow Royalty 🖤👑", vintage → "Thrift Lord Energy 🪩", sporty → "Gym to Slay Pipeline 💪🔥", minimalist → "Less is Luxe ✨", desi/ethnic → "Desi Drip Dynasty 👑", y2k → "2000s Called, Said Keep It 📱💅"
-- praise_line: one stylish shareable sentence SPECIFIC to the outfit. Reference actual items/colors/style detected. Gen Z tone — witty, confident, emoji-sprinkled.
-- STRICTLY NO profanity, cuss words, or vulgar language in any field. Keep it clean but fire 🔥
-- reasons: 1-2 sentences each
-- DO NOT include wardrobe_suggestions or shopping_suggestions`;
+- wardrobe_item_id MUST be an actual id from the wardrobe list above
+- reason: 1 sentence explaining why this item works with the outfit
+- STRICTLY NO profanity`;
+    } else {
+      prompt = `Fashion stylist AI.${profileContext}
+
+Look at this outfit photo. Suggest up to 5 items the user could BUY to complement or upgrade this outfit.
+
+Return ONLY valid JSON:
+{"suggestions":[{"item_name":"string","category":"string","reason":"string","image_prompt":"string"}]}
+
+Rules:
+- image_prompt: a short product photo description for generating an image of the suggested item (e.g. "minimal white leather sneakers on white background")
+- reason: 1 sentence explaining why this item works
+- STRICTLY NO profanity`;
+    }
 
     const data = await callWithFallback(
       ["gemini-2.5-flash-lite", "gemma-3-4b-it", "gemini-2.5-flash"],
@@ -68,7 +91,7 @@ Rules:
           {
             role: "user",
             parts: [
-              { text: systemPrompt + "\n\nAnalyze this outfit. Return JSON only." },
+              { text: prompt + "\n\nAnalyze this outfit and suggest items. Return JSON only." },
               { inlineData: { mimeType: "image/jpeg", data: imageBase64 } },
             ],
           },
@@ -77,7 +100,6 @@ Rules:
     );
 
     const content = data.candidates?.[0]?.content?.parts?.[0]?.text || "{}";
-
     let result = null;
     try {
       const cleaned = content.replace(/```json\n?/g, "").replace(/```\n?/g, "").trim();
@@ -86,9 +108,13 @@ Rules:
       console.error("Failed to parse AI response:", content);
     }
 
-    return new Response(JSON.stringify({ result }), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
+    return new Response(JSON.stringify({ suggestions: result?.suggestions || [] }), {
+      headers: { ...corsHeaders, "Content-Type": "application/json" },
+    });
   } catch (e) {
-    console.error("rate-outfit error:", e);
-    return new Response(JSON.stringify({ error: e instanceof Error ? e.message : "Unknown error" }), { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } });
+    console.error("generate-suggestions error:", e);
+    return new Response(JSON.stringify({ error: e instanceof Error ? e.message : "Unknown error" }), {
+      status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" },
+    });
   }
 });

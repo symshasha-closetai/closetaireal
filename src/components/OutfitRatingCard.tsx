@@ -65,6 +65,36 @@ const OutfitRatingCard = ({ image, imageBase64, result, wardrobeItems = [] }: Pr
   const [savedSuggestions, setSavedSuggestions] = useState<Set<string>>(new Set());
   const shareRef = useRef<HTMLDivElement>(null);
 
+  // On-demand suggestion state
+  const [wardrobeSuggestions, setWardrobeSuggestions] = useState<Suggestion[] | null>(null);
+  const [shoppingSuggestions, setShoppingSuggestions] = useState<Suggestion[] | null>(null);
+  const [loadingWardrobe, setLoadingWardrobe] = useState(false);
+  const [loadingShopping, setLoadingShopping] = useState(false);
+
+  const fetchSuggestions = async (type: "wardrobe" | "shopping") => {
+    const setLoading = type === "wardrobe" ? setLoadingWardrobe : setLoadingShopping;
+    const setData = type === "wardrobe" ? setWardrobeSuggestions : setShoppingSuggestions;
+    setLoading(true);
+    try {
+      const base64 = imageBase64?.includes(",") ? imageBase64.split(",")[1] : imageBase64;
+      const { data, error } = await supabase.functions.invoke("generate-suggestions", {
+        body: {
+          imageBase64: base64,
+          wardrobeItems: type === "wardrobe" ? wardrobeItems : undefined,
+          styleProfile: undefined,
+          type,
+        },
+      });
+      if (error) throw error;
+      setData(data?.suggestions || []);
+    } catch (err) {
+      console.error(`Failed to fetch ${type} suggestions:`, err);
+      toast.error(`Failed to get ${type} suggestions`);
+    } finally {
+      setLoading(false);
+    }
+  };
+
   const handleSaveSuggestion = async (type: "wardrobe" | "shopping", s: Suggestion, idx?: number) => {
     const key = `${type}-${s.item_name}`;
     if (!user || savedSuggestions.has(key)) return;
@@ -372,88 +402,107 @@ const OutfitRatingCard = ({ image, imageBase64, result, wardrobeItems = [] }: Pr
         </div>
       </motion.div>
 
-      {/* Wardrobe Suggestions */}
-      {result.wardrobe_suggestions?.length > 0 && (
-        <motion.div initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.2 }} className="rounded-2xl bg-card border border-border/30 p-5 space-y-3">
-          <h3 className="text-xs uppercase tracking-[0.15em] text-foreground/50">From Your Wardrobe</h3>
-          <div className="space-y-2">
-            {result.wardrobe_suggestions.map((s, i) => {
-              const match = findWardrobeMatch(s, wardrobeItems);
-              return (
-                <div key={i} className="border border-border/20 rounded-xl p-4 flex gap-3">
-                  {match ? (
-                    <img src={match.image_url} alt={s.item_name} className="w-12 h-12 rounded-lg object-cover flex-shrink-0" />
-                  ) : (
-                    <div className="w-12 h-12 rounded-lg bg-muted flex items-center justify-center flex-shrink-0">
-                      <Shirt size={18} className="text-muted-foreground" />
+      {/* On-Demand Suggestion Buttons */}
+      <motion.div initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.2 }} className="space-y-3">
+        {wardrobeSuggestions === null ? (
+          <button
+            onClick={() => fetchSuggestions("wardrobe")}
+            disabled={loadingWardrobe}
+            className="w-full flex items-center justify-center gap-2.5 py-3.5 rounded-2xl bg-card border border-border/30 text-sm font-medium text-foreground/80 active:scale-[0.98] transition-transform disabled:opacity-60"
+          >
+            {loadingWardrobe ? <Loader2 size={16} className="animate-spin" /> : <Shirt size={16} />}
+            {loadingWardrobe ? "Finding matches..." : "Get Wardrobe Suggestions"}
+          </button>
+        ) : wardrobeSuggestions.length > 0 ? (
+          <div className="rounded-2xl bg-card border border-border/30 p-5 space-y-3">
+            <h3 className="text-xs uppercase tracking-[0.15em] text-foreground/50">From Your Wardrobe</h3>
+            <div className="space-y-2">
+              {wardrobeSuggestions.map((s, i) => {
+                const match = findWardrobeMatch(s, wardrobeItems);
+                return (
+                  <div key={i} className="border border-border/20 rounded-xl p-4 flex gap-3">
+                    {match ? (
+                      <img src={match.image_url} alt={s.item_name} className="w-12 h-12 rounded-lg object-cover flex-shrink-0" />
+                    ) : (
+                      <div className="w-12 h-12 rounded-lg bg-muted flex items-center justify-center flex-shrink-0">
+                        <Shirt size={18} className="text-muted-foreground" />
+                      </div>
+                    )}
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center gap-2 mb-1">
+                        <span className="text-sm font-medium text-foreground truncate">{s.item_name}</span>
+                        <span className="text-[9px] uppercase tracking-wider text-muted-foreground/60 border border-border/30 rounded-full px-2 py-0.5 flex-shrink-0">{s.category}</span>
+                      </div>
+                      <p className="text-xs text-muted-foreground">{s.reason}</p>
                     </div>
-                  )}
-                  <div className="flex-1 min-w-0">
-                    <div className="flex items-center gap-2 mb-1">
-                      <span className="text-sm font-medium text-foreground truncate">{s.item_name}</span>
-                      <span className="text-[9px] uppercase tracking-wider text-muted-foreground/60 border border-border/30 rounded-full px-2 py-0.5 flex-shrink-0">{s.category}</span>
-                    </div>
-                    <p className="text-xs text-muted-foreground">{s.reason}</p>
+                    <button onClick={() => handleSaveSuggestion("wardrobe", s)} className="flex-shrink-0 self-center active:scale-90 transition-transform">
+                      <Heart size={16} className={savedSuggestions.has(`wardrobe-${s.item_name}`) ? "fill-primary text-primary" : "text-muted-foreground"} />
+                    </button>
                   </div>
-                  <button
-                    onClick={() => handleSaveSuggestion("wardrobe", s)}
-                    className="flex-shrink-0 self-center active:scale-90 transition-transform"
-                  >
-                    <Heart size={16} className={savedSuggestions.has(`wardrobe-${s.item_name}`) ? "fill-primary text-primary" : "text-muted-foreground"} />
-                  </button>
-                </div>
-              );
-            })}
+                );
+              })}
+            </div>
           </div>
-        </motion.div>
-      )}
+        ) : (
+          <div className="rounded-2xl bg-card border border-border/30 p-5 text-center">
+            <p className="text-xs text-muted-foreground">No wardrobe suggestions found</p>
+          </div>
+        )}
 
-      {/* Shopping Suggestions */}
-      {result.shopping_suggestions?.length > 0 && (
-        <motion.div initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.3 }} className="rounded-2xl bg-card border border-border/30 p-5 space-y-3">
-          <h3 className="text-xs uppercase tracking-[0.15em] text-foreground/50">Shopping Suggestions</h3>
-          <div className="space-y-2">
-            {result.shopping_suggestions.map((s, i) => {
-              const Icon = categoryIcon(s.category);
-              const imgSrc = suggestionImages[i];
-              const isLoading = loadingImages[i];
-
-              if (s.image_prompt && suggestionImages[i] === undefined && !loadingImages[i]) {
-                generateSuggestionImage(i, s.image_prompt);
-              }
-
-              return (
-                <div key={i} className="border border-border/20 rounded-xl p-4 flex gap-3">
-                  {isLoading ? (
-                    <div className="w-12 h-12 rounded-lg bg-muted flex items-center justify-center flex-shrink-0">
-                      <Loader2 size={14} className="animate-spin text-muted-foreground" />
+        {shoppingSuggestions === null ? (
+          <button
+            onClick={() => fetchSuggestions("shopping")}
+            disabled={loadingShopping}
+            className="w-full flex items-center justify-center gap-2.5 py-3.5 rounded-2xl bg-card border border-border/30 text-sm font-medium text-foreground/80 active:scale-[0.98] transition-transform disabled:opacity-60"
+          >
+            {loadingShopping ? <Loader2 size={16} className="animate-spin" /> : <ShoppingBag size={16} />}
+            {loadingShopping ? "Finding items..." : "Get Shopping Suggestions"}
+          </button>
+        ) : shoppingSuggestions.length > 0 ? (
+          <div className="rounded-2xl bg-card border border-border/30 p-5 space-y-3">
+            <h3 className="text-xs uppercase tracking-[0.15em] text-foreground/50">Shopping Suggestions</h3>
+            <div className="space-y-2">
+              {shoppingSuggestions.map((s, i) => {
+                const Icon = categoryIcon(s.category);
+                const imgSrc = suggestionImages[i];
+                const isLoading = loadingImages[i];
+                if (s.image_prompt && suggestionImages[i] === undefined && !loadingImages[i]) {
+                  generateSuggestionImage(i, s.image_prompt);
+                }
+                return (
+                  <div key={i} className="border border-border/20 rounded-xl p-4 flex gap-3">
+                    {isLoading ? (
+                      <div className="w-12 h-12 rounded-lg bg-muted flex items-center justify-center flex-shrink-0">
+                        <Loader2 size={14} className="animate-spin text-muted-foreground" />
+                      </div>
+                    ) : imgSrc ? (
+                      <img src={imgSrc} alt={s.item_name} className="w-12 h-12 rounded-lg object-cover flex-shrink-0" />
+                    ) : (
+                      <div className="w-12 h-12 rounded-lg bg-muted flex items-center justify-center flex-shrink-0">
+                        <Icon size={18} className="text-muted-foreground" />
+                      </div>
+                    )}
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center gap-2 mb-1">
+                        <span className="text-sm font-medium text-foreground truncate">{s.item_name}</span>
+                        <span className="text-[9px] uppercase tracking-wider text-muted-foreground/60 border border-border/30 rounded-full px-2 py-0.5 flex-shrink-0">{s.category}</span>
+                      </div>
+                      <p className="text-xs text-muted-foreground">{s.reason}</p>
                     </div>
-                  ) : imgSrc ? (
-                    <img src={imgSrc} alt={s.item_name} className="w-12 h-12 rounded-lg object-cover flex-shrink-0" />
-                  ) : (
-                    <div className="w-12 h-12 rounded-lg bg-muted flex items-center justify-center flex-shrink-0">
-                      <Icon size={18} className="text-muted-foreground" />
-                    </div>
-                  )}
-                  <div className="flex-1 min-w-0">
-                    <div className="flex items-center gap-2 mb-1">
-                      <span className="text-sm font-medium text-foreground truncate">{s.item_name}</span>
-                      <span className="text-[9px] uppercase tracking-wider text-muted-foreground/60 border border-border/30 rounded-full px-2 py-0.5 flex-shrink-0">{s.category}</span>
-                    </div>
-                    <p className="text-xs text-muted-foreground">{s.reason}</p>
+                    <button onClick={() => handleSaveSuggestion("shopping", s, i)} className="flex-shrink-0 self-center active:scale-90 transition-transform">
+                      <Heart size={16} className={savedSuggestions.has(`shopping-${s.item_name}`) ? "fill-primary text-primary" : "text-muted-foreground"} />
+                    </button>
                   </div>
-                  <button
-                    onClick={() => handleSaveSuggestion("shopping", s, i)}
-                    className="flex-shrink-0 self-center active:scale-90 transition-transform"
-                  >
-                    <Heart size={16} className={savedSuggestions.has(`shopping-${s.item_name}`) ? "fill-primary text-primary" : "text-muted-foreground"} />
-                  </button>
-                </div>
-              );
-            })}
+                );
+              })}
+            </div>
           </div>
-        </motion.div>
-      )}
+        ) : (
+          <div className="rounded-2xl bg-card border border-border/30 p-5 text-center">
+            <p className="text-xs text-muted-foreground">No shopping suggestions found</p>
+          </div>
+        )}
+      </motion.div>
 
       {/* Hidden Share Card */}
       {showShareCard && (

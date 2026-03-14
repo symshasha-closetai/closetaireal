@@ -24,8 +24,8 @@ export type RatingResult = {
   occasion: string;
   advice: string;
   praise_line?: string;
-  wardrobe_suggestions: { item_name: string; category: string; reason: string; wardrobe_item_id?: string }[];
-  shopping_suggestions: { item_name: string; category: string; reason: string; image_prompt?: string }[];
+  wardrobe_suggestions?: { item_name: string; category: string; reason: string; wardrobe_item_id?: string }[];
+  shopping_suggestions?: { item_name: string; category: string; reason: string; image_prompt?: string }[];
 };
 
 // Persist drip analysis state across navigation
@@ -122,20 +122,13 @@ const runAnalysis = async (file: File, userId: string | undefined, styleProfile:
     const imageBase64 = await base64Promise;
 
     if (activeAbort?.signal.aborted) return;
-    updateGlobal({ progress: 30, stage: "Fetching wardrobe..." });
-
-    let fetchedWardrobe: any[] = [];
-    if (userId) {
-      const { data } = await supabase.from("wardrobe").select("id, name, type, color").eq("user_id", userId);
-      fetchedWardrobe = data || [];
-      updateGlobal({ wardrobeItems: fetchedWardrobe });
-    }
+    updateGlobal({ progress: 30, stage: "Analyzing your style..." });
 
     if (activeAbort?.signal.aborted) return;
-    updateGlobal({ progress: 50, stage: "Analyzing your style..." });
+    updateGlobal({ progress: 50, stage: "Rating your drip..." });
 
     const { data, error } = await supabase.functions.invoke("rate-outfit", {
-      body: { imageBase64, wardrobeItems: fetchedWardrobe, styleProfile: styleProfile || undefined },
+      body: { imageBase64, styleProfile: styleProfile || undefined },
     });
 
     if (activeAbort?.signal.aborted) return;
