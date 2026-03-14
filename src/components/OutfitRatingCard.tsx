@@ -65,6 +65,36 @@ const OutfitRatingCard = ({ image, imageBase64, result, wardrobeItems = [] }: Pr
   const [savedSuggestions, setSavedSuggestions] = useState<Set<string>>(new Set());
   const shareRef = useRef<HTMLDivElement>(null);
 
+  // On-demand suggestion state
+  const [wardrobeSuggestions, setWardrobeSuggestions] = useState<Suggestion[] | null>(null);
+  const [shoppingSuggestions, setShoppingSuggestions] = useState<Suggestion[] | null>(null);
+  const [loadingWardrobe, setLoadingWardrobe] = useState(false);
+  const [loadingShopping, setLoadingShopping] = useState(false);
+
+  const fetchSuggestions = async (type: "wardrobe" | "shopping") => {
+    const setLoading = type === "wardrobe" ? setLoadingWardrobe : setLoadingShopping;
+    const setData = type === "wardrobe" ? setWardrobeSuggestions : setShoppingSuggestions;
+    setLoading(true);
+    try {
+      const base64 = imageBase64?.includes(",") ? imageBase64.split(",")[1] : imageBase64;
+      const { data, error } = await supabase.functions.invoke("generate-suggestions", {
+        body: {
+          imageBase64: base64,
+          wardrobeItems: type === "wardrobe" ? wardrobeItems : undefined,
+          styleProfile: undefined,
+          type,
+        },
+      });
+      if (error) throw error;
+      setData(data?.suggestions || []);
+    } catch (err) {
+      console.error(`Failed to fetch ${type} suggestions:`, err);
+      toast.error(`Failed to get ${type} suggestions`);
+    } finally {
+      setLoading(false);
+    }
+  };
+
   const handleSaveSuggestion = async (type: "wardrobe" | "shopping", s: Suggestion, idx?: number) => {
     const key = `${type}-${s.item_name}`;
     if (!user || savedSuggestions.has(key)) return;
