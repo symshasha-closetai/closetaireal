@@ -24,8 +24,8 @@ export type RatingResult = {
   occasion: string;
   advice: string;
   praise_line?: string;
-  wardrobe_suggestions: { item_name: string; category: string; reason: string; wardrobe_item_id?: string }[];
-  shopping_suggestions: { item_name: string; category: string; reason: string; image_prompt?: string }[];
+  wardrobe_suggestions?: { item_name: string; category: string; reason: string; wardrobe_item_id?: string }[];
+  shopping_suggestions?: { item_name: string; category: string; reason: string; image_prompt?: string }[];
 };
 
 // Persist drip analysis state across navigation
