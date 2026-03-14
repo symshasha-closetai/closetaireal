@@ -122,14 +122,7 @@ const runAnalysis = async (file: File, userId: string | undefined, styleProfile:
     const imageBase64 = await base64Promise;
 
     if (activeAbort?.signal.aborted) return;
-    updateGlobal({ progress: 30, stage: "Fetching wardrobe..." });
-
-    let fetchedWardrobe: any[] = [];
-    if (userId) {
-      const { data } = await supabase.from("wardrobe").select("id, name, type, color").eq("user_id", userId);
-      fetchedWardrobe = data || [];
-      updateGlobal({ wardrobeItems: fetchedWardrobe });
-    }
+    updateGlobal({ progress: 30, stage: "Analyzing your style..." });
 
     if (activeAbort?.signal.aborted) return;
     updateGlobal({ progress: 50, stage: "Analyzing your style..." });
