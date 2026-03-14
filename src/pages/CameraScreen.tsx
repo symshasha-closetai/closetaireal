@@ -125,10 +125,10 @@ const runAnalysis = async (file: File, userId: string | undefined, styleProfile:
     updateGlobal({ progress: 30, stage: "Analyzing your style..." });
 
     if (activeAbort?.signal.aborted) return;
-    updateGlobal({ progress: 50, stage: "Analyzing your style..." });
+    updateGlobal({ progress: 50, stage: "Rating your drip..." });
 
     const { data, error } = await supabase.functions.invoke("rate-outfit", {
-      body: { imageBase64, wardrobeItems: fetchedWardrobe, styleProfile: styleProfile || undefined },
+      body: { imageBase64, styleProfile: styleProfile || undefined },
     });
 
     if (activeAbort?.signal.aborted) return;
