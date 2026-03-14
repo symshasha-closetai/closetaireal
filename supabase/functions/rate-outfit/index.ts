@@ -31,15 +31,11 @@ serve(async (req) => {
   if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
 
   try {
-    const { imageBase64, wardrobeItems, styleProfile } = await req.json();
+    const { imageBase64, styleProfile } = await req.json();
     if (!imageBase64) return new Response(JSON.stringify({ error: "No image provided" }), { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } });
 
     const apiKey = Deno.env.get("GOOGLE_AI_API_KEY");
     if (!apiKey) throw new Error("GOOGLE_AI_API_KEY not configured");
-
-    const wardrobeDesc = wardrobeItems?.length
-      ? `User's wardrobe: ${wardrobeItems.slice(0, 15).map((i: any) => `${i.name || i.type} (${i.type}, ${i.color || "?"})`).join(", ")}`
-      : "";
 
     let profileContext = "";
     if (styleProfile) {
