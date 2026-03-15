@@ -11,7 +11,7 @@ interface ScoreRingProps {
 }
 
 const ScoreRing = ({ score, maxScore = 10, size = 56, label, colorClass, strokeColor, light }: ScoreRingProps) => {
-  const strokeWidth = 3;
+  const strokeWidth = light ? 4 : 3;
   const radius = (size - strokeWidth) / 2;
   const circumference = 2 * Math.PI * radius;
   const progress = score / maxScore;
