@@ -1,7 +1,6 @@
 import { useState, useRef, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { Camera, Upload, X, Sparkles } from "lucide-react";
-import { Progress } from "@/components/ui/progress";
+import { Camera, Upload, X, Sparkles, Check, Loader2 } from "lucide-react";
 import AppHeader from "../components/AppHeader";
 import OutfitRatingCard from "../components/OutfitRatingCard";
 import { supabase } from "@/integrations/supabase/client";
@@ -15,6 +14,11 @@ const CLIENT_KILLER_TAGS = [
   "Shadow Stylist 🖤🕶️", "Minimal King 👑✨", "Dark Academia Don 📚🖤", "Chrome Heart Drip 💎🔗",
   "Sunset Sovereign 🌅👑", "Retro Royalty 👑🪩", "Ice Cold Flex ❄️💎", "Golden Hour Glow ☀️✨",
   "Main Character Mode 🎬✨", "Quiet Luxury King 🤫👑", "Concrete Runway 🏙️💫", "Denim Dynasty 👖👑",
+  "Drip Architect 🏛️💧", "Phantom Flex 👻💪", "Vogue Villain 🦹✨", "Zen Drip Master 🧘💧",
+  "Royal Misfit 👑🃏", "Twilight Baron 🌆🎩", "Ivory Tower King 🏰👑", "Digital Nomad Drip 💻🌍",
+  "Obsidian Oracle 🖤🔮", "Champagne Casualty 🥂💫", "Cosmic Drifter 🌌✨", "Vintage Voltage ⚡🪩",
+  "Luxe Outlaw 🤠💎", "Sapphire Sovereign 💙👑", "Crimson Catalyst ❤️‍🔥⚡", "Arctic Aristocrat 🧊👑",
+  "Jade Emperor 🟢👑", "Onyx Operator 🖤🎯", "Gilded Rebel ✨🔥", "Marble Mood 🤍🏛️",
 ];
 
 const CLIENT_PRAISE_LINES = [
@@ -28,6 +32,20 @@ const CLIENT_PRAISE_LINES = [
   "The mirror called, it said thank you 🪞✨",
   "Outfit so clean it should come with a warning label ⚠️✨",
   "You're giving 'I don't try, I just arrive' energy 💅👑",
+  "You're dressed like success is your default setting 💼✨",
+  "This fit just broke the algorithm 📈🔥",
+  "You look like you own the playlist AND the venue 🎶👑",
+  "This outfit has more range than your favorite artist 🎤✨",
+  "You're giving 'walked in, owned it, left' energy 🚶‍♂️💨",
+  "This look just unlocked a new level of drip 🎮✨",
+  "You're dressed like the universe owes you a runway 🌌💃",
+  "You look like you came with a soundtrack 🎧👑",
+  "This outfit just won an award it didn't even enter 🏆✨",
+  "You're giving 'effortlessly iconic' and it's working 💫👑",
+  "You're dressed like your future self sent instructions 🔮🔥",
+  "This fit has more personality than most people 🎭💎",
+  "Styled like the internet's best-kept secret 🤫✨",
+  "This outfit just made gravity optional — you're floating 🫧👑",
 ];
 
 function clientFallbackResult(): RatingResult {
