@@ -285,11 +285,13 @@ const HomeScreen = () => {
       }
       supabase
         .from("wardrobe")
-        .select("id, image_url, type, name, color, material")
+        .select("id, image_url, type, name, color, material, pinned")
         .eq("user_id", user.id)
         .order("created_at", { ascending: false })
         .then(({ data }) => {
-          const items = data || [];
+          const items = ((data || []) as any[]).map(i => ({ ...i, pinned: !!i.pinned })) as WardrobeItem[];
+          // Sort pinned first
+          items.sort((a, b) => (a.pinned === b.pinned ? 0 : a.pinned ? -1 : 1));
           setAllWardrobeItems(items);
           setWardrobeItems(items.slice(0, 6));
           setWardrobeCount(items.length);
