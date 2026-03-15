@@ -8,13 +8,15 @@ import { useAuth } from "@/hooks/useAuth";
 import html2canvas from "html2canvas";
 import type { RatingResult } from "@/pages/CameraScreen";
 
-type Suggestion = {
+export type Suggestion = {
   item_name: string;
   category: string;
   reason: string;
   wardrobe_item_id?: string;
   image_prompt?: string;
 };
+
+export type DetectedItem = { name: string; type: string; color: string; material?: string; quality?: string; brand?: string; selected: boolean };
 
 type WardrobeItem = {
   id: string;
@@ -30,6 +32,16 @@ type Props = {
   imageBase64?: string;
   result: RatingResult;
   wardrobeItems?: WardrobeItem[];
+  wardrobeSuggestions: Suggestion[] | null;
+  shoppingSuggestions: Suggestion[] | null;
+  detectedItems: DetectedItem[] | null;
+  suggestionImages: Record<number, string | null>;
+  savedSuggestions: string[];
+  onWardrobeSuggestionsChange: (v: Suggestion[] | null) => void;
+  onShoppingSuggestionsChange: (v: Suggestion[] | null) => void;
+  onDetectedItemsChange: (v: DetectedItem[] | null) => void;
+  onSuggestionImagesChange: (v: Record<number, string | null>) => void;
+  onSavedSuggestionsChange: (v: string[]) => void;
 };
 
 const categoryIcon = (category: string) => {
@@ -54,32 +66,29 @@ const findWardrobeMatch = (suggestion: Suggestion, wardrobeItems: WardrobeItem[]
   );
 };
 
-const OutfitRatingCard = ({ image, imageBase64, result, wardrobeItems = [] }: Props) => {
+const OutfitRatingCard = ({ image, imageBase64, result, wardrobeItems = [],
+  wardrobeSuggestions, shoppingSuggestions, detectedItems, suggestionImages, savedSuggestions,
+  onWardrobeSuggestionsChange, onShoppingSuggestionsChange, onDetectedItemsChange, onSuggestionImagesChange, onSavedSuggestionsChange
+}: Props) => {
   const { user } = useAuth();
   const [activeTooltip, setActiveTooltip] = useState<string | null>(null);
-  const [suggestionImages, setSuggestionImages] = useState<Record<number, string | null>>({});
   const [loadingImages, setLoadingImages] = useState<Record<number, boolean>>({});
   const [sharing, setSharing] = useState(false);
   const [downloading, setDownloading] = useState(false);
   const [showShareCard, setShowShareCard] = useState(false);
-  const [savedSuggestions, setSavedSuggestions] = useState<Set<string>>(new Set());
   const shareRef = useRef<HTMLDivElement>(null);
 
   // On-demand suggestion state
-  const [wardrobeSuggestions, setWardrobeSuggestions] = useState<Suggestion[] | null>(null);
-  const [shoppingSuggestions, setShoppingSuggestions] = useState<Suggestion[] | null>(null);
   const [loadingWardrobe, setLoadingWardrobe] = useState(false);
   const [loadingShopping, setLoadingShopping] = useState(false);
 
   // Extract outfits state
-  type DetectedItem = { name: string; type: string; color: string; material?: string; quality?: string; brand?: string; selected: boolean };
-  const [detectedItems, setDetectedItems] = useState<DetectedItem[] | null>(null);
   const [extracting, setExtracting] = useState(false);
   const [savingExtracted, setSavingExtracted] = useState(false);
 
   const fetchSuggestions = async (type: "wardrobe" | "shopping") => {
     const setLoading = type === "wardrobe" ? setLoadingWardrobe : setLoadingShopping;
-    const setData = type === "wardrobe" ? setWardrobeSuggestions : setShoppingSuggestions;
+    const setData = type === "wardrobe" ? onWardrobeSuggestionsChange : onShoppingSuggestionsChange;
     setLoading(true);
     try {
       const base64 = imageBase64?.includes(",") ? imageBase64.split(",")[1] : imageBase64;
@@ -111,10 +120,10 @@ const OutfitRatingCard = ({ image, imageBase64, result, wardrobeItems = [] }: Pr
       });
       if (error) throw error;
       if (data?.items?.length) {
-        setDetectedItems(data.items.map((item: any) => ({ ...item, selected: true })));
+        onDetectedItemsChange(data.items.map((item: any) => ({ ...item, selected: true })));
       } else {
         toast.info("No clothing items detected");
-        setDetectedItems([]);
+        onDetectedItemsChange([]);
       }
     } catch (err) {
       console.error("Extract outfits error:", err);
@@ -153,7 +162,7 @@ const OutfitRatingCard = ({ image, imageBase64, result, wardrobeItems = [] }: Pr
         });
       }
       toast.success(`${selected.length} item(s) added to wardrobe!`);
-      setDetectedItems(null);
+      onDetectedItemsChange(null);
     } catch (err) {
       console.error("Save extracted error:", err);
       toast.error("Failed to save items");
@@ -164,7 +173,7 @@ const OutfitRatingCard = ({ image, imageBase64, result, wardrobeItems = [] }: Pr
 
   const handleSaveSuggestion = async (type: "wardrobe" | "shopping", s: Suggestion, idx?: number) => {
     const key = `${type}-${s.item_name}`;
-    if (!user || savedSuggestions.has(key)) return;
+    if (!user || savedSuggestions.includes(key)) return;
     try {
       // Find the image URL for this suggestion
       let imageUrl: string | null = null;
@@ -187,7 +196,7 @@ const OutfitRatingCard = ({ image, imageBase64, result, wardrobeItems = [] }: Pr
       };
       const { data, error } = await supabase.from("saved_suggestions" as any).insert(suggestionData as any).select().single();
       if (error) throw error;
-      setSavedSuggestions(prev => new Set(prev).add(key));
+      onSavedSuggestionsChange([...savedSuggestions, key]);
       // Sync to localStorage
       try {
         const cached = JSON.parse(localStorage.getItem("saved-suggestions") || "[]");
@@ -283,7 +292,7 @@ const OutfitRatingCard = ({ image, imageBase64, result, wardrobeItems = [] }: Pr
       if (cached) {
         const { url, ts } = JSON.parse(cached);
         if (Date.now() - ts < CACHE_TTL && url) {
-          setSuggestionImages(prev => ({ ...prev, [idx]: url }));
+          onSuggestionImagesChange({ ...suggestionImages, [idx]: url });
           return;
         }
         localStorage.removeItem(cacheKey);
@@ -297,13 +306,13 @@ const OutfitRatingCard = ({ image, imageBase64, result, wardrobeItems = [] }: Pr
       });
       const imgUrl = data?.imageUrl || data?.imageBase64;
       if (!error && imgUrl) {
-        setSuggestionImages(prev => ({ ...prev, [idx]: imgUrl }));
+        onSuggestionImagesChange({ ...suggestionImages, [idx]: imgUrl });
         try { localStorage.setItem(cacheKey, JSON.stringify({ url: imgUrl, ts: Date.now() })); } catch { /* quota */ }
       } else {
-        setSuggestionImages(prev => ({ ...prev, [idx]: null }));
+        onSuggestionImagesChange({ ...suggestionImages, [idx]: null });
       }
     } catch {
-      setSuggestionImages(prev => ({ ...prev, [idx]: null }));
+      onSuggestionImagesChange({ ...suggestionImages, [idx]: null });
     } finally {
       setLoadingImages(prev => ({ ...prev, [idx]: false }));
     }
@@ -487,7 +496,7 @@ const OutfitRatingCard = ({ image, imageBase64, result, wardrobeItems = [] }: Pr
               {detectedItems.map((item, i) => (
                 <button
                   key={i}
-                  onClick={() => setDetectedItems(prev => prev?.map((d, j) => j === i ? { ...d, selected: !d.selected } : d) || null)}
+                  onClick={() => onDetectedItemsChange(detectedItems?.map((d, j) => j === i ? { ...d, selected: !d.selected } : d) || null)}
                   className={`w-full border rounded-xl p-3 flex items-center gap-3 text-left transition-colors ${item.selected ? "border-primary/50 bg-primary/5" : "border-border/20"}`}
                 >
                   <div className={`w-5 h-5 rounded-full border-2 flex items-center justify-center flex-shrink-0 ${item.selected ? "border-primary bg-primary" : "border-muted-foreground/30"}`}>
@@ -550,7 +559,7 @@ const OutfitRatingCard = ({ image, imageBase64, result, wardrobeItems = [] }: Pr
                       <p className="text-xs text-muted-foreground">{s.reason}</p>
                     </div>
                     <button onClick={() => handleSaveSuggestion("wardrobe", s)} className="flex-shrink-0 self-center active:scale-90 transition-transform">
-                      <Heart size={16} className={savedSuggestions.has(`wardrobe-${s.item_name}`) ? "fill-primary text-primary" : "text-muted-foreground"} />
+                      <Heart size={16} className={savedSuggestions.includes(`wardrobe-${s.item_name}`) ? "fill-primary text-primary" : "text-muted-foreground"} />
                     </button>
                   </div>
                 );
@@ -604,7 +613,7 @@ const OutfitRatingCard = ({ image, imageBase64, result, wardrobeItems = [] }: Pr
                       <p className="text-xs text-muted-foreground">{s.reason}</p>
                     </div>
                     <button onClick={() => handleSaveSuggestion("shopping", s, i)} className="flex-shrink-0 self-center active:scale-90 transition-transform">
-                      <Heart size={16} className={savedSuggestions.has(`shopping-${s.item_name}`) ? "fill-primary text-primary" : "text-muted-foreground"} />
+                      <Heart size={16} className={savedSuggestions.includes(`shopping-${s.item_name}`) ? "fill-primary text-primary" : "text-muted-foreground"} />
                     </button>
                   </div>
                 );

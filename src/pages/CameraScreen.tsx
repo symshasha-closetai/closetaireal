@@ -29,6 +29,9 @@ export type RatingResult = {
 };
 
 // Persist drip analysis state across navigation
+type DetectedItem = { name: string; type: string; color: string; material?: string; quality?: string; brand?: string; selected: boolean };
+type Suggestion = { item_name: string; category: string; reason: string; wardrobe_item_id?: string; image_prompt?: string };
+
 type DripState = {
   image: string | null;
   imageBase64: string | null;
@@ -37,6 +40,11 @@ type DripState = {
   stage: string;
   result: RatingResult | null;
   wardrobeItems: any[];
+  wardrobeSuggestions: Suggestion[] | null;
+  shoppingSuggestions: Suggestion[] | null;
+  detectedItems: DetectedItem[] | null;
+  suggestionImages: Record<number, string | null>;
+  savedSuggestions: string[];
 };
 
 const globalDripState: DripState = {
@@ -47,6 +55,11 @@ const globalDripState: DripState = {
   stage: "",
   result: null,
   wardrobeItems: [],
+  wardrobeSuggestions: null,
+  shoppingSuggestions: null,
+  detectedItems: null,
+  suggestionImages: {},
+  savedSuggestions: [],
 };
 
 let globalListeners: Set<() => void> = new Set();
@@ -210,7 +223,15 @@ const CameraScreen = () => {
     return () => { globalListeners.delete(listener); };
   }, []);
 
-  const { image, imageBase64, analyzing, progress, stage, result, wardrobeItems } = globalDripState;
+  const { image, imageBase64, analyzing, progress, stage, result, wardrobeItems,
+    wardrobeSuggestions, shoppingSuggestions, detectedItems, suggestionImages, savedSuggestions } = globalDripState;
+
+  // Fetch user's actual wardrobe items on mount
+  useEffect(() => {
+    if (!user?.id) return;
+    supabase.from("wardrobe").select("id, name, type, color, material, image_url").eq("user_id", user.id)
+      .then(({ data }) => { if (data) updateGlobal({ wardrobeItems: data }); });
+  }, [user?.id]);
 
   const handleUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -233,7 +254,8 @@ const CameraScreen = () => {
   };
 
   const clearImage = () => {
-    updateGlobal({ image: null, imageBase64: null, result: null });
+    updateGlobal({ image: null, imageBase64: null, result: null,
+      wardrobeSuggestions: null, shoppingSuggestions: null, detectedItems: null, suggestionImages: {}, savedSuggestions: [] });
   };
 
   return (
@@ -294,7 +316,16 @@ const CameraScreen = () => {
                   <button onClick={clearImage} className="absolute top-3 right-3 z-10 w-8 h-8 rounded-full bg-foreground/60 text-primary-foreground flex items-center justify-center backdrop-blur-sm">
                     <X size={16} />
                   </button>
-                  <OutfitRatingCard image={image} imageBase64={imageBase64 || undefined} result={result} wardrobeItems={wardrobeItems} />
+                  <OutfitRatingCard
+                    image={image} imageBase64={imageBase64 || undefined} result={result} wardrobeItems={wardrobeItems}
+                    wardrobeSuggestions={wardrobeSuggestions} shoppingSuggestions={shoppingSuggestions}
+                    detectedItems={detectedItems} suggestionImages={suggestionImages} savedSuggestions={savedSuggestions}
+                    onWardrobeSuggestionsChange={(v) => updateGlobal({ wardrobeSuggestions: v })}
+                    onShoppingSuggestionsChange={(v) => updateGlobal({ shoppingSuggestions: v })}
+                    onDetectedItemsChange={(v) => updateGlobal({ detectedItems: v })}
+                    onSuggestionImagesChange={(v) => updateGlobal({ suggestionImages: v })}
+                    onSavedSuggestionsChange={(v) => updateGlobal({ savedSuggestions: v })}
+                  />
                   <motion.button initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.3 }}
                     onClick={clearImage}
                     className="w-full mt-4 py-3 rounded-full border border-border/40 text-foreground/70 font-medium text-sm active:scale-[0.98] transition-transform flex items-center justify-center gap-2 tracking-wider">
