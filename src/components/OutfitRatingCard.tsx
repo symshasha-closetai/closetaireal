@@ -88,7 +88,7 @@ const OutfitRatingCard = ({ image, imageBase64, result, wardrobeItems = [],
 
   const fetchSuggestions = async (type: "wardrobe" | "shopping") => {
     const setLoading = type === "wardrobe" ? setLoadingWardrobe : setLoadingShopping;
-    const setData = type === "wardrobe" ? setWardrobeSuggestions : setShoppingSuggestions;
+    const setData = type === "wardrobe" ? onWardrobeSuggestionsChange : onShoppingSuggestionsChange;
     setLoading(true);
     try {
       const base64 = imageBase64?.includes(",") ? imageBase64.split(",")[1] : imageBase64;
