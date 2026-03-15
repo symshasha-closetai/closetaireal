@@ -185,6 +185,16 @@ Return ONLY valid JSON:
 
 Rules:
 - All scores 0-10 decimals. drip_score = Color(25%)+Style(20%)+Fit(25%)+Occasion(20%)+Accessories(10%)
+- confidence_rating: Score based on SCIENTIFIC analysis of facial expression and body language visible in the photo. Evaluate these indicators:
+  * Duchenne smile: genuine smile engaging orbicularis oculi (eye crinkle) vs social/forced smile
+  * Eye contact: direct gaze toward camera = high confidence; averted/downcast = lower
+  * Postural expansiveness (Amy Cuddy's research): open, space-occupying posture = high; closed, contracted = lower
+  * Chin/jaw position: chin level or slightly raised = confidence; tucked/lowered = uncertainty
+  * Shoulder positioning: relaxed, pulled back = confident; hunched, raised = tense
+  * Hand positioning: visible, relaxed, open = confident; hidden, fidgeting, crossed = guarded
+  * Overall body symmetry and groundedness of stance
+  If face is not clearly visible, score based on body language cues only and note that in confidence_reason.
+- confidence_reason: 1-2 sentences referencing the SPECIFIC scientific indicators observed. Mention which cues were detected (e.g. "Duchenne smile with eye engagement", "expansive open posture", "relaxed jaw line").
 - killer_tag: 1-3 words + 1-2 emojis. MUST be SPECIFIC to the actual outfit style/vibe detected — reference the colors, patterns, era, subculture, or energy of THIS outfit. Never use generic tags like "Looking Good" or "Nice Outfit". Think TikTok caption energy. Examples by style: streetwear → "Hypebeast Protocol 🔥", formal/suit → "Board Meeting Baddie 💼✨", casual/cozy → "Soft Era Activated 🧸☁️", colorful → "Dopamine Dealer 🌈", all-black → "Shadow Royalty 🖤👑", vintage → "Thrift Lord Energy 🪩", sporty → "Gym to Slay Pipeline 💪🔥", minimalist → "Less is Luxe ✨", desi/ethnic → "Desi Drip Dynasty 👑", y2k → "2000s Called, Said Keep It 📱💅"
 - praise_line: one stylish shareable sentence SPECIFIC to the outfit. Reference actual items/colors/style detected. Gen Z tone — witty, confident, emoji-sprinkled.
 - STRICTLY NO profanity, cuss words, or vulgar language in any field. Keep it clean but fire 🔥
