@@ -332,6 +332,45 @@ const WardrobeScreen = () => {
     setDetectedItems(prev => prev.map((item, i) => i === idx ? { ...item, [field]: value } : item));
   };
 
+  const retryImageGeneration = async (item: ClothingItem) => {
+    if (!user) return;
+    setRetryingImages(prev => new Set(prev).add(item.id));
+    try {
+      const { data, error } = await supabase.functions.invoke("generate-clothing-image", {
+        body: { itemName: item.name, itemType: item.type, itemColor: item.color, itemMaterial: item.material, userId: user.id, bodyType: styleProfile?.body_type || null, gender: styleProfile?.gender || null },
+      });
+      if (error || !data?.imageUrl) throw new Error("Generation failed");
+      await supabase.from("wardrobe").update({ image_url: data.imageUrl }).eq("id", item.id);
+      setItems(prev => prev.map(i => i.id === item.id ? { ...i, image_url: data.imageUrl } : i));
+      setFailedImages(prev => { const n = new Set(prev); n.delete(item.id); return n; });
+      toast.success("Image regenerated!");
+    } catch {
+      toast.error("Failed to regenerate image. Try again later.");
+    } finally {
+      setRetryingImages(prev => { const n = new Set(prev); n.delete(item.id); return n; });
+    }
+  };
+
+  const regenerateEditImage = async () => {
+    if (!editingItem || !user) return;
+    setRegeneratingEdit(true);
+    try {
+      const { data, error } = await supabase.functions.invoke("generate-clothing-image", {
+        body: { itemName: editForm.name, itemType: editForm.type, itemColor: editForm.color, itemMaterial: editForm.material, userId: user.id, bodyType: styleProfile?.body_type || null, gender: styleProfile?.gender || null },
+      });
+      if (error || !data?.imageUrl) throw new Error("Generation failed");
+      await supabase.from("wardrobe").update({ image_url: data.imageUrl }).eq("id", editingItem.id);
+      setItems(prev => prev.map(i => i.id === editingItem.id ? { ...i, image_url: data.imageUrl } : i));
+      setEditingItem(prev => prev ? { ...prev, image_url: data.imageUrl } : null);
+      setFailedImages(prev => { const n = new Set(prev); n.delete(editingItem.id); return n; });
+      toast.success("Image regenerated!");
+    } catch {
+      toast.error("Failed to regenerate. Try again later.");
+    } finally {
+      setRegeneratingEdit(false);
+    }
+  };
+
   const toggleSelectItem = (id: string) => {
     setSelectedItems(prev => {
       const next = new Set(prev);
