@@ -651,6 +651,11 @@ const WardrobeScreen = () => {
                         className="absolute top-2 left-11 w-7 h-7 rounded-full bg-foreground/50 text-primary-foreground flex items-center justify-center opacity-100 sm:opacity-0 sm:group-hover:opacity-100 transition-opacity backdrop-blur-sm">
                         <Share2 size={13} />
                       </button>
+                      <button onClick={(e) => { e.stopPropagation(); retryImageGeneration(item); }}
+                        disabled={retryingImages.has(item.id)}
+                        className="absolute top-2 right-11 w-7 h-7 rounded-full bg-foreground/50 text-primary-foreground flex items-center justify-center opacity-100 sm:opacity-0 sm:group-hover:opacity-100 transition-opacity backdrop-blur-sm disabled:opacity-50">
+                        {retryingImages.has(item.id) ? <Loader2 size={13} className="animate-spin" /> : <RefreshCw size={13} />}
+                      </button>
                       <button onClick={(e) => { e.stopPropagation(); deleteItem(item.id); }}
                         className="absolute top-2 right-2 w-7 h-7 rounded-full bg-foreground/50 text-primary-foreground flex items-center justify-center opacity-100 sm:opacity-0 sm:group-hover:opacity-100 transition-opacity backdrop-blur-sm">
                         <Trash2 size={13} />
