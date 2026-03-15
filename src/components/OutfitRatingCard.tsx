@@ -1,6 +1,6 @@
 import { useState, useRef, useCallback } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { Share2, ShoppingBag, Shirt, Footprints, Watch, Gem, Loader2, X, Info, Download, Heart } from "lucide-react";
+import { Share2, ShoppingBag, Shirt, Footprints, Watch, Gem, Loader2, X, Info, Download, Heart, ScanLine, Check } from "lucide-react";
 import ScoreRing from "./ScoreRing";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
