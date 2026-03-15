@@ -235,7 +235,13 @@ const runAnalysis = async (file: File, userId: string | undefined, styleProfile:
     updateGlobal({ progress: 90, stage: "Almost done..." });
 
     if (error) throw error;
-    if (data?.error) { toast.error(data.error); updateGlobal({ analyzing: false, progress: 0, stage: "" }); return; }
+    if (data?.error || !data?.result) {
+      // Silently use fallback
+      const fallback = clientFallbackResult();
+      updateGlobal({ result: fallback, analyzing: false, progress: 0, stage: "" });
+      saveDripToHistory(globalDripState.image || "", fallback, userId, imageHash);
+      return;
+    }
     if (data?.result) {
       updateGlobal({ result: data.result, analyzing: false, progress: 0, stage: "" });
       saveDripToHistory(globalDripState.image || "", data.result, userId, imageHash);
@@ -243,8 +249,10 @@ const runAnalysis = async (file: File, userId: string | undefined, styleProfile:
   } catch (err: any) {
     if (err?.name === "AbortError" || activeAbort?.signal.aborted) return;
     console.error("Rating error:", err);
-    toast.error("Failed to analyze outfit. Please try again.");
-    updateGlobal({ analyzing: false, progress: 0, stage: "" });
+    // Silent fallback — no error toast
+    const fallback = clientFallbackResult();
+    updateGlobal({ result: fallback, analyzing: false, progress: 0, stage: "" });
+    saveDripToHistory(globalDripState.image || "", fallback, userId, imageHash);
   } finally {
     activeAbort = null;
   }
