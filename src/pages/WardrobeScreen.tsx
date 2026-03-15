@@ -1,6 +1,6 @@
 import { useState, useRef, useEffect, useCallback, useMemo } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { Plus, Trash2, X, Loader2, Camera, Upload, Sparkles, Pencil, Save, Share2, CheckSquare, Square, SlidersHorizontal, RefreshCw, Pin } from "lucide-react";
+import { Plus, Trash2, X, Loader2, Camera, Upload, Sparkles, Pencil, Save, Share2, CheckSquare, Square, SlidersHorizontal, RefreshCw, Pin, GripVertical } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { toast } from "sonner";
@@ -8,7 +8,9 @@ import AppHeader from "../components/AppHeader";
 import { compressImage } from "@/lib/imageCompression";
 import html2canvas from "html2canvas";
 import { precacheImages } from "@/lib/imageCache";
-
+import { DndContext, closestCenter, PointerSensor, TouchSensor, useSensor, useSensors, type DragEndEvent } from "@dnd-kit/core";
+import { SortableContext, useSortable, rectSortingStrategy, arrayMove } from "@dnd-kit/sortable";
+import { CSS } from "@dnd-kit/utilities";
 type ClothingItem = {
   id: string;
   image_url: string;
@@ -21,6 +23,7 @@ type ClothingItem = {
   season: string | null;
   style: string | null;
   pinned: boolean;
+  pin_order: number;
 };
 
 type DetectedItem = {
@@ -39,6 +42,110 @@ type BackgroundJob = {
 };
 
 const categories = ["All", "Tops", "Bottoms", "Shoes", "Dresses", "Accessories"];
+
+// Shared card content component
+type CardContentProps = {
+  item: ClothingItem;
+  selectMode: boolean;
+  selectedItems: Set<string>;
+  failedImages: Set<string>;
+  retryingImages: Set<string>;
+  setFailedImages: React.Dispatch<React.SetStateAction<Set<string>>>;
+  retryImageGeneration: (item: ClothingItem) => void;
+  togglePin: (item: ClothingItem) => void;
+  openEdit: (item: ClothingItem) => void;
+  shareItem: (item: ClothingItem) => void;
+  deleteItem: (id: string) => void;
+  dragHandle?: React.ReactNode;
+};
+
+const WardrobeCardContent = ({ item, selectMode, selectedItems, failedImages, retryingImages, setFailedImages, retryImageGeneration, togglePin, openEdit, shareItem, deleteItem, dragHandle }: CardContentProps) => (
+  <>
+    <div className="aspect-square overflow-hidden rounded-t-2xl relative">
+      <img src={item.image_url} alt={item.name || "Clothing"} className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105" loading="lazy"
+        onError={() => setFailedImages(prev => new Set(prev).add(item.id))} />
+      {failedImages.has(item.id) && !selectMode && (
+        <div className="absolute inset-0 bg-background/70 backdrop-blur-sm flex flex-col items-center justify-center gap-2">
+          <p className="text-[10px] text-muted-foreground">Image failed</p>
+          <button onClick={(e) => { e.stopPropagation(); retryImageGeneration(item); }} disabled={retryingImages.has(item.id)}
+            className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-primary text-primary-foreground text-[11px] font-medium shadow-soft active:scale-95 transition-transform disabled:opacity-50">
+            {retryingImages.has(item.id) ? <Loader2 size={12} className="animate-spin" /> : <RefreshCw size={12} />}
+            {retryingImages.has(item.id) ? "Retrying..." : "Retry"}
+          </button>
+        </div>
+      )}
+    </div>
+    <div className="p-3">
+      <p className="text-sm font-medium text-foreground truncate">{item.name || "Unnamed"}</p>
+      <p className="text-[11px] text-muted-foreground">{item.color || item.type} · {item.material || "—"}</p>
+      {item.brand && <span className="inline-block mt-1 text-[9px] uppercase tracking-wider text-primary/70 border border-primary/20 rounded-full px-2 py-0.5">{item.brand}</span>}
+    </div>
+    {!selectMode && (
+      <>
+        {item.pinned && (
+          <div className="absolute top-2 left-2 w-7 h-7 rounded-full bg-primary text-primary-foreground flex items-center justify-center z-10">
+            <Pin size={13} />
+          </div>
+        )}
+        {dragHandle}
+        <button onClick={(e) => { e.stopPropagation(); togglePin(item); }}
+          className={`absolute top-2 ${item.pinned ? 'left-11' : 'left-2'} w-7 h-7 rounded-full bg-foreground/50 text-primary-foreground flex items-center justify-center opacity-100 sm:opacity-0 sm:group-hover:opacity-100 transition-opacity backdrop-blur-sm`}>
+          <Pin size={13} className={item.pinned ? "fill-current" : ""} />
+        </button>
+        <button onClick={(e) => { e.stopPropagation(); openEdit(item); }}
+          className={`absolute top-2 ${item.pinned ? 'left-20' : 'left-11'} w-7 h-7 rounded-full bg-foreground/50 text-primary-foreground flex items-center justify-center opacity-100 sm:opacity-0 sm:group-hover:opacity-100 transition-opacity backdrop-blur-sm`}>
+          <Pencil size={13} />
+        </button>
+        <button onClick={(e) => { e.stopPropagation(); shareItem(item); }}
+          className="absolute top-11 left-2 w-7 h-7 rounded-full bg-foreground/50 text-primary-foreground flex items-center justify-center opacity-100 sm:opacity-0 sm:group-hover:opacity-100 transition-opacity backdrop-blur-sm">
+          <Share2 size={13} />
+        </button>
+        <button onClick={(e) => { e.stopPropagation(); retryImageGeneration(item); }} disabled={retryingImages.has(item.id)}
+          className="absolute top-2 right-11 w-7 h-7 rounded-full bg-foreground/50 text-primary-foreground flex items-center justify-center opacity-100 sm:opacity-0 sm:group-hover:opacity-100 transition-opacity backdrop-blur-sm disabled:opacity-50">
+          {retryingImages.has(item.id) ? <Loader2 size={13} className="animate-spin" /> : <RefreshCw size={13} />}
+        </button>
+        <button onClick={(e) => { e.stopPropagation(); deleteItem(item.id); }}
+          className="absolute top-2 right-2 w-7 h-7 rounded-full bg-foreground/50 text-primary-foreground flex items-center justify-center opacity-100 sm:opacity-0 sm:group-hover:opacity-100 transition-opacity backdrop-blur-sm">
+          <Trash2 size={13} />
+        </button>
+      </>
+    )}
+    {selectMode && (
+      <div className="absolute top-2 right-2 w-6 h-6 rounded-full border-2 flex items-center justify-center backdrop-blur-sm"
+        style={{ borderColor: selectedItems.has(item.id) ? "hsl(var(--primary))" : "rgba(255,255,255,0.5)", background: selectedItems.has(item.id) ? "hsl(var(--primary))" : "rgba(0,0,0,0.3)" }}>
+        {selectedItems.has(item.id) && <div className="w-2 h-2 rounded-full bg-primary-foreground" />}
+      </div>
+    )}
+  </>
+);
+
+// Sortable wrapper for pinned items
+const SortableWardrobeCard = (props: CardContentProps & { index: number; toggleSelectItem: (id: string) => void }) => {
+  const { item, index, selectMode, toggleSelectItem, ...rest } = props;
+  const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id: item.id });
+  const style = {
+    transform: CSS.Transform.toString(transform),
+    transition,
+    opacity: isDragging ? 0.5 : 1,
+    zIndex: isDragging ? 50 : undefined,
+  };
+  return (
+    <motion.div ref={setNodeRef} style={style} layout initial={{ opacity: 0, scale: 0.9 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0, scale: 0.9 }}
+      transition={{ duration: 0.3, delay: index * 0.05 }}
+      className={`glass-card overflow-hidden group relative ${selectMode && props.selectedItems.has(item.id) ? "ring-2 ring-primary" : ""}`}
+      onClick={() => selectMode && toggleSelectItem(item.id)}>
+      <WardrobeCardContent item={item} selectMode={selectMode} {...rest}
+        dragHandle={
+          !selectMode ? (
+            <div {...attributes} {...listeners} className="absolute bottom-2 right-2 w-7 h-7 rounded-full bg-foreground/50 text-primary-foreground flex items-center justify-center cursor-grab active:cursor-grabbing backdrop-blur-sm z-20">
+              <GripVertical size={13} />
+            </div>
+          ) : undefined
+        }
+      />
+    </motion.div>
+  );
+};
 
 const WardrobeScreen = () => {
   const { user, styleProfile } = useAuth();
@@ -98,14 +205,19 @@ const WardrobeScreen = () => {
     if (!user) return;
     const { data, error } = await supabase
       .from("wardrobe")
-      .select("id, image_url, type, color, material, name, brand, quality, season, style, pinned")
+      .select("id, image_url, type, color, material, name, brand, quality, season, style, pinned, pin_order")
       .eq("user_id", user.id)
       .order("created_at", { ascending: false });
     if (error) toast.error("Failed to load wardrobe");
     else {
-      const wardrobeItems = ((data || []) as any[]).map(i => ({ ...i, pinned: !!i.pinned })) as ClothingItem[];
-      // Sort pinned first
-      wardrobeItems.sort((a, b) => (a.pinned === b.pinned ? 0 : a.pinned ? -1 : 1));
+      const wardrobeItems = ((data || []) as any[]).map(i => ({ ...i, pinned: !!i.pinned, pin_order: i.pin_order || 0 })) as ClothingItem[];
+      // Sort pinned first by pin_order, then unpinned by created_at (already ordered)
+      wardrobeItems.sort((a, b) => {
+        if (a.pinned && !b.pinned) return -1;
+        if (!a.pinned && b.pinned) return 1;
+        if (a.pinned && b.pinned) return a.pin_order - b.pin_order;
+        return 0;
+      });
       setItems(wardrobeItems);
       precacheImages(wardrobeItems.map((i) => i.image_url).filter(Boolean));
     }
@@ -114,14 +226,48 @@ const WardrobeScreen = () => {
 
   const togglePin = async (item: ClothingItem) => {
     const newPinned = !item.pinned;
-    const { error } = await supabase.from("wardrobe").update({ pinned: newPinned } as any).eq("id", item.id);
+    const maxOrder = items.filter(i => i.pinned).reduce((max, i) => Math.max(max, i.pin_order), 0);
+    const newOrder = newPinned ? maxOrder + 1 : 0;
+    const { error } = await supabase.from("wardrobe").update({ pinned: newPinned, pin_order: newOrder } as any).eq("id", item.id);
     if (error) { toast.error("Failed to update pin"); return; }
     setItems(prev => {
-      const updated = prev.map(i => i.id === item.id ? { ...i, pinned: newPinned } : i);
-      updated.sort((a, b) => (a.pinned === b.pinned ? 0 : a.pinned ? -1 : 1));
+      const updated = prev.map(i => i.id === item.id ? { ...i, pinned: newPinned, pin_order: newOrder } : i);
+      updated.sort((a, b) => {
+        if (a.pinned && !b.pinned) return -1;
+        if (!a.pinned && b.pinned) return 1;
+        if (a.pinned && b.pinned) return a.pin_order - b.pin_order;
+        return 0;
+      });
       return updated;
     });
     toast.success(newPinned ? "Pinned!" : "Unpinned", { duration: 1500 });
+  };
+
+  // DnD sensors
+  const sensors = useSensors(
+    useSensor(PointerSensor, { activationConstraint: { distance: 8 } }),
+    useSensor(TouchSensor, { activationConstraint: { delay: 200, tolerance: 5 } })
+  );
+
+  const handleDragEnd = async (event: DragEndEvent) => {
+    const { active, over } = event;
+    if (!over || active.id === over.id) return;
+    const pinnedItems = filtered.filter(i => i.pinned);
+    const oldIndex = pinnedItems.findIndex(i => i.id === active.id);
+    const newIndex = pinnedItems.findIndex(i => i.id === over.id);
+    if (oldIndex === -1 || newIndex === -1) return;
+    const reordered = arrayMove(pinnedItems, oldIndex, newIndex);
+    // Update pin_order for each reordered item
+    const updates = reordered.map((item, idx) => ({ id: item.id, pin_order: idx }));
+    setItems(prev => {
+      const unpinned = prev.filter(i => !i.pinned);
+      const newPinned = reordered.map((item, idx) => ({ ...item, pin_order: idx }));
+      return [...newPinned, ...unpinned];
+    });
+    // Persist to DB
+    for (const u of updates) {
+      await supabase.from("wardrobe").update({ pin_order: u.pin_order } as any).eq("id", u.id);
+    }
   };
 
   // Extract unique filter values
@@ -618,84 +764,32 @@ const WardrobeScreen = () => {
         ) : filtered.length === 0 ? (
           <div className="text-center py-12"><p className="text-muted-foreground text-sm">No items yet. Add your first piece!</p></div>
         ) : (
-          <motion.div layout className="grid grid-cols-2 gap-3">
-            <AnimatePresence>
-              {filtered.map((item, i) => (
-                <motion.div key={item.id} layout initial={{ opacity: 0, scale: 0.9 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0, scale: 0.9 }}
-                  transition={{ duration: 0.3, delay: i * 0.05 }}
-                  className={`glass-card overflow-hidden group relative ${selectMode && selectedItems.has(item.id) ? "ring-2 ring-primary" : ""}`}
-                  onClick={() => selectMode && toggleSelectItem(item.id)}>
-                  <div className="aspect-square overflow-hidden rounded-t-2xl relative">
-                    <img
-                      src={item.image_url}
-                      alt={item.name || "Clothing"}
-                      className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
-                      loading="lazy"
-                      onError={() => setFailedImages(prev => new Set(prev).add(item.id))}
-                    />
-                    {/* Retry overlay for failed images */}
-                    {failedImages.has(item.id) && !selectMode && (
-                      <div className="absolute inset-0 bg-background/70 backdrop-blur-sm flex flex-col items-center justify-center gap-2">
-                        <p className="text-[10px] text-muted-foreground">Image failed</p>
-                        <button
-                          onClick={(e) => { e.stopPropagation(); retryImageGeneration(item); }}
-                          disabled={retryingImages.has(item.id)}
-                          className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-primary text-primary-foreground text-[11px] font-medium shadow-soft active:scale-95 transition-transform disabled:opacity-50"
-                        >
-                          {retryingImages.has(item.id) ? <Loader2 size={12} className="animate-spin" /> : <RefreshCw size={12} />}
-                          {retryingImages.has(item.id) ? "Retrying..." : "Retry"}
-                        </button>
-                      </div>
-                    )}
-                  </div>
-                  <div className="p-3">
-                    <p className="text-sm font-medium text-foreground truncate">{item.name || "Unnamed"}</p>
-                    <p className="text-[11px] text-muted-foreground">{item.color || item.type} · {item.material || "—"}</p>
-                    {item.brand && (
-                      <span className="inline-block mt-1 text-[9px] uppercase tracking-wider text-primary/70 border border-primary/20 rounded-full px-2 py-0.5">{item.brand}</span>
-                    )}
-                  </div>
-                  {!selectMode && (
-                    <>
-                      {/* Pin indicator */}
-                      {item.pinned && (
-                        <div className="absolute top-2 left-2 w-7 h-7 rounded-full bg-primary text-primary-foreground flex items-center justify-center z-10">
-                          <Pin size={13} />
-                        </div>
-                      )}
-                      <button onClick={(e) => { e.stopPropagation(); togglePin(item); }}
-                        className={`absolute top-2 ${item.pinned ? 'left-11' : 'left-2'} w-7 h-7 rounded-full bg-foreground/50 text-primary-foreground flex items-center justify-center opacity-100 sm:opacity-0 sm:group-hover:opacity-100 transition-opacity backdrop-blur-sm`}>
-                        <Pin size={13} className={item.pinned ? "fill-current" : ""} />
-                      </button>
-                      <button onClick={(e) => { e.stopPropagation(); openEdit(item); }}
-                        className={`absolute top-2 ${item.pinned ? 'left-20' : 'left-11'} w-7 h-7 rounded-full bg-foreground/50 text-primary-foreground flex items-center justify-center opacity-100 sm:opacity-0 sm:group-hover:opacity-100 transition-opacity backdrop-blur-sm`}>
-                        <Pencil size={13} />
-                      </button>
-                      <button onClick={(e) => { e.stopPropagation(); shareItem(item); }}
-                        className="absolute top-11 left-2 w-7 h-7 rounded-full bg-foreground/50 text-primary-foreground flex items-center justify-center opacity-100 sm:opacity-0 sm:group-hover:opacity-100 transition-opacity backdrop-blur-sm">
-                        <Share2 size={13} />
-                      </button>
-                      <button onClick={(e) => { e.stopPropagation(); retryImageGeneration(item); }}
-                        disabled={retryingImages.has(item.id)}
-                        className="absolute top-2 right-11 w-7 h-7 rounded-full bg-foreground/50 text-primary-foreground flex items-center justify-center opacity-100 sm:opacity-0 sm:group-hover:opacity-100 transition-opacity backdrop-blur-sm disabled:opacity-50">
-                        {retryingImages.has(item.id) ? <Loader2 size={13} className="animate-spin" /> : <RefreshCw size={13} />}
-                      </button>
-                      <button onClick={(e) => { e.stopPropagation(); deleteItem(item.id); }}
-                        className="absolute top-2 right-2 w-7 h-7 rounded-full bg-foreground/50 text-primary-foreground flex items-center justify-center opacity-100 sm:opacity-0 sm:group-hover:opacity-100 transition-opacity backdrop-blur-sm">
-                        <Trash2 size={13} />
-                      </button>
-                    </>
-                  )}
-                  {selectMode && (
-                    <div className="absolute top-2 right-2 w-6 h-6 rounded-full border-2 flex items-center justify-center backdrop-blur-sm"
-                      style={{ borderColor: selectedItems.has(item.id) ? "hsl(var(--primary))" : "rgba(255,255,255,0.5)", background: selectedItems.has(item.id) ? "hsl(var(--primary))" : "rgba(0,0,0,0.3)" }}>
-                      {selectedItems.has(item.id) && <div className="w-2 h-2 rounded-full bg-primary-foreground" />}
-                    </div>
-                  )}
-                </motion.div>
-              ))}
-            </AnimatePresence>
-          </motion.div>
+          <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
+            <SortableContext items={filtered.filter(i => i.pinned).map(i => i.id)} strategy={rectSortingStrategy}>
+              <motion.div layout className="grid grid-cols-2 gap-3">
+                <AnimatePresence>
+                  {filtered.map((item, i) => (
+                    item.pinned ? (
+                      <SortableWardrobeCard key={item.id} item={item} index={i} selectMode={selectMode} selectedItems={selectedItems}
+                        toggleSelectItem={toggleSelectItem} failedImages={failedImages} retryingImages={retryingImages}
+                        setFailedImages={setFailedImages} retryImageGeneration={retryImageGeneration}
+                        togglePin={togglePin} openEdit={openEdit} shareItem={shareItem} deleteItem={deleteItem} />
+                    ) : (
+                      <motion.div key={item.id} layout initial={{ opacity: 0, scale: 0.9 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0, scale: 0.9 }}
+                        transition={{ duration: 0.3, delay: i * 0.05 }}
+                        className={`glass-card overflow-hidden group relative ${selectMode && selectedItems.has(item.id) ? "ring-2 ring-primary" : ""}`}
+                        onClick={() => selectMode && toggleSelectItem(item.id)}>
+                        <WardrobeCardContent item={item} selectMode={selectMode} selectedItems={selectedItems}
+                          failedImages={failedImages} retryingImages={retryingImages} setFailedImages={setFailedImages}
+                          retryImageGeneration={retryImageGeneration} togglePin={togglePin} openEdit={openEdit}
+                          shareItem={shareItem} deleteItem={deleteItem} />
+                      </motion.div>
+                    )
+                  ))}
+                </AnimatePresence>
+              </motion.div>
+            </SortableContext>
+          </DndContext>
         )}
 
         {/* Hidden file inputs */}
