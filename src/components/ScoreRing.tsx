@@ -47,7 +47,7 @@ const ScoreRing = ({ score, maxScore = 10, size = 56, label, colorClass, strokeC
           />
         </svg>
         <div className="absolute inset-0 flex items-center justify-center">
-          <span className="text-sm font-light text-foreground">{displayScore}</span>
+          <span className={`text-sm font-light ${light ? "text-white" : "text-foreground"}`}>{displayScore}</span>
         </div>
       </div>
       {label && (

@@ -290,7 +290,7 @@ const OutfitRatingCard = ({ image, imageBase64, result, wardrobeItems = [] }: Pr
 
             {/* Confidence Ring */}
             <button onClick={() => toggleTooltip("confidence")} className="focus:outline-none active:scale-95 transition-transform">
-              <ScoreRing score={result.confidence_rating} size={54} strokeColor="#A8A8A8" />
+              <ScoreRing score={result.confidence_rating} size={54} strokeColor="#A8A8A8" light />
               <p className="text-[9px] uppercase tracking-[0.15em] text-white/50 mt-1 text-center">Confidence</p>
             </button>
           </div>
