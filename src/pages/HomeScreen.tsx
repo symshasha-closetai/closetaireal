@@ -64,6 +64,7 @@ type WardrobeItem = {
   name: string | null;
   color: string | null;
   material: string | null;
+  pinned?: boolean;
 };
 
 type OutfitReasoning = {
