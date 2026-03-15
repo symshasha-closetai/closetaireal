@@ -613,7 +613,7 @@ const OutfitRatingCard = ({ image, imageBase64, result, wardrobeItems = [],
                       <p className="text-xs text-muted-foreground">{s.reason}</p>
                     </div>
                     <button onClick={() => handleSaveSuggestion("shopping", s, i)} className="flex-shrink-0 self-center active:scale-90 transition-transform">
-                      <Heart size={16} className={savedSuggestions.has(`shopping-${s.item_name}`) ? "fill-primary text-primary" : "text-muted-foreground"} />
+                      <Heart size={16} className={savedSuggestions.includes(`shopping-${s.item_name}`) ? "fill-primary text-primary" : "text-muted-foreground"} />
                     </button>
                   </div>
                 );
