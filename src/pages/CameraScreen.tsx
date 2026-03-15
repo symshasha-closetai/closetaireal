@@ -322,7 +322,7 @@ const CameraScreen = () => {
     return () => { globalListeners.delete(listener); };
   }, []);
 
-  const { image, imageBase64, analyzing, progress, stage, result, wardrobeItems,
+  const { image, imageBase64, analyzing, result, wardrobeItems, analysisSteps,
     wardrobeSuggestions, shoppingSuggestions, detectedItems, suggestionImages, savedSuggestions } = globalDripState;
 
   // Fetch user's actual wardrobe items on mount
