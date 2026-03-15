@@ -292,7 +292,7 @@ const OutfitRatingCard = ({ image, imageBase64, result, wardrobeItems = [],
       if (cached) {
         const { url, ts } = JSON.parse(cached);
         if (Date.now() - ts < CACHE_TTL && url) {
-          setSuggestionImages(prev => ({ ...prev, [idx]: url }));
+          onSuggestionImagesChange({ ...suggestionImages, [idx]: url });
           return;
         }
         localStorage.removeItem(cacheKey);
