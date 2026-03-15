@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback, useRef } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { Sparkles, Camera, ChevronRight, X, Heart, GraduationCap, PartyPopper, Shirt, Palette, Music, Church, Briefcase, Sun, Moon, Sunset, CloudRain, Thermometer, CloudSun, Snowflake, Shuffle, Leaf, Smile, Droplet, User, Loader2, Bookmark, BookmarkCheck, ImagePlus } from "lucide-react";
+import { Sparkles, Camera, ChevronRight, X, Heart, GraduationCap, PartyPopper, Shirt, Palette, Music, Church, Briefcase, Sun, Moon, Sunset, CloudRain, Thermometer, CloudSun, Snowflake, Shuffle, Leaf, Smile, Droplet, User, Loader2, Bookmark, BookmarkCheck, ImagePlus, Share2, Flame, Pin, Download } from "lucide-react";
 import AppHeader from "../components/AppHeader";
 import { useAuth } from "../hooks/useAuth";
 import { useNavigate } from "react-router-dom";
@@ -10,6 +10,7 @@ import ScoreRing from "../components/ScoreRing";
 import { Progress } from "@/components/ui/progress";
 import { precacheImages } from "@/lib/imageCache";
 import { compressImage } from "@/lib/imageCompression";
+import html2canvas from "html2canvas";
 
 const occasions = [
   { label: "Casual", icon: Shirt, color: "bg-blue-100 text-blue-600" },
