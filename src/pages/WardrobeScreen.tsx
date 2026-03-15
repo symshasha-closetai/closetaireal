@@ -122,14 +122,48 @@ const WardrobeScreen = () => {
 
   const togglePin = async (item: ClothingItem) => {
     const newPinned = !item.pinned;
-    const { error } = await supabase.from("wardrobe").update({ pinned: newPinned } as any).eq("id", item.id);
+    const maxOrder = items.filter(i => i.pinned).reduce((max, i) => Math.max(max, i.pin_order), 0);
+    const newOrder = newPinned ? maxOrder + 1 : 0;
+    const { error } = await supabase.from("wardrobe").update({ pinned: newPinned, pin_order: newOrder } as any).eq("id", item.id);
     if (error) { toast.error("Failed to update pin"); return; }
     setItems(prev => {
-      const updated = prev.map(i => i.id === item.id ? { ...i, pinned: newPinned } : i);
-      updated.sort((a, b) => (a.pinned === b.pinned ? 0 : a.pinned ? -1 : 1));
+      const updated = prev.map(i => i.id === item.id ? { ...i, pinned: newPinned, pin_order: newOrder } : i);
+      updated.sort((a, b) => {
+        if (a.pinned && !b.pinned) return -1;
+        if (!a.pinned && b.pinned) return 1;
+        if (a.pinned && b.pinned) return a.pin_order - b.pin_order;
+        return 0;
+      });
       return updated;
     });
     toast.success(newPinned ? "Pinned!" : "Unpinned", { duration: 1500 });
+  };
+
+  // DnD sensors
+  const sensors = useSensors(
+    useSensor(PointerSensor, { activationConstraint: { distance: 8 } }),
+    useSensor(TouchSensor, { activationConstraint: { delay: 200, tolerance: 5 } })
+  );
+
+  const handleDragEnd = async (event: DragEndEvent) => {
+    const { active, over } = event;
+    if (!over || active.id === over.id) return;
+    const pinnedItems = filtered.filter(i => i.pinned);
+    const oldIndex = pinnedItems.findIndex(i => i.id === active.id);
+    const newIndex = pinnedItems.findIndex(i => i.id === over.id);
+    if (oldIndex === -1 || newIndex === -1) return;
+    const reordered = arrayMove(pinnedItems, oldIndex, newIndex);
+    // Update pin_order for each reordered item
+    const updates = reordered.map((item, idx) => ({ id: item.id, pin_order: idx }));
+    setItems(prev => {
+      const unpinned = prev.filter(i => !i.pinned);
+      const newPinned = reordered.map((item, idx) => ({ ...item, pin_order: idx }));
+      return [...newPinned, ...unpinned];
+    });
+    // Persist to DB
+    for (const u of updates) {
+      await supabase.from("wardrobe").update({ pin_order: u.pin_order } as any).eq("id", u.id);
+    }
   };
 
   // Extract unique filter values
