@@ -611,8 +611,28 @@ const WardrobeScreen = () => {
                   transition={{ duration: 0.3, delay: i * 0.05 }}
                   className={`glass-card overflow-hidden group relative ${selectMode && selectedItems.has(item.id) ? "ring-2 ring-primary" : ""}`}
                   onClick={() => selectMode && toggleSelectItem(item.id)}>
-                  <div className="aspect-square overflow-hidden rounded-t-2xl">
-                    <img src={item.image_url} alt={item.name || "Clothing"} className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105" loading="lazy" />
+                  <div className="aspect-square overflow-hidden rounded-t-2xl relative">
+                    <img
+                      src={item.image_url}
+                      alt={item.name || "Clothing"}
+                      className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
+                      loading="lazy"
+                      onError={() => setFailedImages(prev => new Set(prev).add(item.id))}
+                    />
+                    {/* Retry overlay for failed images */}
+                    {failedImages.has(item.id) && !selectMode && (
+                      <div className="absolute inset-0 bg-background/70 backdrop-blur-sm flex flex-col items-center justify-center gap-2">
+                        <p className="text-[10px] text-muted-foreground">Image failed</p>
+                        <button
+                          onClick={(e) => { e.stopPropagation(); retryImageGeneration(item); }}
+                          disabled={retryingImages.has(item.id)}
+                          className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-primary text-primary-foreground text-[11px] font-medium shadow-soft active:scale-95 transition-transform disabled:opacity-50"
+                        >
+                          {retryingImages.has(item.id) ? <Loader2 size={12} className="animate-spin" /> : <RefreshCw size={12} />}
+                          {retryingImages.has(item.id) ? "Retrying..." : "Retry"}
+                        </button>
+                      </div>
+                    )}
                   </div>
                   <div className="p-3">
                     <p className="text-sm font-medium text-foreground truncate">{item.name || "Unnamed"}</p>
