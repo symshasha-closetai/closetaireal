@@ -101,14 +101,19 @@ const WardrobeScreen = () => {
     if (!user) return;
     const { data, error } = await supabase
       .from("wardrobe")
-      .select("id, image_url, type, color, material, name, brand, quality, season, style, pinned")
+      .select("id, image_url, type, color, material, name, brand, quality, season, style, pinned, pin_order")
       .eq("user_id", user.id)
       .order("created_at", { ascending: false });
     if (error) toast.error("Failed to load wardrobe");
     else {
-      const wardrobeItems = ((data || []) as any[]).map(i => ({ ...i, pinned: !!i.pinned })) as ClothingItem[];
-      // Sort pinned first
-      wardrobeItems.sort((a, b) => (a.pinned === b.pinned ? 0 : a.pinned ? -1 : 1));
+      const wardrobeItems = ((data || []) as any[]).map(i => ({ ...i, pinned: !!i.pinned, pin_order: i.pin_order || 0 })) as ClothingItem[];
+      // Sort pinned first by pin_order, then unpinned by created_at (already ordered)
+      wardrobeItems.sort((a, b) => {
+        if (a.pinned && !b.pinned) return -1;
+        if (!a.pinned && b.pinned) return 1;
+        if (a.pinned && b.pinned) return a.pin_order - b.pin_order;
+        return 0;
+      });
       setItems(wardrobeItems);
       precacheImages(wardrobeItems.map((i) => i.image_url).filter(Boolean));
     }
