@@ -496,7 +496,7 @@ const OutfitRatingCard = ({ image, imageBase64, result, wardrobeItems = [],
               {detectedItems.map((item, i) => (
                 <button
                   key={i}
-                  onClick={() => setDetectedItems(prev => prev?.map((d, j) => j === i ? { ...d, selected: !d.selected } : d) || null)}
+                  onClick={() => onDetectedItemsChange(detectedItems?.map((d, j) => j === i ? { ...d, selected: !d.selected } : d) || null)}
                   className={`w-full border rounded-xl p-3 flex items-center gap-3 text-left transition-colors ${item.selected ? "border-primary/50 bg-primary/5" : "border-border/20"}`}
                 >
                   <div className={`w-5 h-5 rounded-full border-2 flex items-center justify-center flex-shrink-0 ${item.selected ? "border-primary bg-primary" : "border-muted-foreground/30"}`}>
