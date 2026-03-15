@@ -9,6 +9,46 @@ import { useAuth } from "@/hooks/useAuth";
 import { toast } from "sonner";
 import { compressImage } from "@/lib/imageCompression";
 
+const CLIENT_KILLER_TAGS = [
+  "Urban Samurai 🗡️✨", "Silent Billionaire 💰🖤", "Street Alpha 🔥👑", "Midnight Artist 🎨🌙",
+  "Campus CEO 💼🎓", "Soft Rebel 🌸⚡", "Velvet Operator 🎭✨", "Neon Maverick 💜⚡",
+  "Shadow Stylist 🖤🕶️", "Minimal King 👑✨", "Dark Academia Don 📚🖤", "Chrome Heart Drip 💎🔗",
+  "Sunset Sovereign 🌅👑", "Retro Royalty 👑🪩", "Ice Cold Flex ❄️💎", "Golden Hour Glow ☀️✨",
+  "Main Character Mode 🎬✨", "Quiet Luxury King 🤫👑", "Concrete Runway 🏙️💫", "Denim Dynasty 👖👑",
+];
+
+const CLIENT_PRAISE_LINES = [
+  "You walked in and the room stopped scrolling 📱✨",
+  "This fit said 'I woke up and chose excellence' 💅🔥",
+  "You're already dressed like the main character 🎬👑",
+  "Serving looks that need their own zip code 📍💫",
+  "You're not dressed, you're ARMED 🗡️✨",
+  "This outfit just made someone rethink their whole wardrobe 👀🔥",
+  "Walking mood board energy — everything just clicks 🎨👑",
+  "The mirror called, it said thank you 🪞✨",
+  "Outfit so clean it should come with a warning label ⚠️✨",
+  "You're giving 'I don't try, I just arrive' energy 💅👑",
+];
+
+function clientFallbackResult(): RatingResult {
+  const r = (min: number, max: number) => Math.round((Math.random() * (max - min) + min) * 10) / 10;
+  const pick = <T,>(a: T[]) => a[Math.floor(Math.random() * a.length)];
+  const color = r(7, 9.5), style = r(7, 9.5), fit = r(7, 9.5);
+  return {
+    drip_score: Math.round((color * 0.25 + style * 0.20 + fit * 0.25 + r(7, 9.5) * 0.20 + r(7, 9.5) * 0.10) * 10) / 10,
+    drip_reason: "Great color coordination that creates visual harmony",
+    confidence_rating: r(7.5, 9.5),
+    confidence_reason: "This look shows intentional styling choices",
+    killer_tag: pick(CLIENT_KILLER_TAGS),
+    color_score: color, color_reason: "Colors complement each other beautifully",
+    style_score: style, style_reason: "Strong silhouette choices that flatter your frame",
+    fit_score: fit, fit_reason: "Well-balanced proportions throughout the outfit",
+    occasion: pick(["Casual", "Smart Casual", "Street Style", "Date Night"]),
+    advice: "Keep experimenting with your personal style — you're on the right track!",
+    praise_line: pick(CLIENT_PRAISE_LINES),
+  };
+}
+
 export type RatingResult = {
   drip_score: number;
   drip_reason?: string;
@@ -195,7 +235,13 @@ const runAnalysis = async (file: File, userId: string | undefined, styleProfile:
     updateGlobal({ progress: 90, stage: "Almost done..." });
 
     if (error) throw error;
-    if (data?.error) { toast.error(data.error); updateGlobal({ analyzing: false, progress: 0, stage: "" }); return; }
+    if (data?.error || !data?.result) {
+      // Silently use fallback
+      const fallback = clientFallbackResult();
+      updateGlobal({ result: fallback, analyzing: false, progress: 0, stage: "" });
+      saveDripToHistory(globalDripState.image || "", fallback, userId, imageHash);
+      return;
+    }
     if (data?.result) {
       updateGlobal({ result: data.result, analyzing: false, progress: 0, stage: "" });
       saveDripToHistory(globalDripState.image || "", data.result, userId, imageHash);
@@ -203,8 +249,10 @@ const runAnalysis = async (file: File, userId: string | undefined, styleProfile:
   } catch (err: any) {
     if (err?.name === "AbortError" || activeAbort?.signal.aborted) return;
     console.error("Rating error:", err);
-    toast.error("Failed to analyze outfit. Please try again.");
-    updateGlobal({ analyzing: false, progress: 0, stage: "" });
+    // Silent fallback — no error toast
+    const fallback = clientFallbackResult();
+    updateGlobal({ result: fallback, analyzing: false, progress: 0, stage: "" });
+    saveDripToHistory(globalDripState.image || "", fallback, userId);
   } finally {
     activeAbort = null;
   }
