@@ -98,17 +98,30 @@ const WardrobeScreen = () => {
     if (!user) return;
     const { data, error } = await supabase
       .from("wardrobe")
-      .select("id, image_url, type, color, material, name, brand, quality, season, style")
+      .select("id, image_url, type, color, material, name, brand, quality, season, style, pinned")
       .eq("user_id", user.id)
       .order("created_at", { ascending: false });
     if (error) toast.error("Failed to load wardrobe");
     else {
-      const wardrobeItems = (data as ClothingItem[]) || [];
+      const wardrobeItems = ((data || []) as any[]).map(i => ({ ...i, pinned: !!i.pinned })) as ClothingItem[];
+      // Sort pinned first
+      wardrobeItems.sort((a, b) => (a.pinned === b.pinned ? 0 : a.pinned ? -1 : 1));
       setItems(wardrobeItems);
-      // Precache all wardrobe images for offline/fast access
       precacheImages(wardrobeItems.map((i) => i.image_url).filter(Boolean));
     }
     setLoading(false);
+  };
+
+  const togglePin = async (item: ClothingItem) => {
+    const newPinned = !item.pinned;
+    const { error } = await supabase.from("wardrobe").update({ pinned: newPinned } as any).eq("id", item.id);
+    if (error) { toast.error("Failed to update pin"); return; }
+    setItems(prev => {
+      const updated = prev.map(i => i.id === item.id ? { ...i, pinned: newPinned } : i);
+      updated.sort((a, b) => (a.pinned === b.pinned ? 0 : a.pinned ? -1 : 1));
+      return updated;
+    });
+    toast.success(newPinned ? "Pinned!" : "Unpinned", { duration: 1500 });
   };
 
   // Extract unique filter values
