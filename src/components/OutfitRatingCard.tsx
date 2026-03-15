@@ -123,7 +123,7 @@ const OutfitRatingCard = ({ image, imageBase64, result, wardrobeItems = [],
         onDetectedItemsChange(data.items.map((item: any) => ({ ...item, selected: true })));
       } else {
         toast.info("No clothing items detected");
-        setDetectedItems([]);
+        onDetectedItemsChange([]);
       }
     } catch (err) {
       console.error("Extract outfits error:", err);
