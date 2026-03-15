@@ -14,6 +14,11 @@ const KILLER_TAGS = [
   "Monochrome Monarch 🖤🤍", "Electric Elegance ⚡✨", "Silk Road Style 🧣✨", "Stealth Drip 🥷💧",
   "Boulevard Boss 🛣️👔", "Cozy Commander ☁️🫡", "Pastel Powerhouse 🍬💪", "Grunge Royalty 🎸👑",
   "Polo Club Captain 🏇✨", "Night Shift Drip 🌃💧",
+  "Drip Architect 🏛️💧", "Phantom Flex 👻💪", "Vogue Villain 🦹✨", "Zen Drip Master 🧘💧",
+  "Royal Misfit 👑🃏", "Twilight Baron 🌆🎩", "Ivory Tower King 🏰👑", "Digital Nomad Drip 💻🌍",
+  "Obsidian Oracle 🖤🔮", "Champagne Casualty 🥂💫", "Cosmic Drifter 🌌✨", "Vintage Voltage ⚡🪩",
+  "Luxe Outlaw 🤠💎", "Sapphire Sovereign 💙👑", "Crimson Catalyst ❤️‍🔥⚡", "Arctic Aristocrat 🧊👑",
+  "Jade Emperor 🟢👑", "Onyx Operator 🖤🎯", "Gilded Rebel ✨🔥", "Marble Mood 🤍🏛️",
 ];
 
 const PRAISE_LINES = [
@@ -52,6 +57,23 @@ const PRAISE_LINES = [
   "Styled like you've got a stylist but you ARE the stylist 💇‍♂️👑",
   "This look is giving main event, not opening act 🎤✨",
   "You're dressed like good taste runs in the family 🧬🔥",
+  "You're dressed like success is your default setting 💼✨",
+  "This fit just broke the algorithm 📈🔥",
+  "You look like you own the playlist AND the venue 🎶👑",
+  "This outfit has more range than your favorite artist 🎤✨",
+  "You're giving 'walked in, owned it, left' energy 🚶‍♂️💨",
+  "This look just unlocked a new level of drip 🎮✨",
+  "You're dressed like the universe owes you a runway 🌌💃",
+  "This fit is a whole thesis on looking good 📜🔥",
+  "You look like you came with a soundtrack 🎧👑",
+  "This outfit just won an award it didn't even enter 🏆✨",
+  "You're giving 'effortlessly iconic' and it's working 💫👑",
+  "This look said 'fashion week who?' and meant it 🤷‍♂️✨",
+  "You're dressed like your future self sent instructions 🔮🔥",
+  "This fit has more personality than most people 🎭💎",
+  "You look like the VIP section was built for you 🥂👑",
+  "Styled like the internet's best-kept secret 🤫✨",
+  "This outfit just made gravity optional — you're floating 🫧👑",
 ];
 
 const FALLBACK_REASONS = [

@@ -1,7 +1,6 @@
 import { useState, useRef, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { Camera, Upload, X, Sparkles } from "lucide-react";
-import { Progress } from "@/components/ui/progress";
+import { Camera, Upload, X, Sparkles, Check, Loader2 } from "lucide-react";
 import AppHeader from "../components/AppHeader";
 import OutfitRatingCard from "../components/OutfitRatingCard";
 import { supabase } from "@/integrations/supabase/client";
@@ -15,6 +14,11 @@ const CLIENT_KILLER_TAGS = [
   "Shadow Stylist 🖤🕶️", "Minimal King 👑✨", "Dark Academia Don 📚🖤", "Chrome Heart Drip 💎🔗",
   "Sunset Sovereign 🌅👑", "Retro Royalty 👑🪩", "Ice Cold Flex ❄️💎", "Golden Hour Glow ☀️✨",
   "Main Character Mode 🎬✨", "Quiet Luxury King 🤫👑", "Concrete Runway 🏙️💫", "Denim Dynasty 👖👑",
+  "Drip Architect 🏛️💧", "Phantom Flex 👻💪", "Vogue Villain 🦹✨", "Zen Drip Master 🧘💧",
+  "Royal Misfit 👑🃏", "Twilight Baron 🌆🎩", "Ivory Tower King 🏰👑", "Digital Nomad Drip 💻🌍",
+  "Obsidian Oracle 🖤🔮", "Champagne Casualty 🥂💫", "Cosmic Drifter 🌌✨", "Vintage Voltage ⚡🪩",
+  "Luxe Outlaw 🤠💎", "Sapphire Sovereign 💙👑", "Crimson Catalyst ❤️‍🔥⚡", "Arctic Aristocrat 🧊👑",
+  "Jade Emperor 🟢👑", "Onyx Operator 🖤🎯", "Gilded Rebel ✨🔥", "Marble Mood 🤍🏛️",
 ];
 
 const CLIENT_PRAISE_LINES = [
@@ -28,6 +32,20 @@ const CLIENT_PRAISE_LINES = [
   "The mirror called, it said thank you 🪞✨",
   "Outfit so clean it should come with a warning label ⚠️✨",
   "You're giving 'I don't try, I just arrive' energy 💅👑",
+  "You're dressed like success is your default setting 💼✨",
+  "This fit just broke the algorithm 📈🔥",
+  "You look like you own the playlist AND the venue 🎶👑",
+  "This outfit has more range than your favorite artist 🎤✨",
+  "You're giving 'walked in, owned it, left' energy 🚶‍♂️💨",
+  "This look just unlocked a new level of drip 🎮✨",
+  "You're dressed like the universe owes you a runway 🌌💃",
+  "You look like you came with a soundtrack 🎧👑",
+  "This outfit just won an award it didn't even enter 🏆✨",
+  "You're giving 'effortlessly iconic' and it's working 💫👑",
+  "You're dressed like your future self sent instructions 🔮🔥",
+  "This fit has more personality than most people 🎭💎",
+  "Styled like the internet's best-kept secret 🤫✨",
+  "This outfit just made gravity optional — you're floating 🫧👑",
 ];
 
 function clientFallbackResult(): RatingResult {
@@ -72,12 +90,15 @@ export type RatingResult = {
 type DetectedItem = { name: string; type: string; color: string; material?: string; quality?: string; brand?: string; selected: boolean };
 type Suggestion = { item_name: string; category: string; reason: string; wardrobe_item_id?: string; image_prompt?: string };
 
+type AnalysisStep = { label: string; status: 'pending' | 'active' | 'done' };
+
 type DripState = {
   image: string | null;
   imageBase64: string | null;
   analyzing: boolean;
   progress: number;
   stage: string;
+  analysisSteps: AnalysisStep[];
   result: RatingResult | null;
   wardrobeItems: any[];
   wardrobeSuggestions: Suggestion[] | null;
@@ -87,12 +108,20 @@ type DripState = {
   savedSuggestions: string[];
 };
 
+const ANALYSIS_STEP_LABELS = [
+  "Detecting colors...",
+  "Understanding outfit style...",
+  "Calculating drip score...",
+  "Generating confidence score...",
+];
+
 const globalDripState: DripState = {
   image: null,
   imageBase64: null,
   analyzing: false,
   progress: 0,
   stage: "",
+  analysisSteps: [],
   result: null,
   wardrobeItems: [],
   wardrobeSuggestions: null,
@@ -200,9 +229,31 @@ const checkCache = async (imageHash: string, userId?: string): Promise<RatingRes
 // Run analysis globally so it survives navigation
 let activeAbort: AbortController | null = null;
 
+let stageTimers: ReturnType<typeof setTimeout>[] = [];
+
+const startStagedAnimation = () => {
+  const steps: AnalysisStep[] = ANALYSIS_STEP_LABELS.map((label) => ({ label, status: 'pending' as const }));
+  steps[0].status = 'active';
+  updateGlobal({ analysisSteps: [...steps] });
+
+  for (let i = 0; i < steps.length; i++) {
+    const timer = setTimeout(() => {
+      steps[i].status = 'done';
+      if (i + 1 < steps.length) steps[i + 1].status = 'active';
+      updateGlobal({ analysisSteps: [...steps] });
+    }, (i + 1) * 2000);
+    stageTimers.push(timer);
+  }
+};
+
+const clearStageTimers = () => {
+  stageTimers.forEach(clearTimeout);
+  stageTimers = [];
+};
+
 const runAnalysis = async (file: File, userId: string | undefined, styleProfile: any) => {
   activeAbort = new AbortController();
-  updateGlobal({ analyzing: true, progress: 5, stage: "Compressing image..." });
+  updateGlobal({ analyzing: true, progress: 5, stage: "Compressing image...", analysisSteps: [] });
 
   try {
     const { base64: imageBase64 } = await compressImage(file, 800, 800);
@@ -211,50 +262,50 @@ const runAnalysis = async (file: File, userId: string | undefined, styleProfile:
 
     // Check cache for consistent scores
     const imageHash = computeImageHash(imageBase64);
-    updateGlobal({ progress: 15, stage: "Checking for previous analysis..." });
 
     const cachedResult = await checkCache(imageHash, userId);
     if (cachedResult) {
       if (activeAbort?.signal.aborted) return;
-      updateGlobal({ result: cachedResult, analyzing: false, progress: 0, stage: "" });
+      updateGlobal({ result: cachedResult, analyzing: false, progress: 0, stage: "", analysisSteps: [] });
       toast.success("Loaded your previous rating for this photo!");
       return;
     }
 
     if (activeAbort?.signal.aborted) return;
-    updateGlobal({ progress: 20, stage: "Analyzing your style..." });
 
-    if (activeAbort?.signal.aborted) return;
-    updateGlobal({ progress: 50, stage: "Rating your drip..." });
+    // Start staged animation and AI call in parallel
+    startStagedAnimation();
+    const minDelay = new Promise((r) => setTimeout(r, 8000));
 
-    const { data, error } = await supabase.functions.invoke("rate-outfit", {
+    const aiCall = supabase.functions.invoke("rate-outfit", {
       body: { imageBase64, styleProfile: styleProfile || undefined },
     });
 
+    const [{ data, error }] = await Promise.all([aiCall, minDelay]) as [any, any];
+
     if (activeAbort?.signal.aborted) return;
-    updateGlobal({ progress: 90, stage: "Almost done..." });
+    clearStageTimers();
 
     if (error) throw error;
     if (data?.error || !data?.result) {
-      // Silently use fallback
       const fallback = clientFallbackResult();
-      updateGlobal({ result: fallback, analyzing: false, progress: 0, stage: "" });
+      updateGlobal({ result: fallback, analyzing: false, progress: 0, stage: "", analysisSteps: [] });
       saveDripToHistory(globalDripState.image || "", fallback, userId, imageHash);
       return;
     }
     if (data?.result) {
-      updateGlobal({ result: data.result, analyzing: false, progress: 0, stage: "" });
+      updateGlobal({ result: data.result, analyzing: false, progress: 0, stage: "", analysisSteps: [] });
       saveDripToHistory(globalDripState.image || "", data.result, userId, imageHash);
     }
   } catch (err: any) {
     if (err?.name === "AbortError" || activeAbort?.signal.aborted) return;
     console.error("Rating error:", err);
-    // Silent fallback — no error toast
     const fallback = clientFallbackResult();
-    updateGlobal({ result: fallback, analyzing: false, progress: 0, stage: "" });
+    updateGlobal({ result: fallback, analyzing: false, progress: 0, stage: "", analysisSteps: [] });
     saveDripToHistory(globalDripState.image || "", fallback, userId);
   } finally {
     activeAbort = null;
+    clearStageTimers();
   }
 };
 
@@ -271,7 +322,7 @@ const CameraScreen = () => {
     return () => { globalListeners.delete(listener); };
   }, []);
 
-  const { image, imageBase64, analyzing, progress, stage, result, wardrobeItems,
+  const { image, imageBase64, analyzing, result, wardrobeItems, analysisSteps,
     wardrobeSuggestions, shoppingSuggestions, detectedItems, suggestionImages, savedSuggestions } = globalDripState;
 
   // Fetch user's actual wardrobe items on mount
@@ -298,7 +349,8 @@ const CameraScreen = () => {
   const cancelAnalysis = () => {
     if (activeAbort) activeAbort.abort();
     activeAbort = null;
-    updateGlobal({ analyzing: false, image: null, imageBase64: null, result: null, progress: 0, stage: "" });
+    clearStageTimers();
+    updateGlobal({ analyzing: false, image: null, imageBase64: null, result: null, progress: 0, stage: "", analysisSteps: [] });
   };
 
   const clearImage = () => {
@@ -347,14 +399,38 @@ const CameraScreen = () => {
                   <button onClick={cancelAnalysis} className="absolute top-3 right-3 z-20 flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-destructive/90 text-destructive-foreground backdrop-blur-sm text-xs font-medium active:scale-95 transition-transform">
                     <X size={14} /> Cancel
                   </button>
-                  <div className="absolute inset-0 bg-background/40 backdrop-blur-sm flex items-center justify-center">
-                    <div className="flex flex-col items-center gap-4 w-full max-w-[200px]">
-                      <motion.div animate={{ rotate: 360 }} transition={{ repeat: Infinity, duration: 1.5, ease: "linear" }}>
-                        <Sparkles size={36} className="text-accent drop-shadow-[0_0_12px_hsl(var(--accent))]" />
+                  <div className="absolute inset-0 bg-background/60 backdrop-blur-md flex items-center justify-center">
+                    <div className="flex flex-col items-center gap-5 w-full max-w-[260px]">
+                      <motion.div animate={{ rotate: 360 }} transition={{ repeat: Infinity, duration: 2, ease: "linear" }}>
+                        <Sparkles size={32} className="text-accent drop-shadow-[0_0_12px_hsl(var(--accent))]" />
                       </motion.div>
-                      <div className="w-full space-y-2">
-                        <Progress value={progress} className="h-2" />
-                        <p className="text-xs font-medium text-foreground drop-shadow-sm text-center">{stage}</p>
+                      <div className="w-full space-y-3">
+                        {analysisSteps.map((step, i) => (
+                          <motion.div
+                            key={step.label}
+                            initial={{ opacity: 0, x: -10 }}
+                            animate={{ opacity: 1, x: 0 }}
+                            transition={{ delay: i * 0.15 }}
+                            className="flex items-center gap-3"
+                          >
+                            <div className="w-5 h-5 flex items-center justify-center shrink-0">
+                              {step.status === 'done' ? (
+                                <motion.div initial={{ scale: 0 }} animate={{ scale: 1 }} transition={{ type: "spring", stiffness: 400, damping: 15 }}>
+                                  <Check size={18} className="text-green-400 drop-shadow-sm" />
+                                </motion.div>
+                              ) : step.status === 'active' ? (
+                                <Loader2 size={18} className="text-accent animate-spin" />
+                              ) : (
+                                <div className="w-2 h-2 rounded-full bg-muted-foreground/30" />
+                              )}
+                            </div>
+                            <span className={`text-sm font-medium transition-colors duration-300 ${
+                              step.status === 'done' ? 'text-foreground' : step.status === 'active' ? 'text-foreground' : 'text-muted-foreground/50'
+                            }`}>
+                              {step.label}
+                            </span>
+                          </motion.div>
+                        ))}
                       </div>
                     </div>
                   </div>
