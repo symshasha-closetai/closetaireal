@@ -174,6 +174,20 @@ const HomeScreen = () => {
       const { data: { publicUrl } } = supabase.storage.from("wardrobe").getPublicUrl(path);
       setTodayPhoto(publicUrl);
       localStorage.setItem(`today-look-${user.id}`, JSON.stringify({ url: publicUrl, date: new Date().toDateString() }));
+      // Update streak
+      const today = new Date().toDateString();
+      const yesterday = new Date(Date.now() - 86400000).toDateString();
+      let newStreak = 1;
+      try {
+        const raw = localStorage.getItem(`streak-${user.id}`);
+        if (raw) {
+          const { count, lastDate } = JSON.parse(raw);
+          if (lastDate === yesterday) newStreak = count + 1;
+          else if (lastDate === today) newStreak = count; // already uploaded today
+        }
+      } catch {}
+      setStreak(newStreak);
+      localStorage.setItem(`streak-${user.id}`, JSON.stringify({ count: newStreak, lastDate: today }));
       toast.success("Looking great! 🔥");
     } catch {
       toast.error("Failed to upload photo");
