@@ -39,12 +39,13 @@ serve(async (req) => {
     const genderWord = gender === "female" ? "female" : gender === "male" ? "male" : "";
 
     let prompt: string;
+    const colorEmphasis = itemColor ? ` The color MUST be exactly ${itemColor} — this is critical, do not use any other color.` : "";
     if (isEyewear) {
-      prompt = `A photorealistic close-up portrait of a ${genderWord} person wearing ${itemName || itemType}${colorDesc}${materialDesc}. Focus on the face showing the eyewear clearly, pure white background, professional fashion photography, well-lit with soft even lighting, minimal shadows.`;
+      prompt = `A photorealistic close-up portrait of a ${genderWord} person wearing ${itemName || itemType}${colorDesc}${materialDesc}. Focus on the face showing the eyewear clearly, pure white background, professional fashion photography, well-lit with soft even lighting, minimal shadows.${colorEmphasis}`;
     } else if (isJewelry) {
-      prompt = `A photorealistic close-up photograph of a ${genderWord} person wearing ${itemName || itemType}${colorDesc}${materialDesc}. Focus on the jewelry piece, pure white background, professional fashion photography, well-lit with soft even lighting, minimal shadows.`;
+      prompt = `A photorealistic close-up photograph of a ${genderWord} person wearing ${itemName || itemType}${colorDesc}${materialDesc}. Focus on the jewelry piece, pure white background, professional fashion photography, well-lit with soft even lighting, minimal shadows.${colorEmphasis}`;
     } else {
-      prompt = `A photorealistic flat-lay product photograph of a ${itemName || itemType}${colorDesc}${materialDesc} neatly arranged on a pure white background. No mannequin, no person, no dress form. Clean e-commerce style product shot, natural fabric texture, accurate colors, well-lit with soft even lighting, minimal shadows, top-down view.`;
+      prompt = `A photorealistic flat-lay product photograph of exactly one ${itemColor ? itemColor + " " : ""}${itemName || itemType}${materialDesc} neatly arranged on a pure white background. No mannequin, no person, no dress form. Clean e-commerce style product shot, natural fabric texture, well-lit with soft even lighting, minimal shadows, top-down view.${colorEmphasis}`;
     }
 
     const createRes = await fetch("https://api.replicate.com/v1/models/black-forest-labs/flux-schnell/predictions", {

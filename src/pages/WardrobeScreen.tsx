@@ -1,6 +1,6 @@
 import { useState, useRef, useEffect, useCallback, useMemo } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { Plus, Trash2, X, Loader2, Camera, Upload, Sparkles, Pencil, Save, Share2, CheckSquare, Square, SlidersHorizontal } from "lucide-react";
+import { Plus, Trash2, X, Loader2, Camera, Upload, Sparkles, Pencil, Save, Share2, CheckSquare, Square, SlidersHorizontal, RefreshCw } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { toast } from "sonner";
@@ -71,6 +71,11 @@ const WardrobeScreen = () => {
   const [bgJob, setBgJob] = useState<BackgroundJob>({ totalItems: 0, completedItems: 0, active: false });
   const bgQueueRef = useRef<Array<{ items: DetectedItem[]; selected: number[]; file: File }>>([]);
   const bgProcessingRef = useRef(false);
+
+  // Failed/retry image tracking
+  const [failedImages, setFailedImages] = useState<Set<string>>(new Set());
+  const [retryingImages, setRetryingImages] = useState<Set<string>>(new Set());
+  const [regeneratingEdit, setRegeneratingEdit] = useState(false);
 
   // Filters
   const [showFilters, setShowFilters] = useState(false);
@@ -327,6 +332,45 @@ const WardrobeScreen = () => {
     setDetectedItems(prev => prev.map((item, i) => i === idx ? { ...item, [field]: value } : item));
   };
 
+  const retryImageGeneration = async (item: ClothingItem) => {
+    if (!user) return;
+    setRetryingImages(prev => new Set(prev).add(item.id));
+    try {
+      const { data, error } = await supabase.functions.invoke("generate-clothing-image", {
+        body: { itemName: item.name, itemType: item.type, itemColor: item.color, itemMaterial: item.material, userId: user.id, bodyType: styleProfile?.body_type || null, gender: styleProfile?.gender || null },
+      });
+      if (error || !data?.imageUrl) throw new Error("Generation failed");
+      await supabase.from("wardrobe").update({ image_url: data.imageUrl }).eq("id", item.id);
+      setItems(prev => prev.map(i => i.id === item.id ? { ...i, image_url: data.imageUrl } : i));
+      setFailedImages(prev => { const n = new Set(prev); n.delete(item.id); return n; });
+      toast.success("Image regenerated!");
+    } catch {
+      toast.error("Failed to regenerate image. Try again later.");
+    } finally {
+      setRetryingImages(prev => { const n = new Set(prev); n.delete(item.id); return n; });
+    }
+  };
+
+  const regenerateEditImage = async () => {
+    if (!editingItem || !user) return;
+    setRegeneratingEdit(true);
+    try {
+      const { data, error } = await supabase.functions.invoke("generate-clothing-image", {
+        body: { itemName: editForm.name, itemType: editForm.type, itemColor: editForm.color, itemMaterial: editForm.material, userId: user.id, bodyType: styleProfile?.body_type || null, gender: styleProfile?.gender || null },
+      });
+      if (error || !data?.imageUrl) throw new Error("Generation failed");
+      await supabase.from("wardrobe").update({ image_url: data.imageUrl }).eq("id", editingItem.id);
+      setItems(prev => prev.map(i => i.id === editingItem.id ? { ...i, image_url: data.imageUrl } : i));
+      setEditingItem(prev => prev ? { ...prev, image_url: data.imageUrl } : null);
+      setFailedImages(prev => { const n = new Set(prev); n.delete(editingItem.id); return n; });
+      toast.success("Image regenerated!");
+    } catch {
+      toast.error("Failed to regenerate. Try again later.");
+    } finally {
+      setRegeneratingEdit(false);
+    }
+  };
+
   const toggleSelectItem = (id: string) => {
     setSelectedItems(prev => {
       const next = new Set(prev);
@@ -567,8 +611,28 @@ const WardrobeScreen = () => {
                   transition={{ duration: 0.3, delay: i * 0.05 }}
                   className={`glass-card overflow-hidden group relative ${selectMode && selectedItems.has(item.id) ? "ring-2 ring-primary" : ""}`}
                   onClick={() => selectMode && toggleSelectItem(item.id)}>
-                  <div className="aspect-square overflow-hidden rounded-t-2xl">
-                    <img src={item.image_url} alt={item.name || "Clothing"} className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105" loading="lazy" />
+                  <div className="aspect-square overflow-hidden rounded-t-2xl relative">
+                    <img
+                      src={item.image_url}
+                      alt={item.name || "Clothing"}
+                      className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
+                      loading="lazy"
+                      onError={() => setFailedImages(prev => new Set(prev).add(item.id))}
+                    />
+                    {/* Retry overlay for failed images */}
+                    {failedImages.has(item.id) && !selectMode && (
+                      <div className="absolute inset-0 bg-background/70 backdrop-blur-sm flex flex-col items-center justify-center gap-2">
+                        <p className="text-[10px] text-muted-foreground">Image failed</p>
+                        <button
+                          onClick={(e) => { e.stopPropagation(); retryImageGeneration(item); }}
+                          disabled={retryingImages.has(item.id)}
+                          className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-primary text-primary-foreground text-[11px] font-medium shadow-soft active:scale-95 transition-transform disabled:opacity-50"
+                        >
+                          {retryingImages.has(item.id) ? <Loader2 size={12} className="animate-spin" /> : <RefreshCw size={12} />}
+                          {retryingImages.has(item.id) ? "Retrying..." : "Retry"}
+                        </button>
+                      </div>
+                    )}
                   </div>
                   <div className="p-3">
                     <p className="text-sm font-medium text-foreground truncate">{item.name || "Unnamed"}</p>
@@ -784,10 +848,17 @@ const WardrobeScreen = () => {
                     </div>
                   </div>
                 </div>
-                <button onClick={handleSaveEdit} disabled={savingEdit}
-                  className="w-full flex items-center justify-center gap-2 py-3 rounded-xl gradient-accent text-accent-foreground font-medium text-sm shadow-soft active:scale-[0.98] transition-transform disabled:opacity-60">
-                  <Save size={16} /> {savingEdit ? "Saving..." : "Save Changes"}
-                </button>
+                <div className="flex gap-2">
+                  <button onClick={handleSaveEdit} disabled={savingEdit}
+                    className="flex-1 flex items-center justify-center gap-2 py-3 rounded-xl gradient-accent text-accent-foreground font-medium text-sm shadow-soft active:scale-[0.98] transition-transform disabled:opacity-60">
+                    <Save size={16} /> {savingEdit ? "Saving..." : "Save Changes"}
+                  </button>
+                  <button onClick={regenerateEditImage} disabled={regeneratingEdit || savingEdit}
+                    className="flex items-center justify-center gap-1.5 px-4 py-3 rounded-xl bg-secondary text-secondary-foreground font-medium text-sm active:scale-[0.98] transition-transform disabled:opacity-50"
+                    title="Regenerate image with current details">
+                    {regeneratingEdit ? <Loader2 size={16} className="animate-spin" /> : <RefreshCw size={16} />}
+                  </button>
+                </div>
               </motion.div>
             </motion.div>
           )}
