@@ -349,7 +349,8 @@ const CameraScreen = () => {
   const cancelAnalysis = () => {
     if (activeAbort) activeAbort.abort();
     activeAbort = null;
-    updateGlobal({ analyzing: false, image: null, imageBase64: null, result: null, progress: 0, stage: "" });
+    clearStageTimers();
+    updateGlobal({ analyzing: false, image: null, imageBase64: null, result: null, progress: 0, stage: "", analysisSteps: [] });
   };
 
   const clearImage = () => {
