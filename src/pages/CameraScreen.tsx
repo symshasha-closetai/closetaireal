@@ -155,6 +155,20 @@ const runAnalysis = async (file: File, userId: string | undefined, styleProfile:
     const { base64: imageBase64 } = await compressImage(file, 800, 800);
 
     if (activeAbort?.signal.aborted) return;
+
+    // Check cache for consistent scores
+    const imageHash = computeImageHash(imageBase64);
+    updateGlobal({ progress: 15, stage: "Checking for previous analysis..." });
+
+    const cachedResult = await checkCache(imageHash, userId);
+    if (cachedResult) {
+      if (activeAbort?.signal.aborted) return;
+      updateGlobal({ result: cachedResult, analyzing: false, progress: 0, stage: "" });
+      toast.success("Loaded your previous rating for this photo!");
+      return;
+    }
+
+    if (activeAbort?.signal.aborted) return;
     updateGlobal({ progress: 20, stage: "Analyzing your style..." });
 
     if (activeAbort?.signal.aborted) return;
@@ -171,7 +185,7 @@ const runAnalysis = async (file: File, userId: string | undefined, styleProfile:
     if (data?.error) { toast.error(data.error); updateGlobal({ analyzing: false, progress: 0, stage: "" }); return; }
     if (data?.result) {
       updateGlobal({ result: data.result, analyzing: false, progress: 0, stage: "" });
-      saveDripToHistory(globalDripState.image || "", data.result, userId);
+      saveDripToHistory(globalDripState.image || "", data.result, userId, imageHash);
     }
   } catch (err: any) {
     if (err?.name === "AbortError" || activeAbort?.signal.aborted) return;
