@@ -162,7 +162,7 @@ const OutfitRatingCard = ({ image, imageBase64, result, wardrobeItems = [],
         });
       }
       toast.success(`${selected.length} item(s) added to wardrobe!`);
-      setDetectedItems(null);
+      onDetectedItemsChange(null);
     } catch (err) {
       console.error("Save extracted error:", err);
       toast.error("Failed to save items");
