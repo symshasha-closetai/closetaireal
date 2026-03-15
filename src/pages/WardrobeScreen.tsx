@@ -1,6 +1,6 @@
 import { useState, useRef, useEffect, useCallback, useMemo } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { Plus, Trash2, X, Loader2, Camera, Upload, Sparkles, Pencil, Save, Share2, CheckSquare, Square, SlidersHorizontal, RefreshCw } from "lucide-react";
+import { Plus, Trash2, X, Loader2, Camera, Upload, Sparkles, Pencil, Save, Share2, CheckSquare, Square, SlidersHorizontal, RefreshCw, Pin } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { toast } from "sonner";
@@ -20,6 +20,7 @@ type ClothingItem = {
   quality: string | null;
   season: string | null;
   style: string | null;
+  pinned: boolean;
 };
 
 type DetectedItem = {
@@ -97,17 +98,30 @@ const WardrobeScreen = () => {
     if (!user) return;
     const { data, error } = await supabase
       .from("wardrobe")
-      .select("id, image_url, type, color, material, name, brand, quality, season, style")
+      .select("id, image_url, type, color, material, name, brand, quality, season, style, pinned")
       .eq("user_id", user.id)
       .order("created_at", { ascending: false });
     if (error) toast.error("Failed to load wardrobe");
     else {
-      const wardrobeItems = (data as ClothingItem[]) || [];
+      const wardrobeItems = ((data || []) as any[]).map(i => ({ ...i, pinned: !!i.pinned })) as ClothingItem[];
+      // Sort pinned first
+      wardrobeItems.sort((a, b) => (a.pinned === b.pinned ? 0 : a.pinned ? -1 : 1));
       setItems(wardrobeItems);
-      // Precache all wardrobe images for offline/fast access
       precacheImages(wardrobeItems.map((i) => i.image_url).filter(Boolean));
     }
     setLoading(false);
+  };
+
+  const togglePin = async (item: ClothingItem) => {
+    const newPinned = !item.pinned;
+    const { error } = await supabase.from("wardrobe").update({ pinned: newPinned } as any).eq("id", item.id);
+    if (error) { toast.error("Failed to update pin"); return; }
+    setItems(prev => {
+      const updated = prev.map(i => i.id === item.id ? { ...i, pinned: newPinned } : i);
+      updated.sort((a, b) => (a.pinned === b.pinned ? 0 : a.pinned ? -1 : 1));
+      return updated;
+    });
+    toast.success(newPinned ? "Pinned!" : "Unpinned", { duration: 1500 });
   };
 
   // Extract unique filter values
@@ -643,12 +657,22 @@ const WardrobeScreen = () => {
                   </div>
                   {!selectMode && (
                     <>
+                      {/* Pin indicator */}
+                      {item.pinned && (
+                        <div className="absolute top-2 left-2 w-7 h-7 rounded-full bg-primary text-primary-foreground flex items-center justify-center z-10">
+                          <Pin size={13} />
+                        </div>
+                      )}
+                      <button onClick={(e) => { e.stopPropagation(); togglePin(item); }}
+                        className={`absolute top-2 ${item.pinned ? 'left-11' : 'left-2'} w-7 h-7 rounded-full bg-foreground/50 text-primary-foreground flex items-center justify-center opacity-100 sm:opacity-0 sm:group-hover:opacity-100 transition-opacity backdrop-blur-sm`}>
+                        <Pin size={13} className={item.pinned ? "fill-current" : ""} />
+                      </button>
                       <button onClick={(e) => { e.stopPropagation(); openEdit(item); }}
-                        className="absolute top-2 left-2 w-7 h-7 rounded-full bg-foreground/50 text-primary-foreground flex items-center justify-center opacity-100 sm:opacity-0 sm:group-hover:opacity-100 transition-opacity backdrop-blur-sm">
+                        className={`absolute top-2 ${item.pinned ? 'left-20' : 'left-11'} w-7 h-7 rounded-full bg-foreground/50 text-primary-foreground flex items-center justify-center opacity-100 sm:opacity-0 sm:group-hover:opacity-100 transition-opacity backdrop-blur-sm`}>
                         <Pencil size={13} />
                       </button>
                       <button onClick={(e) => { e.stopPropagation(); shareItem(item); }}
-                        className="absolute top-2 left-11 w-7 h-7 rounded-full bg-foreground/50 text-primary-foreground flex items-center justify-center opacity-100 sm:opacity-0 sm:group-hover:opacity-100 transition-opacity backdrop-blur-sm">
+                        className="absolute top-11 left-2 w-7 h-7 rounded-full bg-foreground/50 text-primary-foreground flex items-center justify-center opacity-100 sm:opacity-0 sm:group-hover:opacity-100 transition-opacity backdrop-blur-sm">
                         <Share2 size={13} />
                       </button>
                       <button onClick={(e) => { e.stopPropagation(); retryImageGeneration(item); }}

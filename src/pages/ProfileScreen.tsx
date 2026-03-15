@@ -9,6 +9,7 @@ import { compressImage } from "@/lib/imageCompression";
 import AppHeader from "../components/AppHeader";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import ScoreRing from "../components/ScoreRing";
+import OutfitRatingCard from "../components/OutfitRatingCard";
 import {
   GenderPicker,
   BodyProfileSection,
@@ -25,6 +26,7 @@ type DripHistoryEntry = {
   praiseLine: string;
   timestamp: number;
   dbId?: string; // DB row id for deletion
+  fullResult?: any; // Full RatingResult for OutfitRatingCard
 };
 
 // --- Suggest Me Section ---
@@ -199,15 +201,20 @@ const ProfileScreen = () => {
 
     // Map drip_history DB rows to DripHistoryEntry
     const dripRows = (dripRes.data || []) as any[];
-    const dripEntries: DripHistoryEntry[] = dripRows.map((r: any) => ({
-      id: r.id,
-      image: r.image_url || "",
-      score: Number(r.score) || 0,
-      killerTag: r.killer_tag || "",
-      praiseLine: r.praise_line || "",
-      timestamp: new Date(r.created_at).getTime(),
-      dbId: r.id,
-    }));
+    // Filter out entries older than 14 days
+    const fourteenDaysAgo = Date.now() - 14 * 24 * 60 * 60 * 1000;
+    const dripEntries: DripHistoryEntry[] = dripRows
+      .filter((r: any) => new Date(r.created_at).getTime() > fourteenDaysAgo)
+      .map((r: any) => ({
+        id: r.id,
+        image: r.image_url || "",
+        score: Number(r.score) || 0,
+        killerTag: r.killer_tag || "",
+        praiseLine: r.praise_line || "",
+        timestamp: new Date(r.created_at).getTime(),
+        dbId: r.id,
+        fullResult: r.full_result || null,
+      }));
     setDripHistory(dripEntries);
 
     try {
@@ -358,22 +365,51 @@ const ProfileScreen = () => {
         <AnimatePresence>
           {viewingCard && (
             <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
-              className="fixed inset-0 z-50 bg-black/90 flex flex-col items-center justify-center p-4 gap-4" onClick={() => setViewingCard(null)}>
-              <button onClick={() => setViewingCard(null)}
-                className="absolute top-4 right-4 z-50 w-10 h-10 rounded-full bg-foreground/20 backdrop-blur-sm flex items-center justify-center">
-                <X size={20} className="text-white" />
-              </button>
-              <img src={viewingCard.image} alt="Drip card" className="max-w-[90vw] max-h-[70vh] rounded-2xl object-contain shadow-2xl"
-                onClick={(e) => e.stopPropagation()} />
-              <div className="flex gap-3" onClick={(e) => e.stopPropagation()}>
-                <button onClick={() => shareDripEntry(viewingCard)}
-                  className="flex items-center gap-2 px-4 py-2 rounded-full border border-white/20 text-white/70 text-xs tracking-wider">
-                  <Share2 size={14} /> Share
-                </button>
-                <button onClick={() => deleteDripEntry(viewingCard.id, viewingCard.dbId)}
-                  className="flex items-center gap-2 px-4 py-2 rounded-full border border-destructive/30 text-destructive text-xs tracking-wider">
-                  <Trash2 size={14} /> Delete
-                </button>
+              className="fixed inset-0 z-[60] bg-background overflow-y-auto">
+              <div className="max-w-lg mx-auto px-5 py-6 pb-32">
+                <div className="flex items-center justify-between mb-4">
+                  <span className="text-xs text-muted-foreground">
+                    {new Date(viewingCard.timestamp).toLocaleDateString("en-US", { weekday: "short", month: "short", day: "numeric" })}
+                  </span>
+                  <button onClick={() => setViewingCard(null)} className="w-9 h-9 rounded-full bg-secondary flex items-center justify-center">
+                    <X size={18} className="text-foreground" />
+                  </button>
+                </div>
+                {viewingCard.fullResult ? (
+                  <OutfitRatingCard
+                    image={viewingCard.image}
+                    result={viewingCard.fullResult}
+                    wardrobeItems={[]}
+                    onWardrobeSuggestionsChange={() => {}}
+                    onShoppingSuggestionsChange={() => {}}
+                    onDetectedItemsChange={() => {}}
+                    onSuggestionImagesChange={() => {}}
+                    onSavedSuggestionsChange={() => {}}
+                    wardrobeSuggestions={null}
+                    shoppingSuggestions={null}
+                    detectedItems={null}
+                    suggestionImages={{}}
+                    savedSuggestions={[]}
+                  />
+                ) : (
+                  <div className="space-y-4">
+                    <img src={viewingCard.image} alt="Drip card" className="w-full rounded-2xl object-contain shadow-2xl" />
+                    <div className="text-center space-y-2">
+                      <p className="text-2xl font-bold text-foreground">{viewingCard.score}/10</p>
+                      {viewingCard.killerTag && <p className="text-sm text-muted-foreground">{viewingCard.killerTag}</p>}
+                    </div>
+                  </div>
+                )}
+                <div className="flex gap-3 justify-center mt-6">
+                  <button onClick={() => shareDripEntry(viewingCard)}
+                    className="flex items-center gap-2 px-4 py-2 rounded-full border border-border text-foreground text-xs tracking-wider">
+                    <Share2 size={14} /> Share
+                  </button>
+                  <button onClick={() => deleteDripEntry(viewingCard.id, viewingCard.dbId)}
+                    className="flex items-center gap-2 px-4 py-2 rounded-full border border-destructive/30 text-destructive text-xs tracking-wider">
+                    <Trash2 size={14} /> Delete
+                  </button>
+                </div>
               </div>
             </motion.div>
           )}

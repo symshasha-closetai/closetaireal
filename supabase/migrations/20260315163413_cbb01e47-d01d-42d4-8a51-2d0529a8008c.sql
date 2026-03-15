@@ -1,0 +1,1 @@
+ALTER TABLE public.wardrobe ADD COLUMN pinned boolean DEFAULT false;

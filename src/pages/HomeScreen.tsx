@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback, useRef } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { Sparkles, Camera, ChevronRight, X, Heart, GraduationCap, PartyPopper, Shirt, Palette, Music, Church, Briefcase, Sun, Moon, Sunset, CloudRain, Thermometer, CloudSun, Snowflake, Shuffle, Leaf, Smile, Droplet, User, Loader2, Bookmark, BookmarkCheck, ImagePlus } from "lucide-react";
+import { Sparkles, Camera, ChevronRight, X, Heart, GraduationCap, PartyPopper, Shirt, Palette, Music, Church, Briefcase, Sun, Moon, Sunset, CloudRain, Thermometer, CloudSun, Snowflake, Shuffle, Leaf, Smile, Droplet, User, Loader2, Bookmark, BookmarkCheck, ImagePlus, Share2, Flame, Pin, Download } from "lucide-react";
 import AppHeader from "../components/AppHeader";
 import { useAuth } from "../hooks/useAuth";
 import { useNavigate } from "react-router-dom";
@@ -10,6 +10,7 @@ import ScoreRing from "../components/ScoreRing";
 import { Progress } from "@/components/ui/progress";
 import { precacheImages } from "@/lib/imageCache";
 import { compressImage } from "@/lib/imageCompression";
+import html2canvas from "html2canvas";
 
 const occasions = [
   { label: "Casual", icon: Shirt, color: "bg-blue-100 text-blue-600" },
@@ -63,6 +64,7 @@ type WardrobeItem = {
   name: string | null;
   color: string | null;
   material: string | null;
+  pinned?: boolean;
 };
 
 type OutfitReasoning = {
@@ -118,6 +120,27 @@ const HomeScreen = () => {
   const [todayPhoto, setTodayPhoto] = useState<string | null>(null);
   const [uploadingPhoto, setUploadingPhoto] = useState(false);
   const photoFileRef = useRef<HTMLInputElement>(null);
+  const todayLookRef = useRef<HTMLDivElement>(null);
+  const [sharingLook, setSharingLook] = useState(false);
+
+  // Streak tracking
+  const [streak, setStreak] = useState(0);
+
+  // Load streak
+  useEffect(() => {
+    if (!user) return;
+    try {
+      const raw = localStorage.getItem(`streak-${user.id}`);
+      if (raw) {
+        const { count, lastDate } = JSON.parse(raw);
+        const today = new Date().toDateString();
+        const yesterday = new Date(Date.now() - 86400000).toDateString();
+        if (lastDate === today) setStreak(count);
+        else if (lastDate === yesterday) setStreak(count); // still valid, will increment on upload
+        else setStreak(0);
+      }
+    } catch {}
+  }, [user]);
 
   useEffect(() => {
     if (user) {
@@ -152,11 +175,50 @@ const HomeScreen = () => {
       const { data: { publicUrl } } = supabase.storage.from("wardrobe").getPublicUrl(path);
       setTodayPhoto(publicUrl);
       localStorage.setItem(`today-look-${user.id}`, JSON.stringify({ url: publicUrl, date: new Date().toDateString() }));
+      // Update streak
+      const today = new Date().toDateString();
+      const yesterday = new Date(Date.now() - 86400000).toDateString();
+      let newStreak = 1;
+      try {
+        const raw = localStorage.getItem(`streak-${user.id}`);
+        if (raw) {
+          const { count, lastDate } = JSON.parse(raw);
+          if (lastDate === yesterday) newStreak = count + 1;
+          else if (lastDate === today) newStreak = count; // already uploaded today
+        }
+      } catch {}
+      setStreak(newStreak);
+      localStorage.setItem(`streak-${user.id}`, JSON.stringify({ count: newStreak, lastDate: today }));
       toast.success("Looking great! 🔥");
     } catch {
       toast.error("Failed to upload photo");
     }
     setUploadingPhoto(false);
+  };
+
+  const handleShareTodayLook = async () => {
+    if (!todayLookRef.current) return;
+    setSharingLook(true);
+    try {
+      const canvas = await html2canvas(todayLookRef.current, { useCORS: true, scale: 2, backgroundColor: null });
+      canvas.toBlob(async (blob) => {
+        if (!blob) { setSharingLook(false); return; }
+        const file = new File([blob], "closetai-today-look.png", { type: "image/png" });
+        if (navigator.share && navigator.canShare?.({ files: [file] })) {
+          await navigator.share({ title: "My Today's Look — ClosetAI", files: [file] });
+        } else {
+          const url = URL.createObjectURL(blob);
+          const a = document.createElement("a"); a.href = url; a.download = "closetai-today-look.png";
+          document.body.appendChild(a); a.click(); document.body.removeChild(a);
+          URL.revokeObjectURL(url);
+          toast.success("Image saved!");
+        }
+        setSharingLook(false);
+      }, "image/png");
+    } catch {
+      toast.info("Couldn't share");
+      setSharingLook(false);
+    }
   };
 
   const handleSaveOutfit = async (outfit: OutfitSuggestion, idx: number) => {
@@ -223,11 +285,13 @@ const HomeScreen = () => {
       }
       supabase
         .from("wardrobe")
-        .select("id, image_url, type, name, color, material")
+        .select("id, image_url, type, name, color, material, pinned")
         .eq("user_id", user.id)
         .order("created_at", { ascending: false })
         .then(({ data }) => {
-          const items = data || [];
+          const items = ((data || []) as any[]).map(i => ({ ...i, pinned: !!i.pinned })) as WardrobeItem[];
+          // Sort pinned first
+          items.sort((a, b) => (a.pinned === b.pinned ? 0 : a.pinned ? -1 : 1));
           setAllWardrobeItems(items);
           setWardrobeItems(items.slice(0, 6));
           setWardrobeCount(items.length);
@@ -367,21 +431,35 @@ const HomeScreen = () => {
         {/* Controls */}
         <div className="space-y-4">
           {/* Today's Look Card */}
-          <div className="glass-card-elevated overflow-hidden">
+          <div className="glass-card-elevated overflow-hidden" ref={todayLookRef}>
             {todayPhoto ? (
               <div className="relative">
                 <img src={todayPhoto} alt="Today's look" className="w-full aspect-[4/5] object-cover" />
                 <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-transparent to-black/20" />
-                <div className="absolute top-3 left-3">
+                <div className="absolute top-3 left-3 flex gap-2">
                   <span className="px-2.5 py-1 rounded-full bg-primary/90 text-primary-foreground text-[10px] font-semibold">Today's Look</span>
+                  {streak > 0 && (
+                    <span className="px-2.5 py-1 rounded-full bg-orange-500/90 text-white text-[10px] font-semibold flex items-center gap-1">
+                      <Flame size={10} /> {streak} day{streak > 1 ? "s" : ""}
+                    </span>
+                  )}
                 </div>
-                <button
-                  onClick={() => photoFileRef.current?.click()}
-                  disabled={uploadingPhoto}
-                  className="absolute top-3 right-3 w-8 h-8 rounded-full bg-foreground/30 backdrop-blur-sm flex items-center justify-center"
-                >
-                  <Camera size={14} className="text-white" />
-                </button>
+                <div className="absolute top-3 right-3 flex gap-2">
+                  <button
+                    onClick={handleShareTodayLook}
+                    disabled={sharingLook}
+                    className="w-8 h-8 rounded-full bg-foreground/30 backdrop-blur-sm flex items-center justify-center"
+                  >
+                    {sharingLook ? <Loader2 size={14} className="text-white animate-spin" /> : <Share2 size={14} className="text-white" />}
+                  </button>
+                  <button
+                    onClick={() => photoFileRef.current?.click()}
+                    disabled={uploadingPhoto}
+                    className="w-8 h-8 rounded-full bg-foreground/30 backdrop-blur-sm flex items-center justify-center"
+                  >
+                    <Camera size={14} className="text-white" />
+                  </button>
+                </div>
                 <div className="absolute bottom-4 left-4 right-4">
                   <p className="text-white font-semibold text-lg drop-shadow-lg">{getDailyTag()}</p>
                   <p className="text-white/60 text-[10px] mt-0.5">{new Date().toLocaleDateString("en-US", { weekday: "long", month: "long", day: "numeric" })}</p>
@@ -403,6 +481,26 @@ const HomeScreen = () => {
               </button>
             )}
           </div>
+
+          {/* Pinned Items */}
+          {allWardrobeItems.filter(i => i.pinned).length > 0 && (
+            <div className="glass-card-elevated p-4">
+              <div className="flex items-center gap-2 mb-3">
+                <Pin size={14} className="text-primary" />
+                <h2 className="text-sm font-semibold text-foreground">Pinned Items</h2>
+              </div>
+              <div className="flex gap-2 overflow-x-auto pb-1 no-scrollbar">
+                {allWardrobeItems.filter(i => i.pinned).map((wi) => (
+                  <div key={wi.id} className="relative flex-shrink-0 w-20 aspect-square rounded-xl overflow-hidden bg-secondary">
+                    <img src={wi.image_url} alt={wi.name || wi.type} className="w-full h-full object-cover" loading="lazy" />
+                    <div className="absolute bottom-0 left-0 right-0 bg-foreground/40 backdrop-blur-sm px-1 py-0.5">
+                      <p className="text-[7px] text-primary-foreground truncate text-center font-medium">{wi.name || wi.type}</p>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
 
           {/* My Wardrobe Card */}
           <div className="glass-card-elevated p-4">
