@@ -49,6 +49,7 @@ export type Database = {
           created_at: string
           full_result: Json | null
           id: string
+          image_hash: string | null
           image_url: string | null
           killer_tag: string | null
           praise_line: string | null
@@ -59,6 +60,7 @@ export type Database = {
           created_at?: string
           full_result?: Json | null
           id?: string
+          image_hash?: string | null
           image_url?: string | null
           killer_tag?: string | null
           praise_line?: string | null
@@ -69,6 +71,7 @@ export type Database = {
           created_at?: string
           full_result?: Json | null
           id?: string
+          image_hash?: string | null
           image_url?: string | null
           killer_tag?: string | null
           praise_line?: string | null

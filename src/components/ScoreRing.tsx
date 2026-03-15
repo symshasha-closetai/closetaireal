@@ -11,7 +11,7 @@ interface ScoreRingProps {
 }
 
 const ScoreRing = ({ score, maxScore = 10, size = 56, label, colorClass, strokeColor, light }: ScoreRingProps) => {
-  const strokeWidth = 3;
+  const strokeWidth = light ? 4 : 3;
   const radius = (size - strokeWidth) / 2;
   const circumference = 2 * Math.PI * radius;
   const progress = score / maxScore;
@@ -28,7 +28,7 @@ const ScoreRing = ({ score, maxScore = 10, size = 56, label, colorClass, strokeC
             cy={size / 2}
             r={radius}
             fill="none"
-            className={light ? "stroke-white/20" : "stroke-border/20"}
+            className={light ? "stroke-white/30" : "stroke-border/20"}
             strokeWidth={strokeWidth}
           />
           <motion.circle
@@ -47,7 +47,7 @@ const ScoreRing = ({ score, maxScore = 10, size = 56, label, colorClass, strokeC
           />
         </svg>
         <div className="absolute inset-0 flex items-center justify-center">
-          <span className={`text-sm font-light ${light ? "text-white" : "text-foreground"}`}>{displayScore}</span>
+          <span className={`text-sm font-semibold ${light ? "text-white" : "text-foreground"}`} style={light ? { textShadow: "0 1px 6px rgba(0,0,0,0.7)" } : undefined}>{displayScore}</span>
         </div>
       </div>
       {label && (

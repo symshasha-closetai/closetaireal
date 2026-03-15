@@ -84,7 +84,7 @@ Rules:
     }
 
     const data = await callWithFallback(
-      ["gemini-2.0-flash", "gemini-2.5-flash"],
+      ["gemini-2.5-flash", "gemini-2.0-flash"],
       apiKey,
       {
         contents: [

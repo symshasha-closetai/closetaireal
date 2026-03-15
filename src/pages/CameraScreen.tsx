@@ -57,14 +57,27 @@ const updateGlobal = (patch: Partial<DripState>) => {
   notifyListeners();
 };
 
+// Simple image hash for cache lookups
+const computeImageHash = (base64: string): string => {
+  const sample = base64.substring(0, 200) + base64.substring(base64.length - 200);
+  let hash = 0;
+  for (let i = 0; i < sample.length; i++) {
+    hash = ((hash << 5) - hash) + sample.charCodeAt(i);
+    hash |= 0;
+  }
+  return `img_${base64.length}_${hash}`;
+};
+
 // Save drip card to DB + localStorage cache
-const saveDripToHistory = async (image: string, result: RatingResult, userId?: string) => {
+const saveDripToHistory = async (image: string, result: RatingResult, userId?: string, imageHash?: string) => {
   const entry = {
     id: `drip-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`,
     image,
     score: result.drip_score,
     killerTag: result.killer_tag || "",
     praiseLine: result.praise_line || "",
+    imageHash: imageHash || "",
+    fullResult: result,
     timestamp: Date.now(),
   };
 
@@ -98,11 +111,37 @@ const saveDripToHistory = async (image: string, result: RatingResult, userId?: s
         killer_tag: result.killer_tag || null,
         praise_line: result.praise_line || null,
         full_result: result as any,
+        image_hash: imageHash || null,
       } as any);
     } catch (err) {
       console.error("Failed to save drip to DB:", err);
     }
   }
+};
+
+// Check cache for existing result by image hash
+const checkCache = async (imageHash: string, userId?: string): Promise<RatingResult | null> => {
+  // Check localStorage first
+  try {
+    const cached = JSON.parse(localStorage.getItem("drip-history") || "[]");
+    const match = cached.find((e: any) => e.imageHash === imageHash);
+    if (match?.fullResult) return match.fullResult;
+  } catch {}
+
+  // Check DB
+  if (userId) {
+    try {
+      const { data } = await supabase
+        .from("drip_history" as any)
+        .select("full_result")
+        .eq("user_id", userId)
+        .eq("image_hash", imageHash)
+        .order("created_at", { ascending: false })
+        .limit(1) as any;
+      if (data?.[0]?.full_result) return data[0].full_result as RatingResult;
+    } catch {}
+  }
+  return null;
 };
 
 // Run analysis globally so it survives navigation
@@ -114,6 +153,20 @@ const runAnalysis = async (file: File, userId: string | undefined, styleProfile:
 
   try {
     const { base64: imageBase64 } = await compressImage(file, 800, 800);
+
+    if (activeAbort?.signal.aborted) return;
+
+    // Check cache for consistent scores
+    const imageHash = computeImageHash(imageBase64);
+    updateGlobal({ progress: 15, stage: "Checking for previous analysis..." });
+
+    const cachedResult = await checkCache(imageHash, userId);
+    if (cachedResult) {
+      if (activeAbort?.signal.aborted) return;
+      updateGlobal({ result: cachedResult, analyzing: false, progress: 0, stage: "" });
+      toast.success("Loaded your previous rating for this photo!");
+      return;
+    }
 
     if (activeAbort?.signal.aborted) return;
     updateGlobal({ progress: 20, stage: "Analyzing your style..." });
@@ -132,7 +185,7 @@ const runAnalysis = async (file: File, userId: string | undefined, styleProfile:
     if (data?.error) { toast.error(data.error); updateGlobal({ analyzing: false, progress: 0, stage: "" }); return; }
     if (data?.result) {
       updateGlobal({ result: data.result, analyzing: false, progress: 0, stage: "" });
-      saveDripToHistory(globalDripState.image || "", data.result, userId);
+      saveDripToHistory(globalDripState.image || "", data.result, userId, imageHash);
     }
   } catch (err: any) {
     if (err?.name === "AbortError" || activeAbort?.signal.aborted) return;

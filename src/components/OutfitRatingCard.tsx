@@ -1,6 +1,6 @@
 import { useState, useRef, useCallback } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { Share2, ShoppingBag, Shirt, Footprints, Watch, Gem, Loader2, X, Info, Download, Heart } from "lucide-react";
+import { Share2, ShoppingBag, Shirt, Footprints, Watch, Gem, Loader2, X, Info, Download, Heart, ScanLine, Check } from "lucide-react";
 import ScoreRing from "./ScoreRing";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
@@ -71,6 +71,12 @@ const OutfitRatingCard = ({ image, imageBase64, result, wardrobeItems = [] }: Pr
   const [loadingWardrobe, setLoadingWardrobe] = useState(false);
   const [loadingShopping, setLoadingShopping] = useState(false);
 
+  // Extract outfits state
+  type DetectedItem = { name: string; type: string; color: string; material?: string; quality?: string; brand?: string; selected: boolean };
+  const [detectedItems, setDetectedItems] = useState<DetectedItem[] | null>(null);
+  const [extracting, setExtracting] = useState(false);
+  const [savingExtracted, setSavingExtracted] = useState(false);
+
   const fetchSuggestions = async (type: "wardrobe" | "shopping") => {
     const setLoading = type === "wardrobe" ? setLoadingWardrobe : setLoadingShopping;
     const setData = type === "wardrobe" ? setWardrobeSuggestions : setShoppingSuggestions;
@@ -92,6 +98,67 @@ const OutfitRatingCard = ({ image, imageBase64, result, wardrobeItems = [] }: Pr
       toast.error(`Failed to get ${type} suggestions`);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleExtractOutfits = async () => {
+    if (!imageBase64) return;
+    setExtracting(true);
+    try {
+      const base64 = imageBase64.includes(",") ? imageBase64.split(",")[1] : imageBase64;
+      const { data, error } = await supabase.functions.invoke("analyze-clothing", {
+        body: { imageBase64: base64 },
+      });
+      if (error) throw error;
+      if (data?.items?.length) {
+        setDetectedItems(data.items.map((item: any) => ({ ...item, selected: true })));
+      } else {
+        toast.info("No clothing items detected");
+        setDetectedItems([]);
+      }
+    } catch (err) {
+      console.error("Extract outfits error:", err);
+      toast.error("Failed to detect clothing items");
+    } finally {
+      setExtracting(false);
+    }
+  };
+
+  const handleSaveExtracted = async () => {
+    if (!user || !detectedItems) return;
+    const selected = detectedItems.filter(i => i.selected);
+    if (!selected.length) { toast.info("Select at least one item"); return; }
+    setSavingExtracted(true);
+    try {
+      const base64 = imageBase64?.includes(",") ? imageBase64?.split(",")[1] : imageBase64;
+      for (const item of selected) {
+        // Generate image for the item
+        let imageUrl = "";
+        try {
+          const { data: imgData } = await supabase.functions.invoke("generate-clothing-image", {
+            body: { name: item.name, type: item.type, color: item.color, material: item.material },
+          });
+          if (imgData?.imageUrl) imageUrl = imgData.imageUrl;
+        } catch { /* use empty url */ }
+
+        await supabase.from("wardrobe").insert({
+          user_id: user.id,
+          name: item.name,
+          type: item.type,
+          color: item.color || null,
+          material: item.material || null,
+          quality: item.quality || null,
+          brand: item.brand || null,
+          image_url: imageUrl || "https://placehold.co/200x200?text=Item",
+        });
+      }
+      toast.success(`${selected.length} item(s) added to wardrobe!`);
+      setDetectedItems(null);
+    } catch (err) {
+      console.error("Save extracted error:", err);
+      toast.error("Failed to save items");
+    } finally {
+      setSavingExtracted(false);
     }
   };
 
@@ -267,11 +334,11 @@ const OutfitRatingCard = ({ image, imageBase64, result, wardrobeItems = [] }: Pr
         </div>
 
         {/* Bottom gradient overlay */}
-        <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/60 via-black/30 to-transparent pt-20 pb-3 px-5">
+        <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/80 via-black/50 to-transparent pt-20 pb-3 px-5">
           <div className="flex items-end justify-between">
             {/* Drip Score Ring */}
             <button onClick={() => toggleTooltip("drip")} className="focus:outline-none active:scale-95 transition-transform">
-              <ScoreRing score={result.drip_score} size={54} strokeColor="#C9A96E" light />
+              <ScoreRing score={result.drip_score} size={64} strokeColor="#C9A96E" light />
               <p className="text-[9px] uppercase tracking-[0.15em] text-white/50 mt-1 text-center">Drip</p>
             </button>
 
@@ -290,7 +357,7 @@ const OutfitRatingCard = ({ image, imageBase64, result, wardrobeItems = [] }: Pr
 
             {/* Confidence Ring */}
             <button onClick={() => toggleTooltip("confidence")} className="focus:outline-none active:scale-95 transition-transform">
-              <ScoreRing score={result.confidence_rating} size={54} strokeColor="#A8A8A8" light />
+              <ScoreRing score={result.confidence_rating} size={64} strokeColor="#A8A8A8" light />
               <p className="text-[9px] uppercase tracking-[0.15em] text-white/50 mt-1 text-center">Confidence</p>
             </button>
           </div>
@@ -400,6 +467,53 @@ const OutfitRatingCard = ({ image, imageBase64, result, wardrobeItems = [] }: Pr
             {downloading ? <Loader2 size={14} className="animate-spin" /> : <Download size={14} />}
           </button>
         </div>
+      </motion.div>
+
+      {/* Extract Outfits Button */}
+      <motion.div initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.15 }} className="space-y-3">
+        {detectedItems === null ? (
+          <button
+            onClick={handleExtractOutfits}
+            disabled={extracting}
+            className="w-full flex items-center justify-center gap-2.5 py-3.5 rounded-2xl gradient-accent text-accent-foreground text-sm font-medium active:scale-[0.98] transition-transform disabled:opacity-60"
+          >
+            {extracting ? <Loader2 size={16} className="animate-spin" /> : <ScanLine size={16} />}
+            {extracting ? "Detecting items..." : "Extract Outfits to Wardrobe"}
+          </button>
+        ) : detectedItems.length > 0 ? (
+          <div className="rounded-2xl bg-card border border-border/30 p-5 space-y-3">
+            <h3 className="text-xs uppercase tracking-[0.15em] text-foreground/50">Detected Items</h3>
+            <div className="space-y-2">
+              {detectedItems.map((item, i) => (
+                <button
+                  key={i}
+                  onClick={() => setDetectedItems(prev => prev?.map((d, j) => j === i ? { ...d, selected: !d.selected } : d) || null)}
+                  className={`w-full border rounded-xl p-3 flex items-center gap-3 text-left transition-colors ${item.selected ? "border-primary/50 bg-primary/5" : "border-border/20"}`}
+                >
+                  <div className={`w-5 h-5 rounded-full border-2 flex items-center justify-center flex-shrink-0 ${item.selected ? "border-primary bg-primary" : "border-muted-foreground/30"}`}>
+                    {item.selected && <Check size={12} className="text-primary-foreground" />}
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <p className="text-sm font-medium text-foreground truncate">{item.name}</p>
+                    <p className="text-xs text-muted-foreground">{item.type} · {item.color}{item.brand ? ` · ${item.brand}` : ""}</p>
+                  </div>
+                </button>
+              ))}
+            </div>
+            <button
+              onClick={handleSaveExtracted}
+              disabled={savingExtracted || !detectedItems.some(i => i.selected)}
+              className="w-full py-3 rounded-xl gradient-accent text-accent-foreground text-sm font-medium active:scale-[0.98] transition-transform disabled:opacity-50"
+            >
+              {savingExtracted ? <Loader2 size={16} className="animate-spin inline mr-2" /> : null}
+              {savingExtracted ? "Adding to wardrobe..." : `Add ${detectedItems.filter(i => i.selected).length} item(s) to Wardrobe`}
+            </button>
+          </div>
+        ) : (
+          <div className="rounded-2xl bg-card border border-border/30 p-5 text-center">
+            <p className="text-xs text-muted-foreground">No clothing items detected in this photo</p>
+          </div>
+        )}
       </motion.div>
 
       {/* On-Demand Suggestion Buttons */}
