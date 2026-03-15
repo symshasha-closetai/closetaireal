@@ -71,6 +71,12 @@ const OutfitRatingCard = ({ image, imageBase64, result, wardrobeItems = [] }: Pr
   const [loadingWardrobe, setLoadingWardrobe] = useState(false);
   const [loadingShopping, setLoadingShopping] = useState(false);
 
+  // Extract outfits state
+  type DetectedItem = { name: string; type: string; color: string; material?: string; quality?: string; brand?: string; selected: boolean };
+  const [detectedItems, setDetectedItems] = useState<DetectedItem[] | null>(null);
+  const [extracting, setExtracting] = useState(false);
+  const [savingExtracted, setSavingExtracted] = useState(false);
+
   const fetchSuggestions = async (type: "wardrobe" | "shopping") => {
     const setLoading = type === "wardrobe" ? setLoadingWardrobe : setLoadingShopping;
     const setData = type === "wardrobe" ? setWardrobeSuggestions : setShoppingSuggestions;
