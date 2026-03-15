@@ -254,7 +254,8 @@ const CameraScreen = () => {
   };
 
   const clearImage = () => {
-    updateGlobal({ image: null, imageBase64: null, result: null });
+    updateGlobal({ image: null, imageBase64: null, result: null,
+      wardrobeSuggestions: null, shoppingSuggestions: null, detectedItems: null, suggestionImages: {}, savedSuggestions: [] });
   };
 
   return (
