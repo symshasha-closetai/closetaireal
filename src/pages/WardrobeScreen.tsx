@@ -660,84 +660,32 @@ const WardrobeScreen = () => {
         ) : filtered.length === 0 ? (
           <div className="text-center py-12"><p className="text-muted-foreground text-sm">No items yet. Add your first piece!</p></div>
         ) : (
-          <motion.div layout className="grid grid-cols-2 gap-3">
-            <AnimatePresence>
-              {filtered.map((item, i) => (
-                <motion.div key={item.id} layout initial={{ opacity: 0, scale: 0.9 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0, scale: 0.9 }}
-                  transition={{ duration: 0.3, delay: i * 0.05 }}
-                  className={`glass-card overflow-hidden group relative ${selectMode && selectedItems.has(item.id) ? "ring-2 ring-primary" : ""}`}
-                  onClick={() => selectMode && toggleSelectItem(item.id)}>
-                  <div className="aspect-square overflow-hidden rounded-t-2xl relative">
-                    <img
-                      src={item.image_url}
-                      alt={item.name || "Clothing"}
-                      className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
-                      loading="lazy"
-                      onError={() => setFailedImages(prev => new Set(prev).add(item.id))}
-                    />
-                    {/* Retry overlay for failed images */}
-                    {failedImages.has(item.id) && !selectMode && (
-                      <div className="absolute inset-0 bg-background/70 backdrop-blur-sm flex flex-col items-center justify-center gap-2">
-                        <p className="text-[10px] text-muted-foreground">Image failed</p>
-                        <button
-                          onClick={(e) => { e.stopPropagation(); retryImageGeneration(item); }}
-                          disabled={retryingImages.has(item.id)}
-                          className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-primary text-primary-foreground text-[11px] font-medium shadow-soft active:scale-95 transition-transform disabled:opacity-50"
-                        >
-                          {retryingImages.has(item.id) ? <Loader2 size={12} className="animate-spin" /> : <RefreshCw size={12} />}
-                          {retryingImages.has(item.id) ? "Retrying..." : "Retry"}
-                        </button>
-                      </div>
-                    )}
-                  </div>
-                  <div className="p-3">
-                    <p className="text-sm font-medium text-foreground truncate">{item.name || "Unnamed"}</p>
-                    <p className="text-[11px] text-muted-foreground">{item.color || item.type} · {item.material || "—"}</p>
-                    {item.brand && (
-                      <span className="inline-block mt-1 text-[9px] uppercase tracking-wider text-primary/70 border border-primary/20 rounded-full px-2 py-0.5">{item.brand}</span>
-                    )}
-                  </div>
-                  {!selectMode && (
-                    <>
-                      {/* Pin indicator */}
-                      {item.pinned && (
-                        <div className="absolute top-2 left-2 w-7 h-7 rounded-full bg-primary text-primary-foreground flex items-center justify-center z-10">
-                          <Pin size={13} />
-                        </div>
-                      )}
-                      <button onClick={(e) => { e.stopPropagation(); togglePin(item); }}
-                        className={`absolute top-2 ${item.pinned ? 'left-11' : 'left-2'} w-7 h-7 rounded-full bg-foreground/50 text-primary-foreground flex items-center justify-center opacity-100 sm:opacity-0 sm:group-hover:opacity-100 transition-opacity backdrop-blur-sm`}>
-                        <Pin size={13} className={item.pinned ? "fill-current" : ""} />
-                      </button>
-                      <button onClick={(e) => { e.stopPropagation(); openEdit(item); }}
-                        className={`absolute top-2 ${item.pinned ? 'left-20' : 'left-11'} w-7 h-7 rounded-full bg-foreground/50 text-primary-foreground flex items-center justify-center opacity-100 sm:opacity-0 sm:group-hover:opacity-100 transition-opacity backdrop-blur-sm`}>
-                        <Pencil size={13} />
-                      </button>
-                      <button onClick={(e) => { e.stopPropagation(); shareItem(item); }}
-                        className="absolute top-11 left-2 w-7 h-7 rounded-full bg-foreground/50 text-primary-foreground flex items-center justify-center opacity-100 sm:opacity-0 sm:group-hover:opacity-100 transition-opacity backdrop-blur-sm">
-                        <Share2 size={13} />
-                      </button>
-                      <button onClick={(e) => { e.stopPropagation(); retryImageGeneration(item); }}
-                        disabled={retryingImages.has(item.id)}
-                        className="absolute top-2 right-11 w-7 h-7 rounded-full bg-foreground/50 text-primary-foreground flex items-center justify-center opacity-100 sm:opacity-0 sm:group-hover:opacity-100 transition-opacity backdrop-blur-sm disabled:opacity-50">
-                        {retryingImages.has(item.id) ? <Loader2 size={13} className="animate-spin" /> : <RefreshCw size={13} />}
-                      </button>
-                      <button onClick={(e) => { e.stopPropagation(); deleteItem(item.id); }}
-                        className="absolute top-2 right-2 w-7 h-7 rounded-full bg-foreground/50 text-primary-foreground flex items-center justify-center opacity-100 sm:opacity-0 sm:group-hover:opacity-100 transition-opacity backdrop-blur-sm">
-                        <Trash2 size={13} />
-                      </button>
-                    </>
-                  )}
-                  {selectMode && (
-                    <div className="absolute top-2 right-2 w-6 h-6 rounded-full border-2 flex items-center justify-center backdrop-blur-sm"
-                      style={{ borderColor: selectedItems.has(item.id) ? "hsl(var(--primary))" : "rgba(255,255,255,0.5)", background: selectedItems.has(item.id) ? "hsl(var(--primary))" : "rgba(0,0,0,0.3)" }}>
-                      {selectedItems.has(item.id) && <div className="w-2 h-2 rounded-full bg-primary-foreground" />}
-                    </div>
-                  )}
-                </motion.div>
-              ))}
-            </AnimatePresence>
-          </motion.div>
+          <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
+            <SortableContext items={filtered.filter(i => i.pinned).map(i => i.id)} strategy={rectSortingStrategy}>
+              <motion.div layout className="grid grid-cols-2 gap-3">
+                <AnimatePresence>
+                  {filtered.map((item, i) => (
+                    item.pinned ? (
+                      <SortableWardrobeCard key={item.id} item={item} index={i} selectMode={selectMode} selectedItems={selectedItems}
+                        toggleSelectItem={toggleSelectItem} failedImages={failedImages} retryingImages={retryingImages}
+                        setFailedImages={setFailedImages} retryImageGeneration={retryImageGeneration}
+                        togglePin={togglePin} openEdit={openEdit} shareItem={shareItem} deleteItem={deleteItem} />
+                    ) : (
+                      <motion.div key={item.id} layout initial={{ opacity: 0, scale: 0.9 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0, scale: 0.9 }}
+                        transition={{ duration: 0.3, delay: i * 0.05 }}
+                        className={`glass-card overflow-hidden group relative ${selectMode && selectedItems.has(item.id) ? "ring-2 ring-primary" : ""}`}
+                        onClick={() => selectMode && toggleSelectItem(item.id)}>
+                        <WardrobeCardContent item={item} selectMode={selectMode} selectedItems={selectedItems}
+                          failedImages={failedImages} retryingImages={retryingImages} setFailedImages={setFailedImages}
+                          retryImageGeneration={retryImageGeneration} togglePin={togglePin} openEdit={openEdit}
+                          shareItem={shareItem} deleteItem={deleteItem} />
+                      </motion.div>
+                    )
+                  ))}
+                </AnimatePresence>
+              </motion.div>
+            </SortableContext>
+          </DndContext>
         )}
 
         {/* Hidden file inputs */}
