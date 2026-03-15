@@ -25,6 +25,7 @@ type DripHistoryEntry = {
   praiseLine: string;
   timestamp: number;
   dbId?: string; // DB row id for deletion
+  fullResult?: any; // Full RatingResult for OutfitRatingCard
 };
 
 // --- Suggest Me Section ---
