@@ -14,6 +14,11 @@ const KILLER_TAGS = [
   "Monochrome Monarch 🖤🤍", "Electric Elegance ⚡✨", "Silk Road Style 🧣✨", "Stealth Drip 🥷💧",
   "Boulevard Boss 🛣️👔", "Cozy Commander ☁️🫡", "Pastel Powerhouse 🍬💪", "Grunge Royalty 🎸👑",
   "Polo Club Captain 🏇✨", "Night Shift Drip 🌃💧",
+  "Drip Architect 🏛️💧", "Phantom Flex 👻💪", "Vogue Villain 🦹✨", "Zen Drip Master 🧘💧",
+  "Royal Misfit 👑🃏", "Twilight Baron 🌆🎩", "Ivory Tower King 🏰👑", "Digital Nomad Drip 💻🌍",
+  "Obsidian Oracle 🖤🔮", "Champagne Casualty 🥂💫", "Cosmic Drifter 🌌✨", "Vintage Voltage ⚡🪩",
+  "Luxe Outlaw 🤠💎", "Sapphire Sovereign 💙👑", "Crimson Catalyst ❤️‍🔥⚡", "Arctic Aristocrat 🧊👑",
+  "Jade Emperor 🟢👑", "Onyx Operator 🖤🎯", "Gilded Rebel ✨🔥", "Marble Mood 🤍🏛️",
 ];
 
 const PRAISE_LINES = [
