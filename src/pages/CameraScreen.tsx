@@ -229,9 +229,31 @@ const checkCache = async (imageHash: string, userId?: string): Promise<RatingRes
 // Run analysis globally so it survives navigation
 let activeAbort: AbortController | null = null;
 
+let stageTimers: ReturnType<typeof setTimeout>[] = [];
+
+const startStagedAnimation = () => {
+  const steps: AnalysisStep[] = ANALYSIS_STEP_LABELS.map((label) => ({ label, status: 'pending' as const }));
+  steps[0].status = 'active';
+  updateGlobal({ analysisSteps: [...steps] });
+
+  for (let i = 0; i < steps.length; i++) {
+    const timer = setTimeout(() => {
+      steps[i].status = 'done';
+      if (i + 1 < steps.length) steps[i + 1].status = 'active';
+      updateGlobal({ analysisSteps: [...steps] });
+    }, (i + 1) * 2000);
+    stageTimers.push(timer);
+  }
+};
+
+const clearStageTimers = () => {
+  stageTimers.forEach(clearTimeout);
+  stageTimers = [];
+};
+
 const runAnalysis = async (file: File, userId: string | undefined, styleProfile: any) => {
   activeAbort = new AbortController();
-  updateGlobal({ analyzing: true, progress: 5, stage: "Compressing image..." });
+  updateGlobal({ analyzing: true, progress: 5, stage: "Compressing image...", analysisSteps: [] });
 
   try {
     const { base64: imageBase64 } = await compressImage(file, 800, 800);
@@ -240,50 +262,50 @@ const runAnalysis = async (file: File, userId: string | undefined, styleProfile:
 
     // Check cache for consistent scores
     const imageHash = computeImageHash(imageBase64);
-    updateGlobal({ progress: 15, stage: "Checking for previous analysis..." });
 
     const cachedResult = await checkCache(imageHash, userId);
     if (cachedResult) {
       if (activeAbort?.signal.aborted) return;
-      updateGlobal({ result: cachedResult, analyzing: false, progress: 0, stage: "" });
+      updateGlobal({ result: cachedResult, analyzing: false, progress: 0, stage: "", analysisSteps: [] });
       toast.success("Loaded your previous rating for this photo!");
       return;
     }
 
     if (activeAbort?.signal.aborted) return;
-    updateGlobal({ progress: 20, stage: "Analyzing your style..." });
 
-    if (activeAbort?.signal.aborted) return;
-    updateGlobal({ progress: 50, stage: "Rating your drip..." });
+    // Start staged animation and AI call in parallel
+    startStagedAnimation();
+    const minDelay = new Promise((r) => setTimeout(r, 8000));
 
-    const { data, error } = await supabase.functions.invoke("rate-outfit", {
+    const aiCall = supabase.functions.invoke("rate-outfit", {
       body: { imageBase64, styleProfile: styleProfile || undefined },
     });
 
+    const [{ data, error }] = await Promise.all([aiCall, minDelay]) as [any, any];
+
     if (activeAbort?.signal.aborted) return;
-    updateGlobal({ progress: 90, stage: "Almost done..." });
+    clearStageTimers();
 
     if (error) throw error;
     if (data?.error || !data?.result) {
-      // Silently use fallback
       const fallback = clientFallbackResult();
-      updateGlobal({ result: fallback, analyzing: false, progress: 0, stage: "" });
+      updateGlobal({ result: fallback, analyzing: false, progress: 0, stage: "", analysisSteps: [] });
       saveDripToHistory(globalDripState.image || "", fallback, userId, imageHash);
       return;
     }
     if (data?.result) {
-      updateGlobal({ result: data.result, analyzing: false, progress: 0, stage: "" });
+      updateGlobal({ result: data.result, analyzing: false, progress: 0, stage: "", analysisSteps: [] });
       saveDripToHistory(globalDripState.image || "", data.result, userId, imageHash);
     }
   } catch (err: any) {
     if (err?.name === "AbortError" || activeAbort?.signal.aborted) return;
     console.error("Rating error:", err);
-    // Silent fallback — no error toast
     const fallback = clientFallbackResult();
-    updateGlobal({ result: fallback, analyzing: false, progress: 0, stage: "" });
+    updateGlobal({ result: fallback, analyzing: false, progress: 0, stage: "", analysisSteps: [] });
     saveDripToHistory(globalDripState.image || "", fallback, userId);
   } finally {
     activeAbort = null;
+    clearStageTimers();
   }
 };
 
