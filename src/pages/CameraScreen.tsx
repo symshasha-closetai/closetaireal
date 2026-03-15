@@ -223,7 +223,15 @@ const CameraScreen = () => {
     return () => { globalListeners.delete(listener); };
   }, []);
 
-  const { image, imageBase64, analyzing, progress, stage, result, wardrobeItems } = globalDripState;
+  const { image, imageBase64, analyzing, progress, stage, result, wardrobeItems,
+    wardrobeSuggestions, shoppingSuggestions, detectedItems, suggestionImages, savedSuggestions } = globalDripState;
+
+  // Fetch user's actual wardrobe items on mount
+  useEffect(() => {
+    if (!user?.id) return;
+    supabase.from("wardrobe").select("id, name, type, color, material, image_url").eq("user_id", user.id)
+      .then(({ data }) => { if (data) updateGlobal({ wardrobeItems: data }); });
+  }, [user?.id]);
 
   const handleUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
