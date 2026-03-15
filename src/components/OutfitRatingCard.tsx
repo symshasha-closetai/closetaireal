@@ -66,26 +66,23 @@ const findWardrobeMatch = (suggestion: Suggestion, wardrobeItems: WardrobeItem[]
   );
 };
 
-const OutfitRatingCard = ({ image, imageBase64, result, wardrobeItems = [] }: Props) => {
+const OutfitRatingCard = ({ image, imageBase64, result, wardrobeItems = [],
+  wardrobeSuggestions, shoppingSuggestions, detectedItems, suggestionImages, savedSuggestions,
+  onWardrobeSuggestionsChange, onShoppingSuggestionsChange, onDetectedItemsChange, onSuggestionImagesChange, onSavedSuggestionsChange
+}: Props) => {
   const { user } = useAuth();
   const [activeTooltip, setActiveTooltip] = useState<string | null>(null);
-  const [suggestionImages, setSuggestionImages] = useState<Record<number, string | null>>({});
   const [loadingImages, setLoadingImages] = useState<Record<number, boolean>>({});
   const [sharing, setSharing] = useState(false);
   const [downloading, setDownloading] = useState(false);
   const [showShareCard, setShowShareCard] = useState(false);
-  const [savedSuggestions, setSavedSuggestions] = useState<Set<string>>(new Set());
   const shareRef = useRef<HTMLDivElement>(null);
 
   // On-demand suggestion state
-  const [wardrobeSuggestions, setWardrobeSuggestions] = useState<Suggestion[] | null>(null);
-  const [shoppingSuggestions, setShoppingSuggestions] = useState<Suggestion[] | null>(null);
   const [loadingWardrobe, setLoadingWardrobe] = useState(false);
   const [loadingShopping, setLoadingShopping] = useState(false);
 
   // Extract outfits state
-  type DetectedItem = { name: string; type: string; color: string; material?: string; quality?: string; brand?: string; selected: boolean };
-  const [detectedItems, setDetectedItems] = useState<DetectedItem[] | null>(null);
   const [extracting, setExtracting] = useState(false);
   const [savingExtracted, setSavingExtracted] = useState(false);
 
