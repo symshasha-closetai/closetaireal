@@ -848,10 +848,17 @@ const WardrobeScreen = () => {
                     </div>
                   </div>
                 </div>
-                <button onClick={handleSaveEdit} disabled={savingEdit}
-                  className="w-full flex items-center justify-center gap-2 py-3 rounded-xl gradient-accent text-accent-foreground font-medium text-sm shadow-soft active:scale-[0.98] transition-transform disabled:opacity-60">
-                  <Save size={16} /> {savingEdit ? "Saving..." : "Save Changes"}
-                </button>
+                <div className="flex gap-2">
+                  <button onClick={handleSaveEdit} disabled={savingEdit}
+                    className="flex-1 flex items-center justify-center gap-2 py-3 rounded-xl gradient-accent text-accent-foreground font-medium text-sm shadow-soft active:scale-[0.98] transition-transform disabled:opacity-60">
+                    <Save size={16} /> {savingEdit ? "Saving..." : "Save Changes"}
+                  </button>
+                  <button onClick={regenerateEditImage} disabled={regeneratingEdit || savingEdit}
+                    className="flex items-center justify-center gap-1.5 px-4 py-3 rounded-xl bg-secondary text-secondary-foreground font-medium text-sm active:scale-[0.98] transition-transform disabled:opacity-50"
+                    title="Regenerate image with current details">
+                    {regeneratingEdit ? <Loader2 size={16} className="animate-spin" /> : <RefreshCw size={16} />}
+                  </button>
+                </div>
               </motion.div>
             </motion.div>
           )}
