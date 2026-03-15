@@ -343,12 +343,12 @@ const OutfitRatingCard = ({ image, imageBase64, result, wardrobeItems = [],
         </div>
 
         {/* Bottom gradient overlay */}
-        <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/80 via-black/50 to-transparent pt-20 pb-3 px-5">
+        <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/90 via-black/60 to-transparent pt-20 pb-3 px-5">
           <div className="flex items-end justify-between">
             {/* Drip Score Ring */}
             <button onClick={() => toggleTooltip("drip")} className="focus:outline-none active:scale-95 transition-transform">
               <ScoreRing score={result.drip_score} size={64} strokeColor="#C9A96E" light />
-              <p className="text-[9px] uppercase tracking-[0.15em] text-white/50 mt-1 text-center">Drip</p>
+              <p className="text-[9px] uppercase tracking-[0.15em] text-white/70 mt-1 text-center" style={{ textShadow: "0 1px 4px rgba(0,0,0,0.9)" }}>Drip</p>
             </button>
 
             {/* Killer Tag */}
@@ -358,7 +358,7 @@ const OutfitRatingCard = ({ image, imageBase64, result, wardrobeItems = [],
                 animate={{ opacity: 1, scale: 1 }}
                 transition={{ delay: 0.5, type: "spring", stiffness: 200 }}
               >
-                <span className="text-[11px] font-medium tracking-wider text-white/80">
+                <span className="text-[11px] font-medium tracking-wider text-white" style={{ textShadow: "0 1px 6px rgba(0,0,0,0.9), 0 0 2px rgba(0,0,0,0.7)" }}>
                   {result.killer_tag}
                 </span>
               </motion.div>
@@ -367,14 +367,14 @@ const OutfitRatingCard = ({ image, imageBase64, result, wardrobeItems = [],
             {/* Confidence Ring */}
             <button onClick={() => toggleTooltip("confidence")} className="focus:outline-none active:scale-95 transition-transform">
               <ScoreRing score={result.confidence_rating} size={64} strokeColor="#A8A8A8" light />
-              <p className="text-[9px] uppercase tracking-[0.15em] text-white/50 mt-1 text-center">Confidence</p>
+              <p className="text-[9px] uppercase tracking-[0.15em] text-white/70 mt-1 text-center" style={{ textShadow: "0 1px 4px rgba(0,0,0,0.9)" }}>Confidence</p>
             </button>
           </div>
 
           {/* Occasion Badge - inside photo */}
           {result.occasion && (
             <div className="flex justify-center mt-2">
-              <span className="text-[10px] uppercase tracking-wider border border-white/20 rounded-full px-3 py-1 text-white/60">
+              <span className="text-[10px] uppercase tracking-wider border border-white/30 rounded-full px-3 py-1 text-white/80" style={{ textShadow: "0 1px 4px rgba(0,0,0,0.9)" }}>
                 {result.occasion}
               </span>
             </div>

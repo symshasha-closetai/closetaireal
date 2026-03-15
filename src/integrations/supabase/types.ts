@@ -46,6 +46,7 @@ export type Database = {
       }
       drip_history: {
         Row: {
+          confidence_score: number | null
           created_at: string
           full_result: Json | null
           id: string
@@ -57,6 +58,7 @@ export type Database = {
           user_id: string
         }
         Insert: {
+          confidence_score?: number | null
           created_at?: string
           full_result?: Json | null
           id?: string
@@ -68,6 +70,7 @@ export type Database = {
           user_id: string
         }
         Update: {
+          confidence_score?: number | null
           created_at?: string
           full_result?: Json | null
           id?: string

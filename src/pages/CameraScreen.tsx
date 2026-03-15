@@ -194,6 +194,7 @@ const saveDripToHistory = async (image: string, result: RatingResult, userId?: s
         praise_line: result.praise_line || null,
         full_result: result as any,
         image_hash: imageHash || null,
+        confidence_score: result.confidence_rating || null,
       } as any);
     } catch (err) {
       console.error("Failed to save drip to DB:", err);
