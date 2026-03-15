@@ -90,12 +90,15 @@ export type RatingResult = {
 type DetectedItem = { name: string; type: string; color: string; material?: string; quality?: string; brand?: string; selected: boolean };
 type Suggestion = { item_name: string; category: string; reason: string; wardrobe_item_id?: string; image_prompt?: string };
 
+type AnalysisStep = { label: string; status: 'pending' | 'active' | 'done' };
+
 type DripState = {
   image: string | null;
   imageBase64: string | null;
   analyzing: boolean;
   progress: number;
   stage: string;
+  analysisSteps: AnalysisStep[];
   result: RatingResult | null;
   wardrobeItems: any[];
   wardrobeSuggestions: Suggestion[] | null;
@@ -105,12 +108,20 @@ type DripState = {
   savedSuggestions: string[];
 };
 
+const ANALYSIS_STEP_LABELS = [
+  "Detecting colors...",
+  "Understanding outfit style...",
+  "Calculating drip score...",
+  "Generating confidence score...",
+];
+
 const globalDripState: DripState = {
   image: null,
   imageBase64: null,
   analyzing: false,
   progress: 0,
   stage: "",
+  analysisSteps: [],
   result: null,
   wardrobeItems: [],
   wardrobeSuggestions: null,
