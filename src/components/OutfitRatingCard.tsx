@@ -101,7 +101,68 @@ const OutfitRatingCard = ({ image, imageBase64, result, wardrobeItems = [] }: Pr
     }
   };
 
-  const handleSaveSuggestion = async (type: "wardrobe" | "shopping", s: Suggestion, idx?: number) => {
+  const handleExtractOutfits = async () => {
+    if (!imageBase64) return;
+    setExtracting(true);
+    try {
+      const base64 = imageBase64.includes(",") ? imageBase64.split(",")[1] : imageBase64;
+      const { data, error } = await supabase.functions.invoke("analyze-clothing", {
+        body: { imageBase64: base64 },
+      });
+      if (error) throw error;
+      if (data?.items?.length) {
+        setDetectedItems(data.items.map((item: any) => ({ ...item, selected: true })));
+      } else {
+        toast.info("No clothing items detected");
+        setDetectedItems([]);
+      }
+    } catch (err) {
+      console.error("Extract outfits error:", err);
+      toast.error("Failed to detect clothing items");
+    } finally {
+      setExtracting(false);
+    }
+  };
+
+  const handleSaveExtracted = async () => {
+    if (!user || !detectedItems) return;
+    const selected = detectedItems.filter(i => i.selected);
+    if (!selected.length) { toast.info("Select at least one item"); return; }
+    setSavingExtracted(true);
+    try {
+      const base64 = imageBase64?.includes(",") ? imageBase64?.split(",")[1] : imageBase64;
+      for (const item of selected) {
+        // Generate image for the item
+        let imageUrl = "";
+        try {
+          const { data: imgData } = await supabase.functions.invoke("generate-clothing-image", {
+            body: { name: item.name, type: item.type, color: item.color, material: item.material },
+          });
+          if (imgData?.imageUrl) imageUrl = imgData.imageUrl;
+        } catch { /* use empty url */ }
+
+        await supabase.from("wardrobe").insert({
+          user_id: user.id,
+          name: item.name,
+          type: item.type,
+          color: item.color || null,
+          material: item.material || null,
+          quality: item.quality || null,
+          brand: item.brand || null,
+          image_url: imageUrl || "https://placehold.co/200x200?text=Item",
+        });
+      }
+      toast.success(`${selected.length} item(s) added to wardrobe!`);
+      setDetectedItems(null);
+    } catch (err) {
+      console.error("Save extracted error:", err);
+      toast.error("Failed to save items");
+    } finally {
+      setSavingExtracted(false);
+    }
+  };
+
+
     const key = `${type}-${s.item_name}`;
     if (!user || savedSuggestions.has(key)) return;
     try {
