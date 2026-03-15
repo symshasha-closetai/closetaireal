@@ -195,6 +195,31 @@ const HomeScreen = () => {
     setUploadingPhoto(false);
   };
 
+  const handleShareTodayLook = async () => {
+    if (!todayLookRef.current) return;
+    setSharingLook(true);
+    try {
+      const canvas = await html2canvas(todayLookRef.current, { useCORS: true, scale: 2, backgroundColor: null });
+      canvas.toBlob(async (blob) => {
+        if (!blob) { setSharingLook(false); return; }
+        const file = new File([blob], "closetai-today-look.png", { type: "image/png" });
+        if (navigator.share && navigator.canShare?.({ files: [file] })) {
+          await navigator.share({ title: "My Today's Look — ClosetAI", files: [file] });
+        } else {
+          const url = URL.createObjectURL(blob);
+          const a = document.createElement("a"); a.href = url; a.download = "closetai-today-look.png";
+          document.body.appendChild(a); a.click(); document.body.removeChild(a);
+          URL.revokeObjectURL(url);
+          toast.success("Image saved!");
+        }
+        setSharingLook(false);
+      }, "image/png");
+    } catch {
+      toast.info("Couldn't share");
+      setSharingLook(false);
+    }
+  };
+
   const handleSaveOutfit = async (outfit: OutfitSuggestion, idx: number) => {
     if (!user || savedOutfitIds.has(idx)) return;
     try {
