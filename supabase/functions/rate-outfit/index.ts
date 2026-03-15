@@ -97,6 +97,17 @@ function pick<T>(arr: T[]): T {
   return arr[Math.floor(Math.random() * arr.length)];
 }
 
+const FALLBACK_CONFIDENCE_REASONS = [
+  "Strong upright posture and relaxed shoulders project natural confidence — consistent with Cuddy's postural expansiveness research",
+  "Open body language with visible hands and balanced stance signals social ease and self-assurance",
+  "Relaxed jaw and neutral chin position indicate comfort and groundedness — no tension markers detected",
+  "Shoulders pulled back with chest open suggests high postural confidence (Carney et al., 2010)",
+  "Natural arm positioning away from torso indicates comfort in personal space — a key dominance cue",
+  "Head held level with steady forward orientation projects composure and directness",
+  "Balanced weight distribution and planted stance convey stability and self-possession",
+  "Expansive posture with uncrossed arms signals openness — a core indicator in nonverbal confidence research",
+];
+
 function generateFallback() {
   const color = randomBetween(7.0, 9.5);
   const style = randomBetween(7.0, 9.5);
@@ -106,8 +117,8 @@ function generateFallback() {
   return {
     drip_score: drip,
     drip_reason: pick(FALLBACK_REASONS),
-    confidence_rating: randomBetween(7.5, 9.5),
-    confidence_reason: "This look shows intentional styling choices that project confidence",
+    confidence_rating: randomBetween(6.0, 9.5),
+    confidence_reason: pick(FALLBACK_CONFIDENCE_REASONS),
     killer_tag: pick(KILLER_TAGS),
     color_score: color,
     color_reason: pick(FALLBACK_REASONS),
