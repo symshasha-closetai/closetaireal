@@ -201,15 +201,20 @@ const ProfileScreen = () => {
 
     // Map drip_history DB rows to DripHistoryEntry
     const dripRows = (dripRes.data || []) as any[];
-    const dripEntries: DripHistoryEntry[] = dripRows.map((r: any) => ({
-      id: r.id,
-      image: r.image_url || "",
-      score: Number(r.score) || 0,
-      killerTag: r.killer_tag || "",
-      praiseLine: r.praise_line || "",
-      timestamp: new Date(r.created_at).getTime(),
-      dbId: r.id,
-    }));
+    // Filter out entries older than 14 days
+    const fourteenDaysAgo = Date.now() - 14 * 24 * 60 * 60 * 1000;
+    const dripEntries: DripHistoryEntry[] = dripRows
+      .filter((r: any) => new Date(r.created_at).getTime() > fourteenDaysAgo)
+      .map((r: any) => ({
+        id: r.id,
+        image: r.image_url || "",
+        score: Number(r.score) || 0,
+        killerTag: r.killer_tag || "",
+        praiseLine: r.praise_line || "",
+        timestamp: new Date(r.created_at).getTime(),
+        dbId: r.id,
+        fullResult: r.full_result || null,
+      }));
     setDripHistory(dripEntries);
 
     try {
