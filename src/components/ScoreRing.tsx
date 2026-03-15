@@ -28,7 +28,7 @@ const ScoreRing = ({ score, maxScore = 10, size = 56, label, colorClass, strokeC
             cy={size / 2}
             r={radius}
             fill="none"
-            className="stroke-border/20"
+            className={light ? "stroke-white/20" : "stroke-border/20"}
             strokeWidth={strokeWidth}
           />
           <motion.circle
