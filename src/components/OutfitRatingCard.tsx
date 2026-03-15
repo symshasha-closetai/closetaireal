@@ -306,7 +306,7 @@ const OutfitRatingCard = ({ image, imageBase64, result, wardrobeItems = [],
       });
       const imgUrl = data?.imageUrl || data?.imageBase64;
       if (!error && imgUrl) {
-        setSuggestionImages(prev => ({ ...prev, [idx]: imgUrl }));
+        onSuggestionImagesChange({ ...suggestionImages, [idx]: imgUrl });
         try { localStorage.setItem(cacheKey, JSON.stringify({ url: imgUrl, ts: Date.now() })); } catch { /* quota */ }
       } else {
         setSuggestionImages(prev => ({ ...prev, [idx]: null }));
