@@ -8,13 +8,15 @@ import { useAuth } from "@/hooks/useAuth";
 import html2canvas from "html2canvas";
 import type { RatingResult } from "@/pages/CameraScreen";
 
-type Suggestion = {
+export type Suggestion = {
   item_name: string;
   category: string;
   reason: string;
   wardrobe_item_id?: string;
   image_prompt?: string;
 };
+
+export type DetectedItem = { name: string; type: string; color: string; material?: string; quality?: string; brand?: string; selected: boolean };
 
 type WardrobeItem = {
   id: string;
@@ -30,6 +32,16 @@ type Props = {
   imageBase64?: string;
   result: RatingResult;
   wardrobeItems?: WardrobeItem[];
+  wardrobeSuggestions: Suggestion[] | null;
+  shoppingSuggestions: Suggestion[] | null;
+  detectedItems: DetectedItem[] | null;
+  suggestionImages: Record<number, string | null>;
+  savedSuggestions: string[];
+  onWardrobeSuggestionsChange: (v: Suggestion[] | null) => void;
+  onShoppingSuggestionsChange: (v: Suggestion[] | null) => void;
+  onDetectedItemsChange: (v: DetectedItem[] | null) => void;
+  onSuggestionImagesChange: (v: Record<number, string | null>) => void;
+  onSavedSuggestionsChange: (v: string[]) => void;
 };
 
 const categoryIcon = (category: string) => {
