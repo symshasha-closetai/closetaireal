@@ -20,6 +20,7 @@ type ClothingItem = {
   quality: string | null;
   season: string | null;
   style: string | null;
+  pinned: boolean;
 };
 
 type DetectedItem = {
