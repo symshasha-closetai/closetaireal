@@ -119,6 +119,27 @@ const HomeScreen = () => {
   const [todayPhoto, setTodayPhoto] = useState<string | null>(null);
   const [uploadingPhoto, setUploadingPhoto] = useState(false);
   const photoFileRef = useRef<HTMLInputElement>(null);
+  const todayLookRef = useRef<HTMLDivElement>(null);
+  const [sharingLook, setSharingLook] = useState(false);
+
+  // Streak tracking
+  const [streak, setStreak] = useState(0);
+
+  // Load streak
+  useEffect(() => {
+    if (!user) return;
+    try {
+      const raw = localStorage.getItem(`streak-${user.id}`);
+      if (raw) {
+        const { count, lastDate } = JSON.parse(raw);
+        const today = new Date().toDateString();
+        const yesterday = new Date(Date.now() - 86400000).toDateString();
+        if (lastDate === today) setStreak(count);
+        else if (lastDate === yesterday) setStreak(count); // still valid, will increment on upload
+        else setStreak(0);
+      }
+    } catch {}
+  }, [user]);
 
   useEffect(() => {
     if (user) {
