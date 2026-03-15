@@ -312,7 +312,7 @@ const OutfitRatingCard = ({ image, imageBase64, result, wardrobeItems = [],
         onSuggestionImagesChange({ ...suggestionImages, [idx]: null });
       }
     } catch {
-      setSuggestionImages(prev => ({ ...prev, [idx]: null }));
+      onSuggestionImagesChange({ ...suggestionImages, [idx]: null });
     } finally {
       setLoadingImages(prev => ({ ...prev, [idx]: false }));
     }
