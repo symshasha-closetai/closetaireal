@@ -431,21 +431,35 @@ const HomeScreen = () => {
         {/* Controls */}
         <div className="space-y-4">
           {/* Today's Look Card */}
-          <div className="glass-card-elevated overflow-hidden">
+          <div className="glass-card-elevated overflow-hidden" ref={todayLookRef}>
             {todayPhoto ? (
               <div className="relative">
                 <img src={todayPhoto} alt="Today's look" className="w-full aspect-[4/5] object-cover" />
                 <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-transparent to-black/20" />
-                <div className="absolute top-3 left-3">
+                <div className="absolute top-3 left-3 flex gap-2">
                   <span className="px-2.5 py-1 rounded-full bg-primary/90 text-primary-foreground text-[10px] font-semibold">Today's Look</span>
+                  {streak > 0 && (
+                    <span className="px-2.5 py-1 rounded-full bg-orange-500/90 text-white text-[10px] font-semibold flex items-center gap-1">
+                      <Flame size={10} /> {streak} day{streak > 1 ? "s" : ""}
+                    </span>
+                  )}
                 </div>
-                <button
-                  onClick={() => photoFileRef.current?.click()}
-                  disabled={uploadingPhoto}
-                  className="absolute top-3 right-3 w-8 h-8 rounded-full bg-foreground/30 backdrop-blur-sm flex items-center justify-center"
-                >
-                  <Camera size={14} className="text-white" />
-                </button>
+                <div className="absolute top-3 right-3 flex gap-2">
+                  <button
+                    onClick={handleShareTodayLook}
+                    disabled={sharingLook}
+                    className="w-8 h-8 rounded-full bg-foreground/30 backdrop-blur-sm flex items-center justify-center"
+                  >
+                    {sharingLook ? <Loader2 size={14} className="text-white animate-spin" /> : <Share2 size={14} className="text-white" />}
+                  </button>
+                  <button
+                    onClick={() => photoFileRef.current?.click()}
+                    disabled={uploadingPhoto}
+                    className="w-8 h-8 rounded-full bg-foreground/30 backdrop-blur-sm flex items-center justify-center"
+                  >
+                    <Camera size={14} className="text-white" />
+                  </button>
+                </div>
                 <div className="absolute bottom-4 left-4 right-4">
                   <p className="text-white font-semibold text-lg drop-shadow-lg">{getDailyTag()}</p>
                   <p className="text-white/60 text-[10px] mt-0.5">{new Date().toLocaleDateString("en-US", { weekday: "long", month: "long", day: "numeric" })}</p>
@@ -467,6 +481,26 @@ const HomeScreen = () => {
               </button>
             )}
           </div>
+
+          {/* Pinned Items */}
+          {allWardrobeItems.filter(i => i.pinned).length > 0 && (
+            <div className="glass-card-elevated p-4">
+              <div className="flex items-center gap-2 mb-3">
+                <Pin size={14} className="text-primary" />
+                <h2 className="text-sm font-semibold text-foreground">Pinned Items</h2>
+              </div>
+              <div className="flex gap-2 overflow-x-auto pb-1 no-scrollbar">
+                {allWardrobeItems.filter(i => i.pinned).map((wi) => (
+                  <div key={wi.id} className="relative flex-shrink-0 w-20 aspect-square rounded-xl overflow-hidden bg-secondary">
+                    <img src={wi.image_url} alt={wi.name || wi.type} className="w-full h-full object-cover" loading="lazy" />
+                    <div className="absolute bottom-0 left-0 right-0 bg-foreground/40 backdrop-blur-sm px-1 py-0.5">
+                      <p className="text-[7px] text-primary-foreground truncate text-center font-medium">{wi.name || wi.type}</p>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
 
           {/* My Wardrobe Card */}
           <div className="glass-card-elevated p-4">
