@@ -435,11 +435,11 @@ const HomeScreen = () => {
             {todayPhoto ? (
               <div className="relative">
                 <img src={todayPhoto} alt="Today's look" className="w-full aspect-[4/5] object-cover" />
-                <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-transparent to-black/20" />
+                <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/40 to-black/20" />
                 <div className="absolute top-3 left-3 flex gap-2">
-                  <span className="px-2.5 py-1 rounded-full bg-primary/90 text-primary-foreground text-[10px] font-semibold">Today's Look</span>
+                  <span className="px-2.5 py-1 rounded-full bg-primary/90 text-primary-foreground text-[10px] font-semibold" style={{ textShadow: "0 1px 4px rgba(0,0,0,0.6)" }}>Today's Look</span>
                   {streak > 0 && (
-                    <span className="px-2.5 py-1 rounded-full bg-orange-500/90 text-white text-[10px] font-semibold flex items-center gap-1">
+                    <span className="px-2.5 py-1 rounded-full bg-orange-500/90 text-white text-[10px] font-semibold flex items-center gap-1" style={{ textShadow: "0 1px 4px rgba(0,0,0,0.6)" }}>
                       <Flame size={10} /> {streak} day{streak > 1 ? "s" : ""}
                     </span>
                   )}
@@ -448,21 +448,21 @@ const HomeScreen = () => {
                   <button
                     onClick={handleShareTodayLook}
                     disabled={sharingLook}
-                    className="w-8 h-8 rounded-full bg-foreground/30 backdrop-blur-sm flex items-center justify-center"
+                    className="w-8 h-8 rounded-full bg-black/50 backdrop-blur-md flex items-center justify-center"
                   >
                     {sharingLook ? <Loader2 size={14} className="text-white animate-spin" /> : <Share2 size={14} className="text-white" />}
                   </button>
                   <button
                     onClick={() => photoFileRef.current?.click()}
                     disabled={uploadingPhoto}
-                    className="w-8 h-8 rounded-full bg-foreground/30 backdrop-blur-sm flex items-center justify-center"
+                    className="w-8 h-8 rounded-full bg-black/50 backdrop-blur-md flex items-center justify-center"
                   >
                     <Camera size={14} className="text-white" />
                   </button>
                 </div>
                 <div className="absolute bottom-4 left-4 right-4">
-                  <p className="text-white font-semibold text-lg drop-shadow-lg">{getDailyTag()}</p>
-                  <p className="text-white/60 text-[10px] mt-0.5">{new Date().toLocaleDateString("en-US", { weekday: "long", month: "long", day: "numeric" })}</p>
+                  <p className="text-white font-bold text-lg" style={{ textShadow: "0 2px 8px rgba(0,0,0,0.9)" }}>{getDailyTag()}</p>
+                  <p className="text-white/80 text-[10px] mt-0.5" style={{ textShadow: "0 1px 4px rgba(0,0,0,0.8)" }}>{new Date().toLocaleDateString("en-US", { weekday: "long", month: "long", day: "numeric" })}</p>
                 </div>
               </div>
             ) : (

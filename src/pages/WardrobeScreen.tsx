@@ -23,6 +23,7 @@ type ClothingItem = {
   season: string | null;
   style: string | null;
   pinned: boolean;
+  pin_order: number;
 };
 
 type DetectedItem = {
