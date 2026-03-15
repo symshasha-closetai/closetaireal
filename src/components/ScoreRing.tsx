@@ -7,9 +7,10 @@ interface ScoreRingProps {
   label?: string;
   colorClass?: string;
   strokeColor?: string;
+  light?: boolean;
 }
 
-const ScoreRing = ({ score, maxScore = 10, size = 56, label, colorClass, strokeColor }: ScoreRingProps) => {
+const ScoreRing = ({ score, maxScore = 10, size = 56, label, colorClass, strokeColor, light }: ScoreRingProps) => {
   const strokeWidth = 3;
   const radius = (size - strokeWidth) / 2;
   const circumference = 2 * Math.PI * radius;
