@@ -333,6 +333,7 @@ export type Database = {
           image_url: string
           material: string | null
           name: string | null
+          pin_order: number | null
           pinned: boolean | null
           quality: string | null
           season: string | null
@@ -348,6 +349,7 @@ export type Database = {
           image_url: string
           material?: string | null
           name?: string | null
+          pin_order?: number | null
           pinned?: boolean | null
           quality?: string | null
           season?: string | null
@@ -363,6 +365,7 @@ export type Database = {
           image_url?: string
           material?: string | null
           name?: string | null
+          pin_order?: number | null
           pinned?: boolean | null
           quality?: string | null
           season?: string | null

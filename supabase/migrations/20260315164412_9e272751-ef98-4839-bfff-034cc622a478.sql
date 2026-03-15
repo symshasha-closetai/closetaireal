@@ -1,0 +1,1 @@
+ALTER TABLE public.wardrobe ADD COLUMN pin_order integer DEFAULT 0;
