@@ -316,7 +316,16 @@ const CameraScreen = () => {
                   <button onClick={clearImage} className="absolute top-3 right-3 z-10 w-8 h-8 rounded-full bg-foreground/60 text-primary-foreground flex items-center justify-center backdrop-blur-sm">
                     <X size={16} />
                   </button>
-                  <OutfitRatingCard image={image} imageBase64={imageBase64 || undefined} result={result} wardrobeItems={wardrobeItems} />
+                  <OutfitRatingCard
+                    image={image} imageBase64={imageBase64 || undefined} result={result} wardrobeItems={wardrobeItems}
+                    wardrobeSuggestions={wardrobeSuggestions} shoppingSuggestions={shoppingSuggestions}
+                    detectedItems={detectedItems} suggestionImages={suggestionImages} savedSuggestions={savedSuggestions}
+                    onWardrobeSuggestionsChange={(v) => updateGlobal({ wardrobeSuggestions: v })}
+                    onShoppingSuggestionsChange={(v) => updateGlobal({ shoppingSuggestions: v })}
+                    onDetectedItemsChange={(v) => updateGlobal({ detectedItems: v })}
+                    onSuggestionImagesChange={(v) => updateGlobal({ suggestionImages: v })}
+                    onSavedSuggestionsChange={(v) => updateGlobal({ savedSuggestions: v })}
+                  />
                   <motion.button initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.3 }}
                     onClick={clearImage}
                     className="w-full mt-4 py-3 rounded-full border border-border/40 text-foreground/70 font-medium text-sm active:scale-[0.98] transition-transform flex items-center justify-center gap-2 tracking-wider">
