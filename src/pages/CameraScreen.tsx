@@ -29,6 +29,9 @@ export type RatingResult = {
 };
 
 // Persist drip analysis state across navigation
+type DetectedItem = { name: string; type: string; color: string; material?: string; quality?: string; brand?: string; selected: boolean };
+type Suggestion = { item_name: string; category: string; reason: string; wardrobe_item_id?: string; image_prompt?: string };
+
 type DripState = {
   image: string | null;
   imageBase64: string | null;
@@ -37,6 +40,11 @@ type DripState = {
   stage: string;
   result: RatingResult | null;
   wardrobeItems: any[];
+  wardrobeSuggestions: Suggestion[] | null;
+  shoppingSuggestions: Suggestion[] | null;
+  detectedItems: DetectedItem[] | null;
+  suggestionImages: Record<number, string | null>;
+  savedSuggestions: string[];
 };
 
 const globalDripState: DripState = {
@@ -47,6 +55,11 @@ const globalDripState: DripState = {
   stage: "",
   result: null,
   wardrobeItems: [],
+  wardrobeSuggestions: null,
+  shoppingSuggestions: null,
+  detectedItems: null,
+  suggestionImages: {},
+  savedSuggestions: [],
 };
 
 let globalListeners: Set<() => void> = new Set();
