@@ -469,6 +469,53 @@ const OutfitRatingCard = ({ image, imageBase64, result, wardrobeItems = [] }: Pr
         </div>
       </motion.div>
 
+      {/* Extract Outfits Button */}
+      <motion.div initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.15 }} className="space-y-3">
+        {detectedItems === null ? (
+          <button
+            onClick={handleExtractOutfits}
+            disabled={extracting}
+            className="w-full flex items-center justify-center gap-2.5 py-3.5 rounded-2xl gradient-accent text-accent-foreground text-sm font-medium active:scale-[0.98] transition-transform disabled:opacity-60"
+          >
+            {extracting ? <Loader2 size={16} className="animate-spin" /> : <ScanLine size={16} />}
+            {extracting ? "Detecting items..." : "Extract Outfits to Wardrobe"}
+          </button>
+        ) : detectedItems.length > 0 ? (
+          <div className="rounded-2xl bg-card border border-border/30 p-5 space-y-3">
+            <h3 className="text-xs uppercase tracking-[0.15em] text-foreground/50">Detected Items</h3>
+            <div className="space-y-2">
+              {detectedItems.map((item, i) => (
+                <button
+                  key={i}
+                  onClick={() => setDetectedItems(prev => prev?.map((d, j) => j === i ? { ...d, selected: !d.selected } : d) || null)}
+                  className={`w-full border rounded-xl p-3 flex items-center gap-3 text-left transition-colors ${item.selected ? "border-primary/50 bg-primary/5" : "border-border/20"}`}
+                >
+                  <div className={`w-5 h-5 rounded-full border-2 flex items-center justify-center flex-shrink-0 ${item.selected ? "border-primary bg-primary" : "border-muted-foreground/30"}`}>
+                    {item.selected && <Check size={12} className="text-primary-foreground" />}
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <p className="text-sm font-medium text-foreground truncate">{item.name}</p>
+                    <p className="text-xs text-muted-foreground">{item.type} · {item.color}{item.brand ? ` · ${item.brand}` : ""}</p>
+                  </div>
+                </button>
+              ))}
+            </div>
+            <button
+              onClick={handleSaveExtracted}
+              disabled={savingExtracted || !detectedItems.some(i => i.selected)}
+              className="w-full py-3 rounded-xl gradient-accent text-accent-foreground text-sm font-medium active:scale-[0.98] transition-transform disabled:opacity-50"
+            >
+              {savingExtracted ? <Loader2 size={16} className="animate-spin inline mr-2" /> : null}
+              {savingExtracted ? "Adding to wardrobe..." : `Add ${detectedItems.filter(i => i.selected).length} item(s) to Wardrobe`}
+            </button>
+          </div>
+        ) : (
+          <div className="rounded-2xl bg-card border border-border/30 p-5 text-center">
+            <p className="text-xs text-muted-foreground">No clothing items detected in this photo</p>
+          </div>
+        )}
+      </motion.div>
+
       {/* On-Demand Suggestion Buttons */}
       <motion.div initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.2 }} className="space-y-3">
         {wardrobeSuggestions === null ? (
