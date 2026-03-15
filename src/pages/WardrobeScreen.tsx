@@ -72,6 +72,11 @@ const WardrobeScreen = () => {
   const bgQueueRef = useRef<Array<{ items: DetectedItem[]; selected: number[]; file: File }>>([]);
   const bgProcessingRef = useRef(false);
 
+  // Failed/retry image tracking
+  const [failedImages, setFailedImages] = useState<Set<string>>(new Set());
+  const [retryingImages, setRetryingImages] = useState<Set<string>>(new Set());
+  const [regeneratingEdit, setRegeneratingEdit] = useState(false);
+
   // Filters
   const [showFilters, setShowFilters] = useState(false);
   const [filterColor, setFilterColor] = useState("");
