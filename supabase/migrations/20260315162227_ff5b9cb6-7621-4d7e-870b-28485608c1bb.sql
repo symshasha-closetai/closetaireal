@@ -1,0 +1,1 @@
+ALTER TABLE public.drip_history ADD COLUMN confidence_score numeric NULL;
