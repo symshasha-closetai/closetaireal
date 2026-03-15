@@ -173,7 +173,7 @@ const OutfitRatingCard = ({ image, imageBase64, result, wardrobeItems = [],
 
   const handleSaveSuggestion = async (type: "wardrobe" | "shopping", s: Suggestion, idx?: number) => {
     const key = `${type}-${s.item_name}`;
-    if (!user || savedSuggestions.has(key)) return;
+    if (!user || savedSuggestions.includes(key)) return;
     try {
       // Find the image URL for this suggestion
       let imageUrl: string | null = null;
