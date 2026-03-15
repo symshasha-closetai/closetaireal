@@ -267,7 +267,7 @@ const OutfitRatingCard = ({ image, imageBase64, result, wardrobeItems = [] }: Pr
         </div>
 
         {/* Bottom gradient overlay */}
-        <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/60 via-black/30 to-transparent pt-20 pb-3 px-5">
+        <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/80 via-black/50 to-transparent pt-20 pb-3 px-5">
           <div className="flex items-end justify-between">
             {/* Drip Score Ring */}
             <button onClick={() => toggleTooltip("drip")} className="focus:outline-none active:scale-95 transition-transform">
