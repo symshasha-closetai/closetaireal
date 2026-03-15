@@ -657,12 +657,22 @@ const WardrobeScreen = () => {
                   </div>
                   {!selectMode && (
                     <>
+                      {/* Pin indicator */}
+                      {item.pinned && (
+                        <div className="absolute top-2 left-2 w-7 h-7 rounded-full bg-primary text-primary-foreground flex items-center justify-center z-10">
+                          <Pin size={13} />
+                        </div>
+                      )}
+                      <button onClick={(e) => { e.stopPropagation(); togglePin(item); }}
+                        className={`absolute top-2 ${item.pinned ? 'left-11' : 'left-2'} w-7 h-7 rounded-full bg-foreground/50 text-primary-foreground flex items-center justify-center opacity-100 sm:opacity-0 sm:group-hover:opacity-100 transition-opacity backdrop-blur-sm`}>
+                        <Pin size={13} className={item.pinned ? "fill-current" : ""} />
+                      </button>
                       <button onClick={(e) => { e.stopPropagation(); openEdit(item); }}
-                        className="absolute top-2 left-2 w-7 h-7 rounded-full bg-foreground/50 text-primary-foreground flex items-center justify-center opacity-100 sm:opacity-0 sm:group-hover:opacity-100 transition-opacity backdrop-blur-sm">
+                        className={`absolute top-2 ${item.pinned ? 'left-20' : 'left-11'} w-7 h-7 rounded-full bg-foreground/50 text-primary-foreground flex items-center justify-center opacity-100 sm:opacity-0 sm:group-hover:opacity-100 transition-opacity backdrop-blur-sm`}>
                         <Pencil size={13} />
                       </button>
                       <button onClick={(e) => { e.stopPropagation(); shareItem(item); }}
-                        className="absolute top-2 left-11 w-7 h-7 rounded-full bg-foreground/50 text-primary-foreground flex items-center justify-center opacity-100 sm:opacity-0 sm:group-hover:opacity-100 transition-opacity backdrop-blur-sm">
+                        className="absolute top-11 left-2 w-7 h-7 rounded-full bg-foreground/50 text-primary-foreground flex items-center justify-center opacity-100 sm:opacity-0 sm:group-hover:opacity-100 transition-opacity backdrop-blur-sm">
                         <Share2 size={13} />
                       </button>
                       <button onClick={(e) => { e.stopPropagation(); retryImageGeneration(item); }}
