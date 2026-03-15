@@ -110,19 +110,13 @@ let activeAbort: AbortController | null = null;
 
 const runAnalysis = async (file: File, userId: string | undefined, styleProfile: any) => {
   activeAbort = new AbortController();
-  updateGlobal({ analyzing: true, progress: 10, stage: "Reading your outfit..." });
+  updateGlobal({ analyzing: true, progress: 5, stage: "Compressing image..." });
 
   try {
-    const reader = new FileReader();
-    const base64Promise = new Promise<string>((resolve, reject) => {
-      reader.onload = () => resolve((reader.result as string).split(",")[1]);
-      reader.onerror = reject;
-      reader.readAsDataURL(file);
-    });
-    const imageBase64 = await base64Promise;
+    const { base64: imageBase64 } = await compressImage(file, 800, 800);
 
     if (activeAbort?.signal.aborted) return;
-    updateGlobal({ progress: 30, stage: "Analyzing your style..." });
+    updateGlobal({ progress: 20, stage: "Analyzing your style..." });
 
     if (activeAbort?.signal.aborted) return;
     updateGlobal({ progress: 50, stage: "Rating your drip..." });
