@@ -7,8 +7,8 @@ export const compressImage = (
   file: File,
   maxWidth = 800,
   maxHeight = 800,
-  quality = 0.7,
-  targetSizeKB = 300
+  quality = 0.65,
+  targetSizeKB = 200
 ): Promise<{ blob: Blob; base64: string }> => {
   return new Promise((resolve, reject) => {
     const img = new Image();
