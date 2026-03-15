@@ -252,7 +252,7 @@ const runAnalysis = async (file: File, userId: string | undefined, styleProfile:
     // Silent fallback — no error toast
     const fallback = clientFallbackResult();
     updateGlobal({ result: fallback, analyzing: false, progress: 0, stage: "" });
-    saveDripToHistory(globalDripState.image || "", fallback, userId, imageHash);
+    saveDripToHistory(globalDripState.image || "", fallback, userId);
   } finally {
     activeAbort = null;
   }
