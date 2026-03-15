@@ -196,7 +196,7 @@ const OutfitRatingCard = ({ image, imageBase64, result, wardrobeItems = [],
       };
       const { data, error } = await supabase.from("saved_suggestions" as any).insert(suggestionData as any).select().single();
       if (error) throw error;
-      setSavedSuggestions(prev => new Set(prev).add(key));
+      onSavedSuggestionsChange([...savedSuggestions, key]);
       // Sync to localStorage
       try {
         const cached = JSON.parse(localStorage.getItem("saved-suggestions") || "[]");
