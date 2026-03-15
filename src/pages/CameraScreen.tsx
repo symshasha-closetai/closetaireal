@@ -399,14 +399,38 @@ const CameraScreen = () => {
                   <button onClick={cancelAnalysis} className="absolute top-3 right-3 z-20 flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-destructive/90 text-destructive-foreground backdrop-blur-sm text-xs font-medium active:scale-95 transition-transform">
                     <X size={14} /> Cancel
                   </button>
-                  <div className="absolute inset-0 bg-background/40 backdrop-blur-sm flex items-center justify-center">
-                    <div className="flex flex-col items-center gap-4 w-full max-w-[200px]">
-                      <motion.div animate={{ rotate: 360 }} transition={{ repeat: Infinity, duration: 1.5, ease: "linear" }}>
-                        <Sparkles size={36} className="text-accent drop-shadow-[0_0_12px_hsl(var(--accent))]" />
+                  <div className="absolute inset-0 bg-background/60 backdrop-blur-md flex items-center justify-center">
+                    <div className="flex flex-col items-center gap-5 w-full max-w-[260px]">
+                      <motion.div animate={{ rotate: 360 }} transition={{ repeat: Infinity, duration: 2, ease: "linear" }}>
+                        <Sparkles size={32} className="text-accent drop-shadow-[0_0_12px_hsl(var(--accent))]" />
                       </motion.div>
-                      <div className="w-full space-y-2">
-                        <Progress value={progress} className="h-2" />
-                        <p className="text-xs font-medium text-foreground drop-shadow-sm text-center">{stage}</p>
+                      <div className="w-full space-y-3">
+                        {analysisSteps.map((step, i) => (
+                          <motion.div
+                            key={step.label}
+                            initial={{ opacity: 0, x: -10 }}
+                            animate={{ opacity: 1, x: 0 }}
+                            transition={{ delay: i * 0.15 }}
+                            className="flex items-center gap-3"
+                          >
+                            <div className="w-5 h-5 flex items-center justify-center shrink-0">
+                              {step.status === 'done' ? (
+                                <motion.div initial={{ scale: 0 }} animate={{ scale: 1 }} transition={{ type: "spring", stiffness: 400, damping: 15 }}>
+                                  <Check size={18} className="text-green-400 drop-shadow-sm" />
+                                </motion.div>
+                              ) : step.status === 'active' ? (
+                                <Loader2 size={18} className="text-accent animate-spin" />
+                              ) : (
+                                <div className="w-2 h-2 rounded-full bg-muted-foreground/30" />
+                              )}
+                            </div>
+                            <span className={`text-sm font-medium transition-colors duration-300 ${
+                              step.status === 'done' ? 'text-foreground' : step.status === 'active' ? 'text-foreground' : 'text-muted-foreground/50'
+                            }`}>
+                              {step.label}
+                            </span>
+                          </motion.div>
+                        ))}
                       </div>
                     </div>
                   </div>
