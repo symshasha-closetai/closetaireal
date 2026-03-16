@@ -307,7 +307,7 @@ const runAnalysis = async (file: File, userId: string | undefined, styleProfile:
 
     // Start staged animation and AI call in parallel
     startStagedAnimation();
-    const minDelay = new Promise((r) => setTimeout(r, 8000));
+    const minDelay = new Promise((r) => setTimeout(r, 12000));
 
     const aiCall = supabase.functions.invoke("rate-outfit", {
       body: { imageBase64, styleProfile: styleProfile || undefined },
