@@ -544,6 +544,12 @@ const HomeScreen = () => {
                     {sharingLook ? <Loader2 size={14} className="text-white animate-spin" /> : <Share2 size={14} className="text-white" />}
                   </button>
                   <button
+                    onClick={handleRecropPhoto}
+                    className="w-8 h-8 rounded-full bg-black/50 backdrop-blur-md flex items-center justify-center"
+                  >
+                    <Crop size={14} className="text-white" />
+                  </button>
+                  <button
                     onClick={() => photoFileRef.current?.click()}
                     disabled={uploadingPhoto}
                     className="w-8 h-8 rounded-full bg-black/50 backdrop-blur-md flex items-center justify-center"
