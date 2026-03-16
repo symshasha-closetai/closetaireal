@@ -79,7 +79,7 @@ const CLIENT_PRAISE_LINES = [
   "This outfit just made gravity optional — you're floating 🫧👑",
 ];
 
-function clientFallbackResult(): RatingResult {
+function clientFallbackResult(gender?: string | null): RatingResult {
   const r = (min: number, max: number) => Math.round((Math.random() * (max - min) + min) * 10) / 10;
   const pick = <T,>(a: T[]) => a[Math.floor(Math.random() * a.length)];
   const color = r(7, 9.5), style = r(7, 9.5), fit = r(7, 9.5);
@@ -88,7 +88,7 @@ function clientFallbackResult(): RatingResult {
     drip_reason: "Great color coordination that creates visual harmony",
     confidence_rating: r(7.5, 9.5),
     confidence_reason: "This look shows intentional styling choices",
-    killer_tag: pick(CLIENT_KILLER_TAGS),
+    killer_tag: pick(getClientKillerTags(gender)),
     color_score: color, color_reason: "Colors complement each other beautifully",
     style_score: style, style_reason: "Strong silhouette choices that flatter your frame",
     fit_score: fit, fit_reason: "Well-balanced proportions throughout the outfit",
