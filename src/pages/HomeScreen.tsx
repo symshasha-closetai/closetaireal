@@ -168,11 +168,24 @@ const HomeScreen = () => {
   const handleTodayPhotoUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file || !user) return;
+    // Read as data URL and open cropper
+    const reader = new FileReader();
+    reader.onload = () => setPendingCropImage(reader.result as string);
+    reader.readAsDataURL(file);
+    // Reset input so the same file can be re-selected
+    e.target.value = "";
+  };
+
+  const handleCroppedPhoto = async (blob: Blob) => {
+    setPendingCropImage(null);
+    if (!user) return;
     setUploadingPhoto(true);
     try {
-      const { blob } = await compressImage(file);
+      // Compress the cropped blob
+      const croppedFile = new File([blob], "cropped.jpg", { type: "image/jpeg" });
+      const { blob: compressedBlob } = await compressImage(croppedFile);
       const path = `${user.id}/today-look-${Date.now()}.jpg`;
-      const { error: uploadError } = await supabase.storage.from("wardrobe").upload(path, blob, { upsert: true, contentType: "image/jpeg" });
+      const { error: uploadError } = await supabase.storage.from("wardrobe").upload(path, compressedBlob, { upsert: true, contentType: "image/jpeg" });
       if (uploadError) throw uploadError;
       const { data: { publicUrl } } = supabase.storage.from("wardrobe").getPublicUrl(path);
       setTodayPhoto(publicUrl);
@@ -186,7 +199,7 @@ const HomeScreen = () => {
         if (raw) {
           const { count, lastDate } = JSON.parse(raw);
           if (lastDate === yesterday) newStreak = count + 1;
-          else if (lastDate === today) newStreak = count; // already uploaded today
+          else if (lastDate === today) newStreak = count;
         }
       } catch {}
       setStreak(newStreak);
