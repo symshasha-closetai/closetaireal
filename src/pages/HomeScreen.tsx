@@ -123,6 +123,7 @@ const HomeScreen = () => {
   const photoFileRef = useRef<HTMLInputElement>(null);
   const todayLookRef = useRef<HTMLDivElement>(null);
   const [sharingLook, setSharingLook] = useState(false);
+  const [pendingCropImage, setPendingCropImage] = useState<string | null>(null);
 
   // Streak tracking
   const [streak, setStreak] = useState(0);
