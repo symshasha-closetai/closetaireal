@@ -320,7 +320,7 @@ const runAnalysis = async (file: File, userId: string | undefined, styleProfile:
 
     if (error) throw error;
     if (data?.error || !data?.result) {
-      const fallback = clientFallbackResult();
+      const fallback = clientFallbackResult(gender);
       updateGlobal({ result: fallback, analyzing: false, progress: 0, stage: "", analysisSteps: [] });
       saveDripToHistory(globalDripState.image || "", fallback, userId, imageHash);
       return;
