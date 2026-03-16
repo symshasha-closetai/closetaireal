@@ -405,6 +405,15 @@ const HomeScreen = () => {
   return (
     <div className="min-h-screen pb-24 px-5 pt-8">
       <input type="file" accept="image/*" capture="user" ref={photoFileRef} className="hidden" onChange={handleTodayPhotoUpload} />
+      {pendingCropImage && (
+        <ImageCropper
+          imageSrc={pendingCropImage}
+          open={!!pendingCropImage}
+          onConfirm={handleCroppedPhoto}
+          onCancel={() => setPendingCropImage(null)}
+          aspectRatio={4 / 5}
+        />
+      )}
 
       <div className="max-w-5xl mx-auto space-y-5">
         <div><AppHeader /></div>
