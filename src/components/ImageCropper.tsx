@@ -1,6 +1,6 @@
 import React, { useState, useCallback } from "react";
 import Cropper, { Area } from "react-easy-crop";
-import { Dialog, DialogContent } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Slider } from "@/components/ui/slider";
 import { ZoomIn, ZoomOut, RotateCw, Check, X } from "lucide-react";
@@ -97,7 +97,8 @@ const ImageCropper: React.FC<ImageCropperProps> = ({
 
   return (
     <Dialog open={open} onOpenChange={(v) => !v && onCancel()}>
-      <DialogContent className="max-w-[95vw] sm:max-w-md p-0 gap-0 overflow-hidden rounded-2xl border-border/50 bg-background">
+      <DialogContent className="max-w-[95vw] sm:max-w-md p-0 gap-0 overflow-hidden rounded-2xl border-border/50 bg-background" aria-describedby={undefined}>
+        <DialogTitle className="sr-only">Crop Photo</DialogTitle>
         {/* Crop area */}
         <div className="relative w-full h-[60vh] sm:h-[50vh] bg-black">
           <Cropper
