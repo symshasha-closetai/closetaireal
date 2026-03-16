@@ -522,7 +522,7 @@ const HomeScreen = () => {
         {/* Controls */}
         <div className="space-y-4">
           {/* Today's Look Card */}
-          <div className="glass-card-elevated overflow-hidden" ref={todayLookRef}>
+          <div className="glass-card-elevated overflow-hidden">
             {todayPhoto ? (
               <div className="relative">
                 <img src={todayPhoto} alt="Today's look" className="w-full aspect-[4/5] object-cover" />
