@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback, useRef } from "react";
+import ImageCropper from "../components/ImageCropper";
 import { motion, AnimatePresence } from "framer-motion";
 import { Sparkles, Camera, ChevronRight, X, Heart, GraduationCap, PartyPopper, Shirt, Palette, Music, Church, Briefcase, Sun, Moon, Sunset, CloudRain, Thermometer, CloudSun, Snowflake, Shuffle, Leaf, Smile, Droplet, User, Loader2, Bookmark, BookmarkCheck, ImagePlus, Share2, Flame, Pin, Download } from "lucide-react";
 import AppHeader from "../components/AppHeader";
@@ -122,6 +123,7 @@ const HomeScreen = () => {
   const photoFileRef = useRef<HTMLInputElement>(null);
   const todayLookRef = useRef<HTMLDivElement>(null);
   const [sharingLook, setSharingLook] = useState(false);
+  const [pendingCropImage, setPendingCropImage] = useState<string | null>(null);
 
   // Streak tracking
   const [streak, setStreak] = useState(0);
@@ -166,11 +168,24 @@ const HomeScreen = () => {
   const handleTodayPhotoUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file || !user) return;
+    // Read as data URL and open cropper
+    const reader = new FileReader();
+    reader.onload = () => setPendingCropImage(reader.result as string);
+    reader.readAsDataURL(file);
+    // Reset input so the same file can be re-selected
+    e.target.value = "";
+  };
+
+  const handleCroppedPhoto = async (blob: Blob) => {
+    setPendingCropImage(null);
+    if (!user) return;
     setUploadingPhoto(true);
     try {
-      const { blob } = await compressImage(file);
+      // Compress the cropped blob
+      const croppedFile = new File([blob], "cropped.jpg", { type: "image/jpeg" });
+      const { blob: compressedBlob } = await compressImage(croppedFile);
       const path = `${user.id}/today-look-${Date.now()}.jpg`;
-      const { error: uploadError } = await supabase.storage.from("wardrobe").upload(path, blob, { upsert: true, contentType: "image/jpeg" });
+      const { error: uploadError } = await supabase.storage.from("wardrobe").upload(path, compressedBlob, { upsert: true, contentType: "image/jpeg" });
       if (uploadError) throw uploadError;
       const { data: { publicUrl } } = supabase.storage.from("wardrobe").getPublicUrl(path);
       setTodayPhoto(publicUrl);
@@ -184,7 +199,7 @@ const HomeScreen = () => {
         if (raw) {
           const { count, lastDate } = JSON.parse(raw);
           if (lastDate === yesterday) newStreak = count + 1;
-          else if (lastDate === today) newStreak = count; // already uploaded today
+          else if (lastDate === today) newStreak = count;
         }
       } catch {}
       setStreak(newStreak);
@@ -390,6 +405,15 @@ const HomeScreen = () => {
   return (
     <div className="min-h-screen pb-24 px-5 pt-8">
       <input type="file" accept="image/*" capture="user" ref={photoFileRef} className="hidden" onChange={handleTodayPhotoUpload} />
+      {pendingCropImage && (
+        <ImageCropper
+          imageSrc={pendingCropImage}
+          open={!!pendingCropImage}
+          onConfirm={handleCroppedPhoto}
+          onCancel={() => setPendingCropImage(null)}
+          aspectRatio={4 / 5}
+        />
+      )}
 
       <div className="max-w-5xl mx-auto space-y-5">
         <div><AppHeader /></div>
