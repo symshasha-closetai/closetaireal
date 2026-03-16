@@ -211,10 +211,74 @@ const HomeScreen = () => {
   };
 
   const handleShareTodayLook = async () => {
-    if (!todayLookRef.current) return;
+    if (!todayPhoto) return;
     setSharingLook(true);
     try {
-      const canvas = await html2canvas(todayLookRef.current, { useCORS: true, scale: 2, backgroundColor: null });
+      // Load image directly as blob to avoid cross-origin html2canvas issues
+      const response = await fetch(todayPhoto);
+      const imgBlob = await response.blob();
+      const img = await createImageBitmap(imgBlob);
+
+      const W = 720;
+      const H = W * (5 / 4); // 4:5 aspect
+      const canvas = document.createElement("canvas");
+      canvas.width = W;
+      canvas.height = H;
+      const ctx = canvas.getContext("2d")!;
+
+      // Draw photo covering canvas
+      const scale = Math.max(W / img.width, H / img.height);
+      const sw = img.width * scale;
+      const sh = img.height * scale;
+      ctx.drawImage(img, (W - sw) / 2, (H - sh) / 2, sw, sh);
+
+      // Gradient overlay
+      const grad = ctx.createLinearGradient(0, H * 0.5, 0, H);
+      grad.addColorStop(0, "rgba(0,0,0,0)");
+      grad.addColorStop(1, "rgba(0,0,0,0.85)");
+      ctx.fillStyle = grad;
+      ctx.fillRect(0, 0, W, H);
+
+      // Top overlay
+      const topGrad = ctx.createLinearGradient(0, 0, 0, H * 0.15);
+      topGrad.addColorStop(0, "rgba(0,0,0,0.4)");
+      topGrad.addColorStop(1, "rgba(0,0,0,0)");
+      ctx.fillStyle = topGrad;
+      ctx.fillRect(0, 0, W, H * 0.15);
+
+      // "Today's Look" badge
+      ctx.font = "bold 20px system-ui, sans-serif";
+      ctx.fillStyle = "rgba(255,255,255,0.95)";
+      ctx.fillText("Today's Look", 24, 40);
+
+      // Streak badge
+      if (streak > 0) {
+        ctx.font = "bold 18px system-ui, sans-serif";
+        ctx.fillText(`🔥 ${streak} day${streak > 1 ? "s" : ""}`, 24, 66);
+      }
+
+      // Daily tag
+      const dailyTag = getDailyTag();
+      ctx.shadowColor = "rgba(0,0,0,0.8)";
+      ctx.shadowBlur = 10;
+      ctx.font = "bold 28px system-ui, sans-serif";
+      ctx.fillStyle = "white";
+      ctx.fillText(dailyTag, 24, H - 52);
+
+      // Date
+      ctx.shadowBlur = 6;
+      ctx.font = "14px system-ui, sans-serif";
+      ctx.fillStyle = "rgba(255,255,255,0.75)";
+      ctx.fillText(new Date().toLocaleDateString("en-US", { weekday: "long", month: "long", day: "numeric" }), 24, H - 28);
+
+      // ClosetAI watermark
+      ctx.shadowBlur = 0;
+      ctx.font = "bold 14px system-ui, sans-serif";
+      ctx.fillStyle = "rgba(255,255,255,0.4)";
+      ctx.textAlign = "right";
+      ctx.fillText("ClosetAI", W - 20, H - 16);
+      ctx.textAlign = "left";
+
       canvas.toBlob(async (blob) => {
         if (!blob) { setSharingLook(false); return; }
         const file = new File([blob], "closetai-today-look.png", { type: "image/png" });
@@ -233,6 +297,10 @@ const HomeScreen = () => {
       toast.info("Couldn't share");
       setSharingLook(false);
     }
+  };
+
+  const handleRecropPhoto = () => {
+    if (todayPhoto) setPendingCropImage(todayPhoto);
   };
 
   const handleSaveOutfit = async (outfit: OutfitSuggestion, idx: number) => {
