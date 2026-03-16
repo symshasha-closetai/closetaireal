@@ -332,7 +332,7 @@ const runAnalysis = async (file: File, userId: string | undefined, styleProfile:
   } catch (err: any) {
     if (err?.name === "AbortError" || activeAbort?.signal.aborted) return;
     console.error("Rating error:", err);
-    const fallback = clientFallbackResult();
+    const fallback = clientFallbackResult(gender);
     updateGlobal({ result: fallback, analyzing: false, progress: 0, stage: "", analysisSteps: [] });
     saveDripToHistory(globalDripState.image || "", fallback, userId);
   } finally {
