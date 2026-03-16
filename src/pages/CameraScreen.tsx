@@ -273,7 +273,7 @@ const startStagedAnimation = () => {
       steps[i].status = 'done';
       if (i + 1 < steps.length) steps[i + 1].status = 'active';
       updateGlobal({ analysisSteps: [...steps] });
-    }, (i + 1) * 2000);
+    }, (i + 1) * 3000);
     stageTimers.push(timer);
   }
 };
