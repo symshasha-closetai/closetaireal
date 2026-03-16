@@ -8,18 +8,49 @@ import { useAuth } from "@/hooks/useAuth";
 import { toast } from "sonner";
 import { compressImage } from "@/lib/imageCompression";
 
-const CLIENT_KILLER_TAGS = [
+const CLIENT_KILLER_TAGS_MALE = [
   "Urban Samurai 🗡️✨", "Silent Billionaire 💰🖤", "Street Alpha 🔥👑", "Midnight Artist 🎨🌙",
-  "Campus CEO 💼🎓", "Soft Rebel 🌸⚡", "Velvet Operator 🎭✨", "Neon Maverick 💜⚡",
-  "Shadow Stylist 🖤🕶️", "Minimal King 👑✨", "Dark Academia Don 📚🖤", "Chrome Heart Drip 💎🔗",
-  "Sunset Sovereign 🌅👑", "Retro Royalty 👑🪩", "Ice Cold Flex ❄️💎", "Golden Hour Glow ☀️✨",
-  "Main Character Mode 🎬✨", "Quiet Luxury King 🤫👑", "Concrete Runway 🏙️💫", "Denim Dynasty 👖👑",
-  "Drip Architect 🏛️💧", "Phantom Flex 👻💪", "Vogue Villain 🦹✨", "Zen Drip Master 🧘💧",
-  "Royal Misfit 👑🃏", "Twilight Baron 🌆🎩", "Ivory Tower King 🏰👑", "Digital Nomad Drip 💻🌍",
-  "Obsidian Oracle 🖤🔮", "Champagne Casualty 🥂💫", "Cosmic Drifter 🌌✨", "Vintage Voltage ⚡🪩",
-  "Luxe Outlaw 🤠💎", "Sapphire Sovereign 💙👑", "Crimson Catalyst ❤️‍🔥⚡", "Arctic Aristocrat 🧊👑",
-  "Jade Emperor 🟢👑", "Onyx Operator 🖤🎯", "Gilded Rebel ✨🔥", "Marble Mood 🤍🏛️",
+  "Campus CEO 💼🎓", "Velvet Operator 🎭✨", "Neon Maverick 💜⚡", "Shadow Stylist 🖤🕶️",
+  "Minimal King 👑✨", "Dark Academia Don 📚🖤", "Chrome Heart Drip 💎🔗", "Sunset Sovereign 🌅👑",
+  "Retro Royalty 👑🪩", "Ice Cold Flex ❄️💎", "Golden Hour Glow ☀️✨", "Main Character Mode 🎬✨",
+  "Quiet Luxury King 🤫👑", "Concrete Runway 🏙️💫", "Denim Dynasty 👖👑", "Monochrome Monarch 🖤🤍",
+  "Drip Architect 🏛️💧", "Phantom Flex 👻💪", "Zen Drip Master 🧘💧", "Royal Misfit 👑🃏",
+  "Twilight Baron 🌆🎩", "Ivory Tower King 🏰👑", "Digital Nomad Drip 💻🌍", "Obsidian Oracle 🖤🔮",
+  "Champagne Casualty 🥂💫", "Cosmic Drifter 🌌✨", "Vintage Voltage ⚡🪩", "Luxe Outlaw 🤠💎",
+  "Sapphire Sovereign 💙👑", "Arctic Aristocrat 🧊👑", "Jade Emperor 🟢👑", "Onyx Operator 🖤🎯",
+  "Gilded Rebel ✨🔥", "Marble Mood 🤍🏛️", "Boulevard Boss 🛣️👔", "Polo Club Captain 🏇✨",
+  "Night Shift Drip 🌃💧", "Stealth Drip 🥷💧", "Grunge Royalty 🎸👑", "Silk Road Style 🧣✨",
+  "Electric Elegance ⚡✨", "Crimson Catalyst ❤️‍🔥⚡",
 ];
+
+const CLIENT_KILLER_TAGS_FEMALE = [
+  "Main Character Energy 🎬✨", "Silent Luxury Queen 💰👑", "Street Goddess 🔥💫", "Midnight Muse 🎨🌙",
+  "Campus Queen 💼🎓", "Soft Power Femme 🌸⚡", "Velvet Vixen 🎭✨", "Neon Empress 💜⚡",
+  "Shadow Siren 🖤🕶️", "Minimal Goddess 👑✨", "Dark Academia Diva 📚🖤", "Chrome Heart Queen 💎🔗",
+  "Sunset Empress 🌅👑", "Retro Diva 👑🪩", "Ice Cold Elegance ❄️💎", "Golden Hour Goddess ☀️✨",
+  "Quiet Luxury Queen 🤫👑", "Concrete Runway Diva 🏙️💫", "Denim Diva 👖✨", "Monochrome Muse 🖤🤍",
+  "Drip Duchess 🏛️💧", "Phantom Femme 👻💅", "Vogue Empress 🦹✨", "Zen Drip Queen 🧘💧",
+  "Royal Rebel 👑🃏", "Twilight Duchess 🌆👑", "Ivory Empress 🏰👑", "Digital Diva 💻🌍",
+  "Obsidian Goddess 🖤🔮", "Champagne Royalty 🥂💫", "Cosmic Diva 🌌✨", "Vintage Vibe Queen ⚡🪩",
+  "Luxe Siren 💎🌹", "Sapphire Empress 💙👑", "Crimson Queen ❤️‍🔥👑", "Arctic Empress 🧊👑",
+  "Jade Goddess 🟢✨", "Onyx Enchantress 🖤🎯", "Gilded Femme ✨🔥", "Marble Muse 🤍🏛️",
+  "Boulevard Diva 🛣️👠", "Polo Club Princess 🏇✨", "Night Shift Glam 🌃💅", "Stealth Siren 🥷💧",
+  "Grunge Goddess 🎸👑", "Silk Dream Diva 🧣✨", "Electric Empress ⚡✨", "Pastel Powerhouse 🍬💪",
+];
+
+const CLIENT_KILLER_TAGS_NEUTRAL = [
+  "Main Character Mode 🎬✨", "Silent Luxury 💰🖤", "Street Icon 🔥💫", "Midnight Artist 🎨🌙",
+  "Campus Legend 💼🎓", "Soft Rebel 🌸⚡", "Velvet Vision 🎭✨", "Neon Maverick 💜⚡",
+  "Shadow Stylist 🖤🕶️", "Minimal Icon 👑✨", "Dark Academia Vibe 📚🖤", "Chrome Heart Drip 💎🔗",
+  "Sunset Sovereign 🌅👑", "Retro Royalty 👑🪩", "Ice Cold Flex ❄️💎", "Golden Hour Glow ☀️✨",
+  "Cosmic Drifter 🌌✨", "Vintage Voltage ⚡🪩", "Gilded Rebel ✨🔥", "Marble Mood 🤍🏛️",
+];
+
+function getClientKillerTags(gender?: string | null) {
+  if (gender === "female") return CLIENT_KILLER_TAGS_FEMALE;
+  if (gender === "male") return CLIENT_KILLER_TAGS_MALE;
+  return CLIENT_KILLER_TAGS_NEUTRAL;
+}
 
 const CLIENT_PRAISE_LINES = [
   "You walked in and the room stopped scrolling 📱✨",
@@ -48,7 +79,7 @@ const CLIENT_PRAISE_LINES = [
   "This outfit just made gravity optional — you're floating 🫧👑",
 ];
 
-function clientFallbackResult(): RatingResult {
+function clientFallbackResult(gender?: string | null): RatingResult {
   const r = (min: number, max: number) => Math.round((Math.random() * (max - min) + min) * 10) / 10;
   const pick = <T,>(a: T[]) => a[Math.floor(Math.random() * a.length)];
   const color = r(7, 9.5), style = r(7, 9.5), fit = r(7, 9.5);
@@ -57,7 +88,7 @@ function clientFallbackResult(): RatingResult {
     drip_reason: "Great color coordination that creates visual harmony",
     confidence_rating: r(7.5, 9.5),
     confidence_reason: "This look shows intentional styling choices",
-    killer_tag: pick(CLIENT_KILLER_TAGS),
+    killer_tag: pick(getClientKillerTags(gender)),
     color_score: color, color_reason: "Colors complement each other beautifully",
     style_score: style, style_reason: "Strong silhouette choices that flatter your frame",
     fit_score: fit, fit_reason: "Well-balanced proportions throughout the outfit",
@@ -242,7 +273,7 @@ const startStagedAnimation = () => {
       steps[i].status = 'done';
       if (i + 1 < steps.length) steps[i + 1].status = 'active';
       updateGlobal({ analysisSteps: [...steps] });
-    }, (i + 1) * 2000);
+    }, (i + 1) * 3000);
     stageTimers.push(timer);
   }
 };
@@ -252,7 +283,7 @@ const clearStageTimers = () => {
   stageTimers = [];
 };
 
-const runAnalysis = async (file: File, userId: string | undefined, styleProfile: any) => {
+const runAnalysis = async (file: File, userId: string | undefined, styleProfile: any, gender?: string | null) => {
   activeAbort = new AbortController();
   updateGlobal({ analyzing: true, progress: 5, stage: "Compressing image...", analysisSteps: [] });
 
@@ -276,7 +307,7 @@ const runAnalysis = async (file: File, userId: string | undefined, styleProfile:
 
     // Start staged animation and AI call in parallel
     startStagedAnimation();
-    const minDelay = new Promise((r) => setTimeout(r, 8000));
+    const minDelay = new Promise((r) => setTimeout(r, 12000));
 
     const aiCall = supabase.functions.invoke("rate-outfit", {
       body: { imageBase64, styleProfile: styleProfile || undefined },
@@ -289,7 +320,7 @@ const runAnalysis = async (file: File, userId: string | undefined, styleProfile:
 
     if (error) throw error;
     if (data?.error || !data?.result) {
-      const fallback = clientFallbackResult();
+      const fallback = clientFallbackResult(gender);
       updateGlobal({ result: fallback, analyzing: false, progress: 0, stage: "", analysisSteps: [] });
       saveDripToHistory(globalDripState.image || "", fallback, userId, imageHash);
       return;
@@ -301,7 +332,7 @@ const runAnalysis = async (file: File, userId: string | undefined, styleProfile:
   } catch (err: any) {
     if (err?.name === "AbortError" || activeAbort?.signal.aborted) return;
     console.error("Rating error:", err);
-    const fallback = clientFallbackResult();
+    const fallback = clientFallbackResult(gender);
     updateGlobal({ result: fallback, analyzing: false, progress: 0, stage: "", analysisSteps: [] });
     saveDripToHistory(globalDripState.image || "", fallback, userId);
   } finally {
@@ -344,7 +375,7 @@ const CameraScreen = () => {
       r.readAsDataURL(file);
     });
     updateGlobal({ image: url, imageBase64: dataUrl, result: null });
-    runAnalysis(file, user?.id, styleProfile);
+    runAnalysis(file, user?.id, styleProfile, styleProfile?.gender);
   };
 
   const cancelAnalysis = () => {

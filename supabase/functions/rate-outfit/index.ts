@@ -5,20 +5,42 @@ const corsHeaders = {
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version",
 };
 
-const KILLER_TAGS = [
+const KILLER_TAGS_MALE = [
   "Urban Samurai 🗡️✨", "Silent Billionaire 💰🖤", "Street Alpha 🔥👑", "Midnight Artist 🎨🌙",
-  "Campus CEO 💼🎓", "Soft Rebel 🌸⚡", "Velvet Operator 🎭✨", "Neon Maverick 💜⚡",
-  "Shadow Stylist 🖤🕶️", "Minimal King 👑✨", "Dark Academia Don 📚🖤", "Chrome Heart Drip 💎🔗",
+  "Campus CEO 💼🎓", "Velvet Operator 🎭✨", "Neon Maverick 💜⚡", "Shadow Stylist 🖤🕶️",
+  "Minimal King 👑✨", "Dark Academia Don 📚🖤", "Chrome Heart Drip 💎🔗", "Sunset Sovereign 🌅👑",
+  "Retro Royalty 👑🪩", "Ice Cold Flex ❄️💎", "Golden Hour Glow ☀️✨", "Main Character Mode 🎬✨",
+  "Quiet Luxury King 🤫👑", "Concrete Runway 🏙️💫", "Denim Dynasty 👖👑", "Monochrome Monarch 🖤🤍",
+  "Drip Architect 🏛️💧", "Phantom Flex 👻💪", "Zen Drip Master 🧘💧", "Royal Misfit 👑🃏",
+  "Twilight Baron 🌆🎩", "Ivory Tower King 🏰👑", "Digital Nomad Drip 💻🌍", "Obsidian Oracle 🖤🔮",
+  "Champagne Casualty 🥂💫", "Cosmic Drifter 🌌✨", "Vintage Voltage ⚡🪩", "Luxe Outlaw 🤠💎",
+  "Sapphire Sovereign 💙👑", "Arctic Aristocrat 🧊👑", "Jade Emperor 🟢👑", "Onyx Operator 🖤🎯",
+  "Gilded Rebel ✨🔥", "Marble Mood 🤍🏛️", "Boulevard Boss 🛣️👔", "Polo Club Captain 🏇✨",
+  "Night Shift Drip 🌃💧", "Stealth Drip 🥷💧", "Grunge Royalty 🎸👑", "Silk Road Style 🧣✨",
+  "Electric Elegance ⚡✨", "Crimson Catalyst ❤️‍🔥⚡",
+];
+
+const KILLER_TAGS_FEMALE = [
+  "Main Character Energy 🎬✨", "Silent Luxury Queen 💰👑", "Street Goddess 🔥💫", "Midnight Muse 🎨🌙",
+  "Campus Queen 💼🎓", "Soft Power Femme 🌸⚡", "Velvet Vixen 🎭✨", "Neon Empress 💜⚡",
+  "Shadow Siren 🖤🕶️", "Minimal Goddess 👑✨", "Dark Academia Diva 📚🖤", "Chrome Heart Queen 💎🔗",
+  "Sunset Empress 🌅👑", "Retro Diva 👑🪩", "Ice Cold Elegance ❄️💎", "Golden Hour Goddess ☀️✨",
+  "Quiet Luxury Queen 🤫👑", "Concrete Runway Diva 🏙️💫", "Denim Diva 👖✨", "Monochrome Muse 🖤🤍",
+  "Drip Duchess 🏛️💧", "Phantom Femme 👻💅", "Vogue Empress 🦹✨", "Zen Drip Queen 🧘💧",
+  "Royal Rebel 👑🃏", "Twilight Duchess 🌆👑", "Ivory Empress 🏰👑", "Digital Diva 💻🌍",
+  "Obsidian Goddess 🖤🔮", "Champagne Royalty 🥂💫", "Cosmic Diva 🌌✨", "Vintage Vibe Queen ⚡🪩",
+  "Luxe Siren 💎🌹", "Sapphire Empress 💙👑", "Crimson Queen ❤️‍🔥👑", "Arctic Empress 🧊👑",
+  "Jade Goddess 🟢✨", "Onyx Enchantress 🖤🎯", "Gilded Femme ✨🔥", "Marble Muse 🤍🏛️",
+  "Boulevard Diva 🛣️👠", "Polo Club Princess 🏇✨", "Night Shift Glam 🌃💅", "Stealth Siren 🥷💧",
+  "Grunge Goddess 🎸👑", "Silk Dream Diva 🧣✨", "Electric Empress ⚡✨", "Pastel Powerhouse 🍬💪",
+];
+
+const KILLER_TAGS_NEUTRAL = [
+  "Main Character Mode 🎬✨", "Silent Luxury 💰🖤", "Street Icon 🔥💫", "Midnight Artist 🎨🌙",
+  "Campus Legend 💼🎓", "Soft Rebel 🌸⚡", "Velvet Vision 🎭✨", "Neon Maverick 💜⚡",
+  "Shadow Stylist 🖤🕶️", "Minimal Icon 👑✨", "Dark Academia Vibe 📚🖤", "Chrome Heart Drip 💎🔗",
   "Sunset Sovereign 🌅👑", "Retro Royalty 👑🪩", "Ice Cold Flex ❄️💎", "Golden Hour Glow ☀️✨",
-  "Main Character Mode 🎬✨", "Quiet Luxury King 🤫👑", "Concrete Runway 🏙️💫", "Denim Dynasty 👖👑",
-  "Monochrome Monarch 🖤🤍", "Electric Elegance ⚡✨", "Silk Road Style 🧣✨", "Stealth Drip 🥷💧",
-  "Boulevard Boss 🛣️👔", "Cozy Commander ☁️🫡", "Pastel Powerhouse 🍬💪", "Grunge Royalty 🎸👑",
-  "Polo Club Captain 🏇✨", "Night Shift Drip 🌃💧",
-  "Drip Architect 🏛️💧", "Phantom Flex 👻💪", "Vogue Villain 🦹✨", "Zen Drip Master 🧘💧",
-  "Royal Misfit 👑🃏", "Twilight Baron 🌆🎩", "Ivory Tower King 🏰👑", "Digital Nomad Drip 💻🌍",
-  "Obsidian Oracle 🖤🔮", "Champagne Casualty 🥂💫", "Cosmic Drifter 🌌✨", "Vintage Voltage ⚡🪩",
-  "Luxe Outlaw 🤠💎", "Sapphire Sovereign 💙👑", "Crimson Catalyst ❤️‍🔥⚡", "Arctic Aristocrat 🧊👑",
-  "Jade Emperor 🟢👑", "Onyx Operator 🖤🎯", "Gilded Rebel ✨🔥", "Marble Mood 🤍🏛️",
+  "Cosmic Drifter 🌌✨", "Vintage Voltage ⚡🪩", "Gilded Rebel ✨🔥", "Marble Mood 🤍🏛️",
 ];
 
 const PRAISE_LINES = [
@@ -108,7 +130,13 @@ const FALLBACK_CONFIDENCE_REASONS = [
   "Expansive posture with uncrossed arms signals openness — a core indicator in nonverbal confidence research",
 ];
 
-function generateFallback() {
+function getKillerTags(gender?: string | null) {
+  if (gender === "female") return KILLER_TAGS_FEMALE;
+  if (gender === "male") return KILLER_TAGS_MALE;
+  return KILLER_TAGS_NEUTRAL;
+}
+
+function generateFallback(gender?: string | null) {
   const color = randomBetween(7.0, 9.5);
   const style = randomBetween(7.0, 9.5);
   const fit = randomBetween(7.0, 9.5);
@@ -119,7 +147,7 @@ function generateFallback() {
     drip_reason: pick(FALLBACK_REASONS),
     confidence_rating: randomBetween(6.0, 9.5),
     confidence_reason: pick(FALLBACK_CONFIDENCE_REASONS),
-    killer_tag: pick(KILLER_TAGS),
+    killer_tag: pick(getKillerTags(gender)),
     color_score: color,
     color_reason: pick(FALLBACK_REASONS),
     style_score: style,
@@ -161,11 +189,12 @@ serve(async (req) => {
     const { imageBase64, styleProfile } = await req.json();
     if (!imageBase64) return new Response(JSON.stringify({ error: "No image provided" }), { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } });
 
+    const gender = styleProfile?.gender || null;
+
     const apiKey = Deno.env.get("GOOGLE_AI_API_KEY");
     if (!apiKey) {
-      // No API key — use fallback
       console.warn("GOOGLE_AI_API_KEY not configured, using fallback");
-      return new Response(JSON.stringify({ result: generateFallback() }), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
+      return new Response(JSON.stringify({ result: generateFallback(gender) }), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
     }
 
     let profileContext = "";
@@ -177,6 +206,12 @@ serve(async (req) => {
       if (styleProfile.style_type) parts.push(`Styles: ${styleProfile.style_type}`);
       if (parts.length > 0) profileContext = ` Profile: ${parts.join(", ")}.`;
     }
+
+    const genderInstruction = gender === "female"
+      ? "Use feminine/gender-appropriate language in killer_tag — use words like Queen, Empress, Goddess, Diva, Siren, Duchess, Muse. NEVER use King, Emperor, Boss, Don, Baron."
+      : gender === "male"
+      ? "Use masculine/gender-appropriate language in killer_tag — use words like King, Emperor, Boss, Don, Baron, Sovereign. NEVER use Queen, Empress, Goddess, Diva."
+      : "Use gender-neutral language in killer_tag — avoid gendered words like King/Queen.";
 
     const systemPrompt = `Fashion stylist AI.${profileContext}
 
@@ -195,7 +230,7 @@ Rules:
   * Overall body symmetry and groundedness of stance
   If face is not clearly visible, score based on body language cues only and note that in confidence_reason.
 - confidence_reason: 1-2 sentences referencing the SPECIFIC scientific indicators observed. Mention which cues were detected (e.g. "Duchenne smile with eye engagement", "expansive open posture", "relaxed jaw line").
-- killer_tag: 1-3 words + 1-2 emojis. MUST be SPECIFIC to the actual outfit style/vibe detected — reference the colors, patterns, era, subculture, or energy of THIS outfit. Never use generic tags like "Looking Good" or "Nice Outfit". Think TikTok caption energy. Examples by style: streetwear → "Hypebeast Protocol 🔥", formal/suit → "Board Meeting Baddie 💼✨", casual/cozy → "Soft Era Activated 🧸☁️", colorful → "Dopamine Dealer 🌈", all-black → "Shadow Royalty 🖤👑", vintage → "Thrift Lord Energy 🪩", sporty → "Gym to Slay Pipeline 💪🔥", minimalist → "Less is Luxe ✨", desi/ethnic → "Desi Drip Dynasty 👑", y2k → "2000s Called, Said Keep It 📱💅"
+- killer_tag: 1-3 words + 1-2 emojis. ${genderInstruction} MUST be SPECIFIC to the actual outfit style/vibe detected — reference the colors, patterns, era, subculture, or energy of THIS outfit. Never use generic tags like "Looking Good" or "Nice Outfit". Think TikTok caption energy.
 - praise_line: one stylish shareable sentence SPECIFIC to the outfit. Reference actual items/colors/style detected. Gen Z tone — witty, confident, emoji-sprinkled.
 - STRICTLY NO profanity, cuss words, or vulgar language in any field. Keep it clean but fire 🔥
 - reasons: 1-2 sentences each
@@ -231,17 +266,16 @@ Rules:
         result = JSON.parse(cleaned);
       } catch {
         console.error("Failed to parse AI response:", content);
-        result = generateFallback();
+        result = generateFallback(gender);
       }
     } catch (e) {
       console.warn("AI call failed/timed out, using fallback:", e);
-      result = generateFallback();
+      result = generateFallback(gender);
     }
 
     return new Response(JSON.stringify({ result }), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
   } catch (e) {
     console.error("rate-outfit error:", e);
-    // Even on unexpected errors, return a fallback — never show errors to user
     return new Response(JSON.stringify({ result: generateFallback() }), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
   }
 });
