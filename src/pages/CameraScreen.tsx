@@ -283,7 +283,7 @@ const clearStageTimers = () => {
   stageTimers = [];
 };
 
-const runAnalysis = async (file: File, userId: string | undefined, styleProfile: any) => {
+const runAnalysis = async (file: File, userId: string | undefined, styleProfile: any, gender?: string | null) => {
   activeAbort = new AbortController();
   updateGlobal({ analyzing: true, progress: 5, stage: "Compressing image...", analysisSteps: [] });
 
