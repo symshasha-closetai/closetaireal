@@ -120,7 +120,7 @@ const HomeScreen = () => {
   const [todayPhoto, setTodayPhoto] = useState<string | null>(null);
   const [uploadingPhoto, setUploadingPhoto] = useState(false);
   const photoFileRef = useRef<HTMLInputElement>(null);
-  const todayLookRef = useRef<HTMLDivElement>(null);
+  
   const [sharingLook, setSharingLook] = useState(false);
   const [pendingCropImage, setPendingCropImage] = useState<string | null>(null);
 
