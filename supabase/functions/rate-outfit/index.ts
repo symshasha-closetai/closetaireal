@@ -153,9 +153,9 @@ serve(async (req) => {
 
     const gender = styleProfile?.gender || null;
 
-    const apiKey = Deno.env.get("LOVABLE_API_KEY");
+    const apiKey = Deno.env.get("GOOGLE_AI_API_KEY");
     if (!apiKey) {
-      console.warn("LOVABLE_API_KEY not configured, using fallback");
+      console.warn("GOOGLE_AI_API_KEY not configured, using fallback");
       return new Response(JSON.stringify({ result: generateFallback(gender) }), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
     }
 
@@ -170,76 +170,73 @@ serve(async (req) => {
     }
 
     const genderInstruction = gender === "female"
-      ? "Use feminine language in killer_tag (Queen, Empress, Goddess). NEVER use King, Emperor, Boss."
+      ? "Use feminine killer_tag (Queen, Empress, Goddess)."
       : gender === "male"
-      ? "Use masculine language in killer_tag (King, Emperor, Boss). NEVER use Queen, Empress, Goddess."
-      : "Use gender-neutral language in killer_tag.";
+      ? "Use masculine killer_tag (King, Emperor, Boss)."
+      : "Use gender-neutral killer_tag.";
 
-    const systemPrompt = `Fashion stylist AI.${profileContext}
+    const prompt = `Fashion stylist AI.${profileContext}
 
 Return ONLY valid JSON:
 {"drip_score":number,"drip_reason":"string","confidence_rating":number,"confidence_reason":"string","killer_tag":"string","color_score":number,"color_reason":"string","style_score":number,"style_reason":"string","fit_score":number,"fit_reason":"string","occasion":"string","advice":"string","praise_line":"string"}
 
 Rules:
 - All scores 0-10 decimals. drip_score = Color(25%)+Style(20%)+Fit(25%)+Occasion(20%)+Accessories(10%)
-- confidence_rating: Score body language/posture visible in photo (0-10). If face not visible, score posture only.
-- confidence_reason: 1 sentence referencing specific cues observed.
-- killer_tag: 1-3 words + 1-2 emojis. ${genderInstruction} SPECIFIC to outfit style/vibe. Think TikTok caption energy.
-- praise_line: one witty shareable sentence SPECIFIC to the outfit. Gen Z tone, emoji-sprinkled.
-- NO profanity. reasons: 1 sentence each.
-- DO NOT include wardrobe_suggestions or shopping_suggestions`;
+- confidence_rating: Score posture/body language 0-10.
+- killer_tag: 1-3 words + 1-2 emojis. ${genderInstruction}
+- praise_line: witty shareable sentence, Gen Z tone, emojis.
+- reasons: 1 sentence each. NO profanity.
 
-    // Use Lovable AI Gateway (OpenAI-compatible with vision)
-    const aiPromise = fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
-      method: "POST",
-      headers: {
-        "Authorization": `Bearer ${apiKey}`,
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
-        model: "google/gemini-2.5-flash",
-        messages: [
-          {
-            role: "user",
-            content: [
-              { type: "text", text: systemPrompt + "\n\nAnalyze this outfit. Return JSON only." },
-              { type: "image_url", image_url: { url: `data:image/jpeg;base64,${imageBase64}` } },
-            ],
-          },
+Analyze this outfit. Return JSON only.`;
+
+    // Direct Google Gemini API call using generateContent
+    const geminiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${apiKey}`;
+
+    const geminiBody = {
+      contents: [{
+        parts: [
+          { text: prompt },
+          { inlineData: { mimeType: "image/jpeg", data: imageBase64 } },
         ],
-      }),
-    });
+      }],
+      generationConfig: {
+        temperature: 0.7,
+        maxOutputTokens: 1024,
+      },
+    };
 
     const timeoutPromise = new Promise((_, reject) =>
-      setTimeout(() => reject(new Error("TIMEOUT")), 12000)
+      setTimeout(() => reject(new Error("TIMEOUT")), 15000)
     );
 
     let result = null;
     try {
-      const response = await Promise.race([aiPromise, timeoutPromise]) as Response;
-      
+      const response = await Promise.race([
+        fetch(geminiUrl, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(geminiBody),
+        }),
+        timeoutPromise,
+      ]) as Response;
+
       if (!response.ok) {
         const errText = await response.text();
-        console.error(`Lovable AI error: ${response.status} ${errText}`);
-        if (response.status === 429) {
-          console.warn("Rate limited, using fallback");
-        } else if (response.status === 402) {
-          console.warn("Payment required, using fallback");
-        }
+        console.error(`Gemini API error: ${response.status} ${errText}`);
         result = generateFallback(gender);
       } else {
         const data = await response.json();
-        const content = data.choices?.[0]?.message?.content || "{}";
+        const content = data.candidates?.[0]?.content?.parts?.[0]?.text || "{}";
         try {
           const cleaned = content.replace(/```json\n?/g, "").replace(/```\n?/g, "").trim();
           result = JSON.parse(cleaned);
         } catch {
-          console.error("Failed to parse AI response:", content);
+          console.error("Failed to parse Gemini response:", content);
           result = generateFallback(gender);
         }
       }
     } catch (e) {
-      console.warn("AI call failed/timed out, using fallback:", e);
+      console.warn("Gemini call failed/timed out, using fallback:", e);
       result = generateFallback(gender);
     }
 
