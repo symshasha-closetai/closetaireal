@@ -288,14 +288,28 @@ const runAnalysis = async (file: File, userId: string | undefined, styleProfile:
   updateGlobal({ analyzing: true, progress: 5, stage: "Compressing image...", analysisSteps: [] });
 
   try {
-    const { base64: imageBase64 } = await compressImage(file, 800, 800);
+    const { blob, base64: imageBase64 } = await compressImage(file, 512, 512);
 
     if (activeAbort?.signal.aborted) return;
 
-    // Check cache for consistent scores
+    // Parallel: check cache + upload to storage
     const imageHash = computeImageHash(imageBase64);
+    
+    const cachePromise = checkCache(imageHash, userId);
+    let uploadPromise: Promise<string | null> = Promise.resolve(null);
+    if (userId) {
+      const path = `${userId}/drip-${Date.now()}.jpg`;
+      uploadPromise = supabase.storage.from("wardrobe").upload(path, blob, { contentType: "image/jpeg" })
+        .then(({ error: uploadErr }) => {
+          if (uploadErr) return null;
+          const { data: { publicUrl } } = supabase.storage.from("wardrobe").getPublicUrl(path);
+          return publicUrl;
+        })
+        .catch(() => null);
+    }
 
-    const cachedResult = await checkCache(imageHash, userId);
+    const [cachedResult, uploadedUrl] = await Promise.all([cachePromise, uploadPromise]);
+
     if (cachedResult) {
       if (activeAbort?.signal.aborted) return;
       updateGlobal({ result: cachedResult, analyzing: false, progress: 0, stage: "", analysisSteps: [] });
@@ -307,22 +321,11 @@ const runAnalysis = async (file: File, userId: string | undefined, styleProfile:
 
     // Start staged animation and AI call in parallel
     startStagedAnimation();
-    const minDelay = new Promise((r) => setTimeout(r, 8000));
+    const minDelay = new Promise((r) => setTimeout(r, 5000));
 
-    // Upload to storage for faster transfer (URL instead of base64)
-    let aiCallBody: any = { imageBase64, styleProfile: styleProfile || undefined };
-    if (userId) {
-      try {
-        const response = await fetch(`data:image/jpeg;base64,${imageBase64}`);
-        const blob = await response.blob();
-        const path = `${userId}/drip-${Date.now()}.jpg`;
-        const { error: uploadErr } = await supabase.storage.from("wardrobe").upload(path, blob, { contentType: "image/jpeg" });
-        if (!uploadErr) {
-          const { data: { publicUrl } } = supabase.storage.from("wardrobe").getPublicUrl(path);
-          aiCallBody = { imageUrl: publicUrl, styleProfile: styleProfile || undefined };
-        }
-      } catch { /* fall back to base64 */ }
-    }
+    const aiCallBody: any = uploadedUrl
+      ? { imageUrl: uploadedUrl, styleProfile: styleProfile || undefined }
+      : { imageBase64, styleProfile: styleProfile || undefined };
 
     const aiCall = supabase.functions.invoke("rate-outfit", {
       body: aiCallBody,

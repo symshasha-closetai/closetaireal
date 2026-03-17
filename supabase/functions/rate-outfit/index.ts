@@ -43,61 +43,6 @@ const KILLER_TAGS_NEUTRAL = [
   "Cosmic Drifter 🌌✨", "Vintage Voltage ⚡🪩", "Gilded Rebel ✨🔥", "Marble Mood 🤍🏛️",
 ];
 
-const PRAISE_LINES = [
-  "You walked in and the room stopped scrolling 📱✨",
-  "This fit said 'I woke up and chose excellence' 💅🔥",
-  "You're not dressed, you're ARMED 🗡️✨",
-  "Serving looks that need their own zip code 📍💫",
-  "You're already dressed like the main character 🎬👑",
-  "This outfit just made someone rethink their whole wardrobe 👀🔥",
-  "You didn't get ready, you stayed ready 💎✨",
-  "Walking mood board energy — everything just clicks 🎨👑",
-  "The mirror called, it said thank you 🪞✨",
-  "This fit has its own gravitational pull 🌍💫",
-  "You look like the plot twist nobody saw coming 🎭🔥",
-  "Outfit so clean it should come with a warning label ⚠️✨",
-  "You're giving 'I don't try, I just arrive' energy 💅👑",
-  "This look just raised everyone's standards 📈🔥",
-  "Styled like tomorrow already happened ⏳✨",
-  "This fit walked so others could crawl 🚶‍♂️💨",
-  "You're dressed like confidence has a uniform 🫡✨",
-  "Somebody call the fire department because this look is blazing 🔥🚒",
-  "You're already dressed like a CEO on vacation 🏝️👔",
-  "This outfit is what Wi-Fi would look like if it were stylish 📶✨",
-  "The drip is so real, umbrellas are jealous ☂️💧",
-  "You're giving 'I own the room' without saying a word 🤫👑",
-  "This fit is a whole vibe check passed with honors 🎓🔥",
-  "Looking like you stepped out of a style documentary 🎥✨",
-  "You just made getting dressed look like an art form 🎨💅",
-  "This look has more layers than your playlist 🎵✨",
-  "You're dressed like the algorithm wants to feature you 📲🔥",
-  "Outfit so fire, screenshots are being taken right now 📸💥",
-  "You're already dressed like the sequel everyone's been waiting for 🎬✨",
-  "This fit just sent the fashion police on paid leave 👮‍♂️💫",
-  "You look like confidence and comfort had a baby 👶✨",
-  "This outfit radiates 'I know exactly who I am' energy 🪞🔥",
-  "Styled like you've got a stylist but you ARE the stylist 💇‍♂️👑",
-  "This look is giving main event, not opening act 🎤✨",
-  "You're dressed like good taste runs in the family 🧬🔥",
-  "You're dressed like success is your default setting 💼✨",
-  "This fit just broke the algorithm 📈🔥",
-  "You look like you own the playlist AND the venue 🎶👑",
-  "This outfit has more range than your favorite artist 🎤✨",
-  "You're giving 'walked in, owned it, left' energy 🚶‍♂️💨",
-  "This look just unlocked a new level of drip 🎮✨",
-  "You're dressed like the universe owes you a runway 🌌💃",
-  "This fit is a whole thesis on looking good 📜🔥",
-  "You look like you came with a soundtrack 🎧👑",
-  "This outfit just won an award it didn't even enter 🏆✨",
-  "You're giving 'effortlessly iconic' and it's working 💫👑",
-  "This look said 'fashion week who?' and meant it 🤷‍♂️✨",
-  "You're dressed like your future self sent instructions 🔮🔥",
-  "This fit has more personality than most people 🎭💎",
-  "You look like the VIP section was built for you 🥂👑",
-  "Styled like the internet's best-kept secret 🤫✨",
-  "This outfit just made gravity optional — you're floating 🫧👑",
-];
-
 const FALLBACK_REASONS = [
   "Great color coordination that creates visual harmony",
   "Strong silhouette choices that flatter your frame",
@@ -111,6 +56,39 @@ const FALLBACK_REASONS = [
 
 const OCCASIONS = ["Casual", "Smart Casual", "Street Style", "Date Night", "Work", "Weekend", "Night Out", "Brunch"];
 
+const PRAISE_LINES = [
+  "You walked in and the room stopped scrolling 📱✨",
+  "This fit said 'I woke up and chose excellence' 💅🔥",
+  "You're not dressed, you're ARMED 🗡️✨",
+  "Serving looks that need their own zip code 📍💫",
+  "You're already dressed like the main character 🎬👑",
+  "This outfit just made someone rethink their whole wardrobe 👀🔥",
+  "You didn't get ready, you stayed ready 💎✨",
+  "Walking mood board energy — everything just clicks 🎨👑",
+  "The mirror called, it said thank you 🪞✨",
+  "Outfit so clean it should come with a warning label ⚠️✨",
+  "You're giving 'I don't try, I just arrive' energy 💅👑",
+  "This fit just broke the algorithm 📈🔥",
+  "You're dressed like success is your default setting 💼✨",
+  "This outfit just won an award it didn't even enter 🏆✨",
+  "You're giving 'effortlessly iconic' and it's working 💫👑",
+  "You're dressed like your future self sent instructions 🔮🔥",
+  "This fit has more personality than most people 🎭💎",
+  "Styled like the internet's best-kept secret 🤫✨",
+  "This outfit just made gravity optional — you're floating 🫧👑",
+];
+
+const FALLBACK_CONFIDENCE_REASONS = [
+  "Strong upright posture and relaxed shoulders project natural confidence",
+  "Open body language with visible hands and balanced stance signals self-assurance",
+  "Relaxed jaw and neutral chin position indicate comfort and groundedness",
+  "Shoulders pulled back with chest open suggests high postural confidence",
+  "Natural arm positioning away from torso indicates comfort in personal space",
+  "Head held level with steady forward orientation projects composure",
+  "Balanced weight distribution and planted stance convey stability",
+  "Expansive posture with uncrossed arms signals openness and confidence",
+];
+
 function randomBetween(min: number, max: number): number {
   return Math.round((Math.random() * (max - min) + min) * 10) / 10;
 }
@@ -118,17 +96,6 @@ function randomBetween(min: number, max: number): number {
 function pick<T>(arr: T[]): T {
   return arr[Math.floor(Math.random() * arr.length)];
 }
-
-const FALLBACK_CONFIDENCE_REASONS = [
-  "Strong upright posture and relaxed shoulders project natural confidence — consistent with Cuddy's postural expansiveness research",
-  "Open body language with visible hands and balanced stance signals social ease and self-assurance",
-  "Relaxed jaw and neutral chin position indicate comfort and groundedness — no tension markers detected",
-  "Shoulders pulled back with chest open suggests high postural confidence (Carney et al., 2010)",
-  "Natural arm positioning away from torso indicates comfort in personal space — a key dominance cue",
-  "Head held level with steady forward orientation projects composure and directness",
-  "Balanced weight distribution and planted stance convey stability and self-possession",
-  "Expansive posture with uncrossed arms signals openness — a core indicator in nonverbal confidence research",
-];
 
 function getKillerTags(gender?: string | null) {
   if (gender === "female") return KILLER_TAGS_FEMALE;
@@ -160,28 +127,6 @@ function generateFallback(gender?: string | null) {
   };
 }
 
-async function callWithFallback(models: string[], apiKey: string, body: any): Promise<any> {
-  for (let i = 0; i < models.length; i++) {
-    const model = models[i];
-    const response = await fetch(
-      `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`,
-      { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) }
-    );
-    if (response.ok) return response.json();
-    if (response.status === 429 || response.status >= 500) {
-      console.warn(`Model ${model} returned ${response.status}, trying fallback...`);
-      if (i === models.length - 1) {
-        const errText = await response.text();
-        throw new Error(`All models failed. Last: ${response.status} ${errText}`);
-      }
-      continue;
-    }
-    const errText = await response.text();
-    throw new Error(`Gemini API error: ${response.status} ${errText}`);
-  }
-  throw new Error("No models available");
-}
-
 serve(async (req) => {
   if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
 
@@ -208,9 +153,9 @@ serve(async (req) => {
 
     const gender = styleProfile?.gender || null;
 
-    const apiKey = Deno.env.get("GOOGLE_AI_API_KEY");
+    const apiKey = Deno.env.get("LOVABLE_API_KEY");
     if (!apiKey) {
-      console.warn("GOOGLE_AI_API_KEY not configured, using fallback");
+      console.warn("LOVABLE_API_KEY not configured, using fallback");
       return new Response(JSON.stringify({ result: generateFallback(gender) }), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
     }
 
@@ -225,10 +170,10 @@ serve(async (req) => {
     }
 
     const genderInstruction = gender === "female"
-      ? "Use feminine/gender-appropriate language in killer_tag — use words like Queen, Empress, Goddess, Diva, Siren, Duchess, Muse. NEVER use King, Emperor, Boss, Don, Baron."
+      ? "Use feminine language in killer_tag (Queen, Empress, Goddess). NEVER use King, Emperor, Boss."
       : gender === "male"
-      ? "Use masculine/gender-appropriate language in killer_tag — use words like King, Emperor, Boss, Don, Baron, Sovereign. NEVER use Queen, Empress, Goddess, Diva."
-      : "Use gender-neutral language in killer_tag — avoid gendered words like King/Queen.";
+      ? "Use masculine language in killer_tag (King, Emperor, Boss). NEVER use Queen, Empress, Goddess."
+      : "Use gender-neutral language in killer_tag.";
 
     const systemPrompt = `Fashion stylist AI.${profileContext}
 
@@ -237,53 +182,61 @@ Return ONLY valid JSON:
 
 Rules:
 - All scores 0-10 decimals. drip_score = Color(25%)+Style(20%)+Fit(25%)+Occasion(20%)+Accessories(10%)
-- confidence_rating: Score based on SCIENTIFIC analysis of facial expression and body language visible in the photo. Evaluate these indicators:
-  * Duchenne smile: genuine smile engaging orbicularis oculi (eye crinkle) vs social/forced smile
-  * Eye contact: direct gaze toward camera = high confidence; averted/downcast = lower
-  * Postural expansiveness (Amy Cuddy's research): open, space-occupying posture = high; closed, contracted = lower
-  * Chin/jaw position: chin level or slightly raised = confidence; tucked/lowered = uncertainty
-  * Shoulder positioning: relaxed, pulled back = confident; hunched, raised = tense
-  * Hand positioning: visible, relaxed, open = confident; hidden, fidgeting, crossed = guarded
-  * Overall body symmetry and groundedness of stance
-  If face is not clearly visible, score based on body language cues only and note that in confidence_reason.
-- confidence_reason: 1-2 sentences referencing the SPECIFIC scientific indicators observed. Mention which cues were detected (e.g. "Duchenne smile with eye engagement", "expansive open posture", "relaxed jaw line").
-- killer_tag: 1-3 words + 1-2 emojis. ${genderInstruction} MUST be SPECIFIC to the actual outfit style/vibe detected — reference the colors, patterns, era, subculture, or energy of THIS outfit. Never use generic tags like "Looking Good" or "Nice Outfit". Think TikTok caption energy.
-- praise_line: one stylish shareable sentence SPECIFIC to the outfit. Reference actual items/colors/style detected. Gen Z tone — witty, confident, emoji-sprinkled.
-- STRICTLY NO profanity, cuss words, or vulgar language in any field. Keep it clean but fire 🔥
-- reasons: 1-2 sentences each
+- confidence_rating: Score body language/posture visible in photo (0-10). If face not visible, score posture only.
+- confidence_reason: 1 sentence referencing specific cues observed.
+- killer_tag: 1-3 words + 1-2 emojis. ${genderInstruction} SPECIFIC to outfit style/vibe. Think TikTok caption energy.
+- praise_line: one witty shareable sentence SPECIFIC to the outfit. Gen Z tone, emoji-sprinkled.
+- NO profanity. reasons: 1 sentence each.
 - DO NOT include wardrobe_suggestions or shopping_suggestions`;
 
-    // 7-second timeout: race AI call vs timeout
-    const aiPromise = callWithFallback(
-      ["gemini-2.0-flash", "gemini-2.5-flash"],
-      apiKey,
-      {
-        contents: [
+    // Use Lovable AI Gateway (OpenAI-compatible with vision)
+    const aiPromise = fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
+      method: "POST",
+      headers: {
+        "Authorization": `Bearer ${apiKey}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        model: "google/gemini-2.5-flash",
+        messages: [
           {
             role: "user",
-            parts: [
-              { text: systemPrompt + "\n\nAnalyze this outfit. Return JSON only." },
-              { inlineData: { mimeType: "image/jpeg", data: imageBase64 } },
+            content: [
+              { type: "text", text: systemPrompt + "\n\nAnalyze this outfit. Return JSON only." },
+              { type: "image_url", image_url: { url: `data:image/jpeg;base64,${imageBase64}` } },
             ],
           },
         ],
-      }
-    );
+      }),
+    });
 
     const timeoutPromise = new Promise((_, reject) =>
-      setTimeout(() => reject(new Error("TIMEOUT")), 10000)
+      setTimeout(() => reject(new Error("TIMEOUT")), 12000)
     );
 
     let result = null;
     try {
-      const data = await Promise.race([aiPromise, timeoutPromise]) as any;
-      const content = data.candidates?.[0]?.content?.parts?.[0]?.text || "{}";
-      try {
-        const cleaned = content.replace(/```json\n?/g, "").replace(/```\n?/g, "").trim();
-        result = JSON.parse(cleaned);
-      } catch {
-        console.error("Failed to parse AI response:", content);
+      const response = await Promise.race([aiPromise, timeoutPromise]) as Response;
+      
+      if (!response.ok) {
+        const errText = await response.text();
+        console.error(`Lovable AI error: ${response.status} ${errText}`);
+        if (response.status === 429) {
+          console.warn("Rate limited, using fallback");
+        } else if (response.status === 402) {
+          console.warn("Payment required, using fallback");
+        }
         result = generateFallback(gender);
+      } else {
+        const data = await response.json();
+        const content = data.choices?.[0]?.message?.content || "{}";
+        try {
+          const cleaned = content.replace(/```json\n?/g, "").replace(/```\n?/g, "").trim();
+          result = JSON.parse(cleaned);
+        } catch {
+          console.error("Failed to parse AI response:", content);
+          result = generateFallback(gender);
+        }
       }
     } catch (e) {
       console.warn("AI call failed/timed out, using fallback:", e);
