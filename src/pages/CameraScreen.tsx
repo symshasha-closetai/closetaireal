@@ -346,18 +346,22 @@ const runAnalysis = async (file: File, userId: string | undefined, styleProfile:
     if (data?.result) {
       updateGlobal({ result: data.result, analyzing: false, progress: 0, stage: "", analysisSteps: [] });
       saveDripToHistory(globalDripState.image || "", data.result, userId, imageHash);
-      // Update streak on successful drip check
-      try {
-        const today = new Date().toDateString();
-        const lastDate = localStorage.getItem("lastCheckInDate");
-        if (lastDate !== today) {
+      // Update streak on successful drip check (synced with HomeScreen format)
+      if (userId) {
+        try {
+          const today = new Date().toDateString();
           const yesterday = new Date(Date.now() - 86400000).toDateString();
-          const currentStreak = parseInt(localStorage.getItem("streakCount") || "0");
-          const newStreak = lastDate === yesterday ? currentStreak + 1 : 1;
-          localStorage.setItem("streakCount", newStreak.toString());
-          localStorage.setItem("lastCheckInDate", today);
-        }
-      } catch {}
+          let newStreak = 1;
+          const raw = localStorage.getItem(`streak-${userId}`);
+          if (raw) {
+            const { count, lastDate } = JSON.parse(raw);
+            if (lastDate === yesterday) newStreak = count + 1;
+            else if (lastDate === today) newStreak = count;
+            else newStreak = 1;
+          }
+          localStorage.setItem(`streak-${userId}`, JSON.stringify({ count: newStreak, lastDate: today }));
+        } catch {}
+      }
     }
   } catch (err: any) {
     if (err?.name === "AbortError" || activeAbort?.signal.aborted) return;
