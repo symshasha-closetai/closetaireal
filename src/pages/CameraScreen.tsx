@@ -346,6 +346,18 @@ const runAnalysis = async (file: File, userId: string | undefined, styleProfile:
     if (data?.result) {
       updateGlobal({ result: data.result, analyzing: false, progress: 0, stage: "", analysisSteps: [] });
       saveDripToHistory(globalDripState.image || "", data.result, userId, imageHash);
+      // Update streak on successful drip check
+      try {
+        const today = new Date().toDateString();
+        const lastDate = localStorage.getItem("lastCheckInDate");
+        if (lastDate !== today) {
+          const yesterday = new Date(Date.now() - 86400000).toDateString();
+          const currentStreak = parseInt(localStorage.getItem("streakCount") || "0");
+          const newStreak = lastDate === yesterday ? currentStreak + 1 : 1;
+          localStorage.setItem("streakCount", newStreak.toString());
+          localStorage.setItem("lastCheckInDate", today);
+        }
+      } catch {}
     }
   } catch (err: any) {
     if (err?.name === "AbortError" || activeAbort?.signal.aborted) return;
