@@ -271,7 +271,7 @@ Rules:
     );
 
     const timeoutPromise = new Promise((_, reject) =>
-      setTimeout(() => reject(new Error("TIMEOUT")), 7000)
+      setTimeout(() => reject(new Error("TIMEOUT")), 10000)
     );
 
     let result = null;

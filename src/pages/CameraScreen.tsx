@@ -307,10 +307,25 @@ const runAnalysis = async (file: File, userId: string | undefined, styleProfile:
 
     // Start staged animation and AI call in parallel
     startStagedAnimation();
-    const minDelay = new Promise((r) => setTimeout(r, 12000));
+    const minDelay = new Promise((r) => setTimeout(r, 8000));
+
+    // Upload to storage for faster transfer (URL instead of base64)
+    let aiCallBody: any = { imageBase64, styleProfile: styleProfile || undefined };
+    if (userId) {
+      try {
+        const response = await fetch(`data:image/jpeg;base64,${imageBase64}`);
+        const blob = await response.blob();
+        const path = `${userId}/drip-${Date.now()}.jpg`;
+        const { error: uploadErr } = await supabase.storage.from("wardrobe").upload(path, blob, { contentType: "image/jpeg" });
+        if (!uploadErr) {
+          const { data: { publicUrl } } = supabase.storage.from("wardrobe").getPublicUrl(path);
+          aiCallBody = { imageUrl: publicUrl, styleProfile: styleProfile || undefined };
+        }
+      } catch { /* fall back to base64 */ }
+    }
 
     const aiCall = supabase.functions.invoke("rate-outfit", {
-      body: { imageBase64, styleProfile: styleProfile || undefined },
+      body: aiCallBody,
     });
 
     const [{ data, error }] = await Promise.all([aiCall, minDelay]) as [any, any];
