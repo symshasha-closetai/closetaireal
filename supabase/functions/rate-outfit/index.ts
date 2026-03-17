@@ -186,7 +186,24 @@ serve(async (req) => {
   if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
 
   try {
-    const { imageBase64, styleProfile } = await req.json();
+    const { imageBase64: rawBase64, imageUrl, styleProfile } = await req.json();
+
+    // Resolve image base64: either provided directly or fetched from URL
+    let imageBase64 = rawBase64;
+    if (!imageBase64 && imageUrl) {
+      try {
+        const imgRes = await fetch(imageUrl);
+        if (!imgRes.ok) throw new Error(`Failed to fetch image: ${imgRes.status}`);
+        const arrayBuf = await imgRes.arrayBuffer();
+        const bytes = new Uint8Array(arrayBuf);
+        let binary = "";
+        for (let i = 0; i < bytes.length; i++) binary += String.fromCharCode(bytes[i]);
+        imageBase64 = btoa(binary);
+      } catch (fetchErr) {
+        console.error("Failed to fetch image from URL:", fetchErr);
+        return new Response(JSON.stringify({ error: "Failed to fetch image from URL" }), { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } });
+      }
+    }
     if (!imageBase64) return new Response(JSON.stringify({ error: "No image provided" }), { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } });
 
     const gender = styleProfile?.gender || null;
