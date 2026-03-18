@@ -153,9 +153,15 @@ serve(async (req) => {
 
     const gender = styleProfile?.gender || null;
 
-    const apiKey = Deno.env.get("GOOGLE_AI_API_KEY");
-    if (!apiKey) {
-      console.warn("GOOGLE_AI_API_KEY not configured, using fallback");
+    // Collect all available API keys for rotation
+    const apiKeys: string[] = [];
+    for (const name of ["GOOGLE_AI_API_KEY", "GOOGLE_AI_API_KEY_2", "GOOGLE_AI_API_KEY_3", "GOOGLE_AI_API_KEY_4"]) {
+      const k = Deno.env.get(name);
+      if (k) apiKeys.push(k);
+    }
+
+    if (apiKeys.length === 0) {
+      console.warn("No GOOGLE_AI_API_KEY configured, using fallback");
       return new Response(JSON.stringify({ result: generateFallback(gender) }), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
     }
 
@@ -189,9 +195,6 @@ Rules:
 
 Analyze this outfit. Return JSON only.`;
 
-    // Direct Google Gemini API call using generateContent
-    const geminiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${apiKey}`;
-
     const geminiBody = {
       contents: [{
         parts: [
@@ -205,26 +208,41 @@ Analyze this outfit. Return JSON only.`;
       },
     };
 
-    const timeoutPromise = new Promise((_, reject) =>
-      setTimeout(() => reject(new Error("TIMEOUT")), 15000)
-    );
-
+    // Multi-key rotation with 8s global timeout
     let result = null;
-    try {
-      const response = await Promise.race([
-        fetch(geminiUrl, {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify(geminiBody),
-        }),
-        timeoutPromise,
-      ]) as Response;
+    const startTime = Date.now();
+    const GLOBAL_TIMEOUT = 8000;
 
-      if (!response.ok) {
-        const errText = await response.text();
-        console.error(`Gemini API error: ${response.status} ${errText}`);
-        result = generateFallback(gender);
-      } else {
+    for (let i = 0; i < apiKeys.length; i++) {
+      if (Date.now() - startTime > GLOBAL_TIMEOUT) {
+        console.warn("Global 8s timeout reached, using fallback");
+        break;
+      }
+
+      const remainingMs = GLOBAL_TIMEOUT - (Date.now() - startTime);
+      const geminiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${apiKeys[i]}`;
+
+      try {
+        const response = await Promise.race([
+          fetch(geminiUrl, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify(geminiBody),
+          }),
+          new Promise<never>((_, reject) => setTimeout(() => reject(new Error("TIMEOUT")), remainingMs)),
+        ]) as Response;
+
+        if (response.status === 429 || response.status >= 500) {
+          console.warn(`Key ${i + 1} returned ${response.status}, trying next key...`);
+          continue;
+        }
+
+        if (!response.ok) {
+          const errText = await response.text();
+          console.error(`Key ${i + 1} error: ${response.status} ${errText}`);
+          continue;
+        }
+
         const data = await response.json();
         const content = data.candidates?.[0]?.content?.parts?.[0]?.text || "{}";
         try {
@@ -232,13 +250,17 @@ Analyze this outfit. Return JSON only.`;
           result = JSON.parse(cleaned);
         } catch {
           console.error("Failed to parse Gemini response:", content);
-          result = generateFallback(gender);
+          continue;
         }
+        // Success — break out of key rotation
+        break;
+      } catch (e) {
+        console.warn(`Key ${i + 1} failed:`, e instanceof Error ? e.message : e);
+        continue;
       }
-    } catch (e) {
-      console.warn("Gemini call failed/timed out, using fallback:", e);
-      result = generateFallback(gender);
     }
+
+    if (!result) result = generateFallback(gender);
 
     return new Response(JSON.stringify({ result }), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
   } catch (e) {
