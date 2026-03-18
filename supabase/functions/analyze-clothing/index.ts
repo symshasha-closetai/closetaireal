@@ -5,34 +5,6 @@ const corsHeaders = {
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version",
 };
 
-async function callWithFallback(models: string[], apiKey: string, body: any): Promise<any> {
-  for (let i = 0; i < models.length; i++) {
-    const model = models[i];
-    const response = await fetch(
-      `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`,
-      { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) }
-    );
-    if (response.ok) return response.json();
-    if (response.status === 429 || response.status >= 500) {
-      console.warn(`Model ${model} returned ${response.status}, trying fallback...`);
-      if (i === models.length - 1) {
-        if (response.status === 429) {
-          return { _rateLimited: true };
-        }
-        const errText = await response.text();
-        throw new Error(`All models failed. Last: ${response.status} ${errText}`);
-      }
-      continue;
-    }
-    if (response.status === 400) {
-      return { _badRequest: true };
-    }
-    const errText = await response.text();
-    throw new Error(`Gemini API error: ${response.status} ${errText}`);
-  }
-  throw new Error("No models available");
-}
-
 serve(async (req) => {
   if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
 
@@ -40,13 +12,14 @@ serve(async (req) => {
     const { imageBase64, mimeType } = await req.json();
     if (!imageBase64) {
       return new Response(JSON.stringify({ error: "No image provided" }), {
-        status: 400,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
+        status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
 
-    const apiKey = Deno.env.get("GOOGLE_AI_API_KEY");
-    if (!apiKey) throw new Error("GOOGLE_AI_API_KEY not configured");
+    const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
+    if (!LOVABLE_API_KEY) throw new Error("LOVABLE_API_KEY is not configured");
+
+    const resolvedMime = mimeType || "image/jpeg";
 
     const systemPrompt = `You are a fashion AI that analyzes clothing images. Given an image of a person wearing clothes or a group of clothing items, identify and categorize each visible clothing item or accessory.
 
@@ -61,36 +34,46 @@ For each item found, return a JSON array of objects with these fields:
 Return ONLY valid JSON array, no markdown, no explanation. Example:
 [{"name":"White Cotton T-Shirt","type":"Tops","color":"White","material":"Cotton","quality":"Mid-range","brand":null},{"name":"Blue Slim Jeans","type":"Bottoms","color":"Blue","material":"Denim","quality":"Premium","brand":"Levi's"}]`;
 
-    const resolvedMime = mimeType || "image/jpeg";
-
-    const data = await callWithFallback(
-      ["gemini-2.0-flash", "gemini-2.5-flash"],
-      apiKey,
-      {
-        contents: [
+    const response = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${LOVABLE_API_KEY}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        model: "google/gemini-2.5-flash",
+        messages: [
           {
             role: "user",
-            parts: [
-              { text: systemPrompt + "\n\nAnalyze this image and identify all clothing items and accessories. Return JSON array only." },
-              { inlineData: { mimeType: resolvedMime, data: imageBase64 } },
+            content: [
+              { type: "text", text: systemPrompt + "\n\nAnalyze this image and identify all clothing items and accessories. Return JSON array only." },
+              { type: "image_url", image_url: { url: `data:${resolvedMime};base64,${imageBase64}` } },
             ],
           },
         ],
-      }
-    );
+      }),
+    });
 
-    if (data._rateLimited) {
-      return new Response(JSON.stringify({ error: "Rate limited, try again shortly", retryable: true }), {
+    if (response.status === 429) {
+      return new Response(JSON.stringify({ error: "Rate limited, please try again later.", retryable: true }), {
         status: 429, headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
-    if (data._badRequest) {
-      return new Response(JSON.stringify({ error: "Could not process this image. Try a different photo.", retryable: false }), {
-        status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" },
+    if (response.status === 402) {
+      return new Response(JSON.stringify({ error: "AI credits exhausted. Please add funds.", retryable: false }), {
+        status: 402, headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+    if (!response.ok) {
+      const errText = await response.text();
+      console.error("AI gateway error:", response.status, errText);
+      return new Response(JSON.stringify({ error: "Could not process this image. Try a different photo.", retryable: true }), {
+        status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
 
-    const content = data.candidates?.[0]?.content?.parts?.[0]?.text || "[]";
+    const data = await response.json();
+    const content = data.choices?.[0]?.message?.content || "[]";
 
     let items;
     try {
@@ -108,8 +91,7 @@ Return ONLY valid JSON array, no markdown, no explanation. Example:
   } catch (error) {
     console.error("Error in analyze-clothing:", error);
     return new Response(JSON.stringify({ error: error.message, retryable: true }), {
-      status: 500,
-      headers: { ...corsHeaders, "Content-Type": "application/json" },
+      status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
   }
 });
