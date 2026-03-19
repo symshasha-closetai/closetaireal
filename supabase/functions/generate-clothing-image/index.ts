@@ -45,18 +45,19 @@ serve(async (req) => {
 
     let prompt: string;
     const colorEmphasis = itemColor ? ` The color MUST be exactly ${itemColor} — this is critical, do not use any other color.` : "";
+    const mannequinBase = "plain white featureless mannequin, completely smooth, no hair, no skin texture, no facial features, no skin color, solid white mannequin body";
     if (isEyewear) {
-      prompt = `A photorealistic close-up of a mannequin face wearing ${itemName || itemType}${colorDesc}${materialDesc}. Show only the face and eyewear, no body. Pure white background, professional fashion photography, well-lit with soft even lighting, minimal shadows.${colorEmphasis}`;
+      prompt = `A photorealistic close-up of a ${mannequinBase} head wearing ${itemName || itemType}${colorDesc}${materialDesc}. Smooth white featureless mannequin head, no hair, no face details. Front-facing eye-level camera angle. Pure white background, professional fashion photography, well-lit with soft even lighting, minimal shadows.${colorEmphasis}`;
     } else if (isWatch || isBracelet) {
-      prompt = `A photorealistic close-up of a mannequin wrist wearing ${itemName || itemType}${colorDesc}${materialDesc}. Show only the wrist area. Pure white background, professional fashion photography, well-lit with soft even lighting, minimal shadows.${colorEmphasis}`;
+      prompt = `A photorealistic close-up of a ${mannequinBase} wrist wearing ${itemName || itemType}${colorDesc}${materialDesc}. Show only the smooth white mannequin wrist area. Front-facing eye-level camera angle. Pure white background, professional fashion photography, well-lit with soft even lighting, minimal shadows.${colorEmphasis}`;
     } else if (isNecklace) {
-      prompt = `A photorealistic close-up of a mannequin neck wearing ${itemName || itemType}${colorDesc}${materialDesc}. Show only the neck and upper chest area. Pure white background, professional fashion photography, well-lit with soft even lighting, minimal shadows.${colorEmphasis}`;
+      prompt = `A photorealistic close-up of a ${mannequinBase} neck wearing ${itemName || itemType}${colorDesc}${materialDesc}. Show only the smooth white mannequin neck and upper chest. Front-facing eye-level camera angle. Pure white background, professional fashion photography, well-lit with soft even lighting, minimal shadows.${colorEmphasis}`;
     } else if (isEarring) {
-      prompt = `A photorealistic close-up of a mannequin ear wearing ${itemName || itemType}${colorDesc}${materialDesc}. Show only the ear area. Pure white background, professional fashion photography, well-lit with soft even lighting, minimal shadows.${colorEmphasis}`;
+      prompt = `A photorealistic close-up of a ${mannequinBase} ear wearing ${itemName || itemType}${colorDesc}${materialDesc}. Smooth white featureless mannequin head, no hair. Front-facing eye-level camera angle. Pure white background, professional fashion photography, well-lit with soft even lighting, minimal shadows.${colorEmphasis}`;
     } else if (isJewelry) {
-      prompt = `A photorealistic close-up of a mannequin wearing ${itemName || itemType}${colorDesc}${materialDesc}. Focus on the jewelry piece on the appropriate body part. Pure white background, professional fashion photography, well-lit with soft even lighting, minimal shadows.${colorEmphasis}`;
+      prompt = `A photorealistic close-up of a ${mannequinBase} wearing ${itemName || itemType}${colorDesc}${materialDesc}. Focus on the jewelry piece on the appropriate body part of the smooth white mannequin. Front-facing eye-level camera angle. Pure white background, professional fashion photography, well-lit with soft even lighting, minimal shadows.${colorEmphasis}`;
     } else {
-      prompt = `A photorealistic product photograph of exactly one ${itemColor ? itemColor + " " : ""}${itemName || itemType}${materialDesc} with background removed, floating on a pure white background. No mannequin, no person, no dress form. Clean e-commerce style, natural fabric texture, well-lit with soft even lighting, minimal shadows.${colorEmphasis}`;
+      prompt = `A photorealistic photograph of a full ${itemColor ? itemColor + " " : ""}${itemName || itemType}${materialDesc} displayed on a ${mannequinBase}. Full garment visible from top to bottom, front-facing eye-level camera angle, 2D flat style. The mannequin is completely white and featureless with no hair, no skin, no face. Pure white background, professional fashion photography, well-lit with soft even lighting, minimal shadows.${colorEmphasis}`;
     }
 
     const createRes = await fetch("https://api.replicate.com/v1/models/black-forest-labs/flux-schnell/predictions", {
