@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback, useRef } from "react";
 import ImageCropper from "../components/ImageCropper";
 import { motion, AnimatePresence } from "framer-motion";
-import { Sparkles, Camera, ChevronRight, X, Heart, GraduationCap, PartyPopper, Shirt, Palette, Briefcase, Sun, Moon, Sunset, CloudRain, Thermometer, CloudSun, Snowflake, Shuffle, Leaf, Smile, Droplet, User, Loader2, Bookmark, BookmarkCheck, ImagePlus, Share2, Flame, Pin, Download, Crop, Music, Landmark } from "lucide-react";
+import { Sparkles, Camera, ChevronRight, X, Heart, GraduationCap, PartyPopper, Shirt, Palette, Briefcase, Sun, Moon, Sunset, CloudRain, Thermometer, CloudSun, Snowflake, Shuffle, Leaf, Smile, Droplet, User, Loader2, Bookmark, BookmarkCheck, ImagePlus, Share2, Flame, Pin, Download, Crop, Music, Flag } from "lucide-react";
 import AppHeader from "../components/AppHeader";
 import { useAuth } from "../hooks/useAuth";
 import { useNavigate } from "react-router-dom";
@@ -18,7 +18,7 @@ const occasions = [
   { label: "Formal", icon: Briefcase, color: "bg-gray-100 text-gray-600" },
   { label: "Date Night", icon: Heart, color: "bg-red-100 text-red-600" },
   { label: "College", icon: GraduationCap, color: "bg-green-100 text-green-600" },
-  { label: "Cultural", icon: Landmark, color: "bg-amber-100 text-amber-600" },
+  { label: "Cultural", icon: Flag, color: "bg-red-100 text-red-600" },
   { label: "Festival", icon: PartyPopper, color: "bg-purple-100 text-purple-600" },
   { label: "Creative", icon: Palette, color: "bg-teal-100 text-teal-600" },
 ];
