@@ -479,7 +479,22 @@ const OutfitRatingCard = ({ image, imageBase64, result, wardrobeItems = [],
           >
             {downloading ? <Loader2 size={14} className="animate-spin" /> : <Download size={14} />}
           </button>
+          <button
+            type="button"
+            onClick={() => setShowSendPicker(true)}
+            className="w-9 h-9 rounded-full border border-border/40 flex items-center justify-center text-foreground/50 active:scale-95 transition-transform"
+          >
+            <Send size={14} />
+          </button>
         </div>
+
+        <SendToFriendPicker
+          open={showSendPicker}
+          onOpenChange={setShowSendPicker}
+          contentType="drip_card"
+          content={`Drip Score: ${result.drip_score}/10`}
+          metadata={{ image_url: image, score: result.drip_score, killer_tag: result.killer_tag }}
+        />
       </motion.div>
 
       {/* Extract Outfits Button */}
