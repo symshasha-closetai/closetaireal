@@ -640,6 +640,31 @@ const ProfileScreen = () => {
                   placeholder="Your name" />
               </div>
 
+              <div className="space-y-2">
+                <label className="text-xs font-medium text-foreground">Username</label>
+                <div className="relative">
+                  <span className="absolute left-4 top-1/2 -translate-y-1/2 text-muted-foreground text-sm">@</span>
+                  <input type="text" value={username} onChange={(e) => {
+                    const val = e.target.value.replace(/[^a-zA-Z0-9_.]/g, "").slice(0, 30);
+                    setUsername(val);
+                    setUsernameError(null);
+                  }}
+                    onBlur={async () => {
+                      if (!username || username.length < 3) {
+                        if (username.length > 0) setUsernameError("At least 3 characters");
+                        return;
+                      }
+                      const { data } = await supabase.from("profiles").select("user_id").eq("username", username).neq("user_id", user?.id || "").limit(1) as any;
+                      if (data && data.length > 0) setUsernameError("Username taken");
+                      else setUsernameError(null);
+                    }}
+                    className="w-full pl-8 pr-4 py-3 rounded-xl bg-secondary border border-border text-foreground text-sm placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-accent/30 transition-all"
+                    placeholder="your.username" />
+                </div>
+                {usernameError && <p className="text-[10px] text-destructive">{usernameError}</p>}
+                <p className="text-[10px] text-muted-foreground">Letters, numbers, underscores, and dots only</p>
+              </div>
+
               <GenderPicker gender={styleActions.gender} setGender={styleActions.setGender} />
 
               <div className="space-y-2">
