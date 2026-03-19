@@ -1,7 +1,7 @@
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, useCallback } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { motion } from "framer-motion";
-import { ArrowLeft, Send, Loader2, Info } from "lucide-react";
+import { ArrowLeft, Send, Loader2, Info, CheckCheck } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { toast } from "sonner";
@@ -30,6 +30,12 @@ const ChatScreen = () => {
   const [otherUser, setOtherUser] = useState<{ name: string | null; username: string | null; avatar_url: string | null } | null>(null);
   const [showBanner, setShowBanner] = useState(false);
   const scrollRef = useRef<HTMLDivElement>(null);
+
+  // Typing & read receipts via presence
+  const [otherTyping, setOtherTyping] = useState(false);
+  const [otherLastRead, setOtherLastRead] = useState<string | null>(null);
+  const channelRef = useRef<any>(null);
+  const typingTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   // Fetch other user info
   useEffect(() => {
@@ -66,18 +72,14 @@ const ChatScreen = () => {
     const msgs = (data || []) as Message[];
     setMessages(msgs);
     setLoading(false);
-
-    // Show banner if first message
     if (msgs.length === 0) setShowBanner(true);
 
-    // Cache
     try {
       localStorage.setItem(`chat-${conversationId}`, JSON.stringify({ msgs, ts: Date.now() }));
     } catch {}
   };
 
   useEffect(() => {
-    // Try cache first
     try {
       const cached = JSON.parse(localStorage.getItem(`chat-${conversationId}`) || "null");
       if (cached && Date.now() - cached.ts < 7 * 24 * 60 * 60 * 1000) {
@@ -88,11 +90,14 @@ const ChatScreen = () => {
     fetchMessages();
   }, [conversationId]);
 
-  // Realtime subscription
+  // Realtime subscription + Presence
   useEffect(() => {
-    if (!conversationId) return;
-    const channel = supabase
-      .channel(`chat-${conversationId}`)
+    if (!conversationId || !user) return;
+    const channel = supabase.channel(`chat-${conversationId}`, {
+      config: { presence: { key: user.id } },
+    });
+
+    channel
       .on("postgres_changes", {
         event: "INSERT",
         schema: "public",
@@ -101,18 +106,60 @@ const ChatScreen = () => {
       }, (payload) => {
         setMessages((prev) => [...prev, payload.new as Message]);
       })
-      .subscribe();
+      .on("presence", { event: "sync" }, () => {
+        const state = channel.presenceState();
+        // Check other users' presence
+        for (const [key, presences] of Object.entries(state)) {
+          if (key !== user.id && Array.isArray(presences) && presences.length > 0) {
+            const p = presences[0] as any;
+            setOtherTyping(!!p.typing);
+            if (p.last_read) setOtherLastRead(p.last_read);
+          }
+        }
+      })
+      .subscribe(async (status) => {
+        if (status === "SUBSCRIBED") {
+          await channel.track({ typing: false, last_read: null });
+        }
+      });
+
+    channelRef.current = channel;
     return () => { supabase.removeChannel(channel); };
-  }, [conversationId]);
+  }, [conversationId, user?.id]);
+
+  // Track read receipts when messages change
+  useEffect(() => {
+    if (!channelRef.current || !messages.length || !user) return;
+    const lastMsg = messages[messages.length - 1];
+    if (lastMsg.sender_id !== user.id) {
+      channelRef.current.track({ typing: false, last_read: lastMsg.id });
+    }
+  }, [messages.length, user?.id]);
+
+  // Handle typing indicator
+  const handleTyping = useCallback((value: string) => {
+    setText(value);
+    if (!channelRef.current || !user) return;
+
+    channelRef.current.track({ typing: true, last_read: otherLastRead });
+
+    if (typingTimeoutRef.current) clearTimeout(typingTimeoutRef.current);
+    typingTimeoutRef.current = setTimeout(() => {
+      channelRef.current?.track({ typing: false, last_read: otherLastRead });
+    }, 2000);
+  }, [user?.id, otherLastRead]);
 
   // Auto-scroll
   useEffect(() => {
     scrollRef.current?.scrollTo({ top: scrollRef.current.scrollHeight, behavior: "smooth" });
-  }, [messages.length]);
+  }, [messages.length, otherTyping]);
 
   const handleSend = async () => {
     if (!text.trim() || !user || !conversationId) return;
     setSending(true);
+    if (typingTimeoutRef.current) clearTimeout(typingTimeoutRef.current);
+    channelRef.current?.track({ typing: false, last_read: otherLastRead });
+
     const { error } = await supabase.from("messages" as any).insert({
       conversation_id: conversationId,
       sender_id: user.id,
@@ -136,11 +183,20 @@ const ChatScreen = () => {
     setMessages(prev => prev.filter(m => m.id !== msgId));
   };
 
+  // Check if a message has been read by other user
+  const isRead = (msg: Message) => {
+    if (msg.sender_id !== user?.id) return false;
+    if (!otherLastRead) return false;
+    const readMsg = messages.find(m => m.id === otherLastRead);
+    if (!readMsg) return false;
+    return new Date(msg.created_at) <= new Date(readMsg.created_at);
+  };
+
   return (
     <div className="min-h-screen flex flex-col bg-background">
       {/* Header */}
       <div className="flex items-center gap-3 px-4 py-3 border-b border-border/30 bg-card/80 backdrop-blur-sm">
-        <button onClick={() => navigate("/messages")} className="w-8 h-8 rounded-full bg-secondary flex items-center justify-center">
+        <button onClick={() => navigate(-1)} className="w-8 h-8 rounded-full bg-secondary flex items-center justify-center">
           <ArrowLeft size={16} className="text-foreground" />
         </button>
         <div className="w-8 h-8 rounded-full bg-muted overflow-hidden flex items-center justify-center">
@@ -152,7 +208,11 @@ const ChatScreen = () => {
         </div>
         <div className="flex-1 min-w-0">
           <p className="text-sm font-medium text-foreground truncate">{otherUser?.name || otherUser?.username || "Chat"}</p>
-          {otherUser?.username && <p className="text-[10px] text-muted-foreground">@{otherUser.username}</p>}
+          {otherTyping ? (
+            <p className="text-[10px] text-primary animate-pulse">typing...</p>
+          ) : otherUser?.username ? (
+            <p className="text-[10px] text-muted-foreground">@{otherUser.username}</p>
+          ) : null}
         </div>
       </div>
 
@@ -168,21 +228,41 @@ const ChatScreen = () => {
         {loading && messages.length === 0 ? (
           <div className="flex justify-center py-20"><Loader2 size={20} className="animate-spin text-muted-foreground" /></div>
         ) : (
-          messages.map((m) => (
-            <MessageBubble
-              key={m.id}
-              id={m.id}
-              content={m.content}
-              contentType={m.content_type}
-              metadata={m.metadata}
-              isMine={m.sender_id === user?.id}
-              kept={m.kept}
-              expiresAt={m.expires_at}
-              createdAt={m.created_at}
-              onKeep={handleKeep}
-              onDelete={handleDelete}
-            />
-          ))
+          messages.map((m, i) => {
+            const isMine = m.sender_id === user?.id;
+            const isLastMine = isMine && (i === messages.length - 1 || messages[i + 1]?.sender_id !== user?.id);
+            return (
+              <div key={m.id}>
+                <MessageBubble
+                  id={m.id}
+                  content={m.content}
+                  contentType={m.content_type}
+                  metadata={m.metadata}
+                  isMine={isMine}
+                  kept={m.kept}
+                  expiresAt={m.expires_at}
+                  createdAt={m.created_at}
+                  onKeep={handleKeep}
+                  onDelete={handleDelete}
+                />
+                {isMine && isLastMine && isRead(m) && (
+                  <div className="flex justify-end mt-0.5 mr-1">
+                    <CheckCheck size={12} className="text-primary" />
+                  </div>
+                )}
+              </div>
+            );
+          })
+        )}
+        {/* Typing indicator */}
+        {otherTyping && (
+          <motion.div initial={{ opacity: 0, y: 5 }} animate={{ opacity: 1, y: 0 }} className="flex items-center gap-1.5 py-1 px-2">
+            <div className="flex gap-1">
+              <span className="w-1.5 h-1.5 rounded-full bg-muted-foreground/50 animate-bounce" style={{ animationDelay: "0ms" }} />
+              <span className="w-1.5 h-1.5 rounded-full bg-muted-foreground/50 animate-bounce" style={{ animationDelay: "150ms" }} />
+              <span className="w-1.5 h-1.5 rounded-full bg-muted-foreground/50 animate-bounce" style={{ animationDelay: "300ms" }} />
+            </div>
+          </motion.div>
         )}
       </div>
 
@@ -191,7 +271,7 @@ const ChatScreen = () => {
         <div className="flex gap-2 items-end max-w-lg mx-auto">
           <input
             value={text}
-            onChange={(e) => setText(e.target.value)}
+            onChange={(e) => handleTyping(e.target.value)}
             onKeyDown={(e) => e.key === "Enter" && !e.shiftKey && handleSend()}
             placeholder="Message..."
             className="flex-1 px-4 py-2.5 rounded-full bg-secondary border border-border text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/30"

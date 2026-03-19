@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
 import { motion } from "framer-motion";
 import { useNavigate } from "react-router-dom";
-import { MessageCircle, Loader2, User, ArrowLeft, Settings } from "lucide-react";
+import { MessageCircle, Loader2, ArrowLeft } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import AppHeader from "@/components/AppHeader";
@@ -123,11 +123,11 @@ const MessagesScreen = () => {
   return (
     <div className="min-h-screen pb-24 px-5 pt-4">
       <div className="max-w-lg mx-auto space-y-4">
-        <div className="flex items-center justify-between">
-          <h1 className="font-display text-xl font-semibold text-foreground">Messages</h1>
-          <button onClick={() => navigate("/profile")} className="w-9 h-9 rounded-full bg-secondary flex items-center justify-center">
-            <User size={16} className="text-muted-foreground" />
+        <div className="flex items-center gap-3">
+          <button onClick={() => navigate(-1)} className="w-9 h-9 rounded-full bg-secondary flex items-center justify-center">
+            <ArrowLeft size={16} className="text-foreground" />
           </button>
+          <h1 className="font-display text-xl font-semibold text-foreground">Messages</h1>
         </div>
 
         {loading ? (

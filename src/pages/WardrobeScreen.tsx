@@ -1,6 +1,6 @@
 import React, { useState, useRef, useEffect, useCallback, useMemo } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { Plus, Trash2, X, Loader2, Camera, Upload, Sparkles, Pencil, Save, Share2, CheckSquare, Square, SlidersHorizontal, RefreshCw, Pin, GripVertical, RotateCcw, Eye } from "lucide-react";
+import { Plus, Trash2, X, Loader2, Camera, Upload, Sparkles, Pencil, Save, Share2, CheckSquare, Square, SlidersHorizontal, RefreshCw, Pin, GripVertical, RotateCcw, Eye, Send } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { toast } from "sonner";
@@ -8,6 +8,7 @@ import AppHeader from "../components/AppHeader";
 import { compressImage } from "@/lib/imageCompression";
 import html2canvas from "html2canvas";
 import { precacheImages } from "@/lib/imageCache";
+import SendToFriendPicker from "@/components/SendToFriendPicker";
 import { DndContext, closestCenter, PointerSensor, TouchSensor, useSensor, useSensors, type DragEndEvent } from "@dnd-kit/core";
 import { SortableContext, useSortable, rectSortingStrategy, arrayMove } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
@@ -109,12 +110,13 @@ type CardContentProps = {
   togglePin: (item: ClothingItem) => void;
   openEdit: (item: ClothingItem) => void;
   shareItem: (item: ClothingItem) => void;
+  sendToFriend: (item: ClothingItem) => void;
   deleteItem: (id: string) => void;
   onItemClick?: (item: ClothingItem) => void;
   dragHandle?: React.ReactNode;
 };
 
-const WardrobeCardContent = ({ item, selectMode, selectedItems, failedImages, retryingImages, setFailedImages, retryImageGeneration, togglePin, openEdit, shareItem, deleteItem, dragHandle }: CardContentProps) => (
+const WardrobeCardContent = ({ item, selectMode, selectedItems, failedImages, retryingImages, setFailedImages, retryImageGeneration, togglePin, openEdit, shareItem, sendToFriend, deleteItem, dragHandle }: CardContentProps) => (
   <>
     <div className="aspect-square overflow-hidden rounded-t-2xl relative">
       <img src={item.image_url} alt={item.name || "Clothing"} className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105" loading="lazy"
@@ -158,6 +160,10 @@ const WardrobeCardContent = ({ item, selectMode, selectedItems, failedImages, re
         <button onClick={(e) => { e.stopPropagation(); deleteItem(item.id); }}
           className="absolute top-11 right-2 w-7 h-7 rounded-full bg-foreground/50 text-primary-foreground flex items-center justify-center opacity-100 sm:opacity-0 sm:group-hover:opacity-100 transition-opacity backdrop-blur-sm">
           <Trash2 size={13} />
+        </button>
+        <button onClick={(e) => { e.stopPropagation(); sendToFriend(item); }}
+          className="absolute top-20 right-2 w-7 h-7 rounded-full bg-foreground/50 text-primary-foreground flex items-center justify-center opacity-100 sm:opacity-0 sm:group-hover:opacity-100 transition-opacity backdrop-blur-sm">
+          <Send size={13} />
         </button>
       </>
     )}
@@ -239,6 +245,9 @@ const WardrobeScreen = () => {
   // Detail view state
   const [detailItem, setDetailItem] = useState<ClothingItem | null>(null);
   const [showOriginal, setShowOriginal] = useState(false);
+
+  // Send to friend state
+  const [sendFriendItem, setSendFriendItem] = useState<ClothingItem | null>(null);
 
   // Custom categories
   const [customCategories, setCustomCategories] = useState<WardrobeCategory[]>([]);
@@ -986,7 +995,7 @@ const WardrobeScreen = () => {
                       <SortableWardrobeCard key={item.id} item={item} index={i} selectMode={selectMode} selectedItems={selectedItems}
                         toggleSelectItem={toggleSelectItem} failedImages={failedImages} retryingImages={retryingImages}
                         setFailedImages={setFailedImages} retryImageGeneration={retryImageGeneration}
-                        togglePin={togglePin} openEdit={openEdit} shareItem={shareItem} deleteItem={deleteItem} onItemClick={setDetailItem} />
+                        togglePin={togglePin} openEdit={openEdit} shareItem={shareItem} sendToFriend={setSendFriendItem} deleteItem={deleteItem} onItemClick={setDetailItem} />
                     ) : (
                       <motion.div key={item.id} layout initial={{ opacity: 0, scale: 0.9 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0, scale: 0.9 }}
                         transition={{ duration: 0.3, delay: i * 0.05 }}
@@ -995,7 +1004,7 @@ const WardrobeScreen = () => {
                         <WardrobeCardContent item={item} selectMode={selectMode} selectedItems={selectedItems}
                           failedImages={failedImages} retryingImages={retryingImages} setFailedImages={setFailedImages}
                           retryImageGeneration={retryImageGeneration} togglePin={togglePin} openEdit={openEdit}
-                          shareItem={shareItem} deleteItem={deleteItem} onItemClick={setDetailItem} />
+                          shareItem={shareItem} sendToFriend={setSendFriendItem} deleteItem={deleteItem} onItemClick={setDetailItem} />
                       </motion.div>
                     )
                   ))}
@@ -1400,6 +1409,14 @@ const WardrobeScreen = () => {
           </div>
         )}
       </div>
+
+      <SendToFriendPicker
+        open={!!sendFriendItem}
+        onOpenChange={(open) => { if (!open) setSendFriendItem(null); }}
+        contentType="wardrobe_item"
+        content={sendFriendItem?.name || ""}
+        metadata={sendFriendItem ? { image_url: sendFriendItem.image_url, name: sendFriendItem.name, type: sendFriendItem.type } : undefined}
+      />
     </div>
   );
 };

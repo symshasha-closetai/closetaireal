@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { Share2, Trophy, Crown, Loader2, Lightbulb } from "lucide-react";
+import { Share2, Trophy, Crown, Loader2, Lightbulb, X } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { toast } from "sonner";
@@ -34,7 +34,6 @@ type LeaderboardEntry = {
 
 type ViewMode = "daily" | "weekly";
 
-// Cache per mode
 let dailyCache: { entries: LeaderboardEntry[]; friendIds: string[]; ts: number } | null = null;
 let weeklyCache: { entries: LeaderboardEntry[]; friendIds: string[]; ts: number } | null = null;
 const CACHE_TTL = 2 * 60 * 1000;
@@ -53,6 +52,7 @@ const LeaderboardTab = () => {
   const [friendIds, setFriendIds] = useState<string[]>(dailyCache?.friendIds || []);
   const [myRank, setMyRank] = useState<number | null>(null);
   const [sharingId, setSharingId] = useState<string | null>(null);
+  const [selectedEntry, setSelectedEntry] = useState<{ entry: LeaderboardEntry; rank: number } | null>(null);
 
   const fetchFriends = async () => {
     if (!user) return [];
@@ -69,33 +69,27 @@ const LeaderboardTab = () => {
   };
 
   const fetchFriendBonuses = async (relevantIds: string[], dateStr: string) => {
-    // +20 for each friend added today
     const bonuses = new Map<string, number>();
     relevantIds.forEach(id => bonuses.set(id, 0));
-
     const { data: friendsToday } = await supabase
       .from("friends" as any)
       .select("user_id, created_at")
       .gte("created_at", `${dateStr}T00:00:00`)
       .lt("created_at", `${dateStr}T23:59:59.999999`)
       .in("user_id", relevantIds) as any;
-
     for (const f of (friendsToday || [])) {
       bonuses.set(f.user_id, (bonuses.get(f.user_id) || 0) + 20);
     }
-
     return bonuses;
   };
 
   const fetchStreakBonuses = async (relevantIds: string[], dateStr: string) => {
-    // +10 if user has a streak > 1 (maintained from yesterday)
     const bonuses = new Map<string, number>();
     const { data: looks } = await supabase
       .from("daily_looks")
       .select("user_id, streak")
       .eq("look_date", dateStr)
       .in("user_id", relevantIds) as any;
-
     for (const look of (looks || [])) {
       if (Number(look.streak) > 1) {
         bonuses.set(look.user_id, 10);
@@ -158,7 +152,7 @@ const LeaderboardTab = () => {
       .map((uid) => {
         const drip = bestByUser.get(uid);
         const prof = profileMap.get(uid) || {};
-        const baseScore = Number(drip.score) * 10; // out of 100
+        const baseScore = Number(drip.score) * 10;
         const fBonus = friendBonuses.get(uid) || 0;
         const sBonus = streakBonuses.get(uid) || 0;
         return {
@@ -196,7 +190,6 @@ const LeaderboardTab = () => {
     const friends = await fetchFriends();
     const relevantIds = [user.id, ...friends];
 
-    // Previous week Mon-Sun
     const now = new Date();
     const thisMonday = getMonday(now);
     const lastMonday = new Date(thisMonday);
@@ -221,9 +214,8 @@ const LeaderboardTab = () => {
       return;
     }
 
-    // Get daily max scores per user per day, then also get bonuses per day
-    const dailyMaxes = new Map<string, Map<string, number>>(); // user_id -> date -> maxScore
-    const dailyBest = new Map<string, any>(); // user_id -> best row overall (for image)
+    const dailyMaxes = new Map<string, Map<string, number>>();
+    const dailyBest = new Map<string, any>();
 
     for (const row of dripData) {
       const dateKey = row.created_at.split("T")[0];
@@ -232,18 +224,15 @@ const LeaderboardTab = () => {
       const existing = userDays.get(dateKey) || 0;
       const score = Number(row.score);
       if (score > existing) userDays.set(dateKey, score);
-
       const bestRow = dailyBest.get(row.user_id);
       if (!bestRow || score > Number(bestRow.score)) dailyBest.set(row.user_id, row);
     }
 
-    // Fetch friend adds and streaks for each day of the week
     const weekDays: string[] = [];
     for (let d = new Date(lastMonday); d <= lastSunday; d.setDate(d.getDate() + 1)) {
       weekDays.push(d.toISOString().split("T")[0]);
     }
 
-    // Get all friend adds in the week
     const { data: weekFriends } = await supabase
       .from("friends" as any)
       .select("user_id, created_at")
@@ -251,7 +240,6 @@ const LeaderboardTab = () => {
       .lte("created_at", `${endStr}T23:59:59.999999`)
       .in("user_id", relevantIds) as any;
 
-    // Get all streaks in the week
     const { data: weekLooks } = await supabase
       .from("daily_looks")
       .select("user_id, look_date, streak")
@@ -259,30 +247,22 @@ const LeaderboardTab = () => {
       .lte("look_date", endStr)
       .in("user_id", relevantIds) as any;
 
-    // Calculate daily totals per user
-    const userDailyTotals = new Map<string, number[]>(); // user_id -> array of daily totals
-
+    const userDailyTotals = new Map<string, number[]>();
     const allUserIds = new Set<string>();
     dailyMaxes.forEach((_, uid) => allUserIds.add(uid));
 
     for (const uid of allUserIds) {
       const totals: number[] = [];
       const userDays = dailyMaxes.get(uid) || new Map();
-
       for (const day of weekDays) {
         const baseScore = (userDays.get(day) || 0) * 10;
-        if (baseScore === 0) continue; // skip days with no drip check
-
-        // Friend bonus for this day
+        if (baseScore === 0) continue;
         const fBonus = (weekFriends || []).filter((f: any) =>
           f.user_id === uid && f.created_at.startsWith(day)
         ).length * 20;
-
-        // Streak bonus for this day
         const sBonus = (weekLooks || []).some((l: any) =>
           l.user_id === uid && l.look_date === day && Number(l.streak) > 1
         ) ? 10 : 0;
-
         totals.push(baseScore + fBonus + sBonus);
       }
       if (totals.length > 0) userDailyTotals.set(uid, totals);
@@ -331,7 +311,6 @@ const LeaderboardTab = () => {
   const handleShare = async (entry: LeaderboardEntry, rank: number) => {
     setSharingId(entry.user_id);
     await new Promise((r) => setTimeout(r, 100));
-
     try {
       if (entry.image_url) {
         await new Promise<void>((resolve) => {
@@ -342,7 +321,6 @@ const LeaderboardTab = () => {
           img.src = entry.image_url!;
         });
       }
-
       const el = document.getElementById(`share-card-${entry.user_id}`);
       if (!el) return;
       const canvas = await html2canvas(el, { backgroundColor: null, scale: 2, useCORS: true, allowTaint: true });
@@ -369,6 +347,20 @@ const LeaderboardTab = () => {
   const top3 = entries.slice(0, 3);
   const rest = entries.slice(3);
   const podiumOrder = [1, 0, 2];
+
+  const getRankBorderClass = (rank: number) => {
+    if (rank === 1) return "ring-2 ring-yellow-400 shadow-[0_0_24px_rgba(250,204,21,0.4),0_0_8px_rgba(251,146,60,0.3)]";
+    if (rank === 2) return "ring-2 ring-gray-300 shadow-[0_0_16px_rgba(156,163,175,0.3)]";
+    if (rank === 3) return "ring-2 ring-amber-600 shadow-[0_0_16px_rgba(217,119,6,0.3)]";
+    return "ring-1 ring-border/30";
+  };
+
+  const getRankGradientWrapper = (rank: number) => {
+    if (rank === 1) return "bg-gradient-to-br from-yellow-400 via-orange-500 to-red-500 p-[2px] rounded-2xl";
+    if (rank === 2) return "bg-gradient-to-br from-gray-200 via-gray-400 to-gray-300 p-[2px] rounded-2xl";
+    if (rank === 3) return "bg-gradient-to-br from-amber-600 via-amber-500 to-amber-700 p-[2px] rounded-2xl";
+    return "";
+  };
 
   if (loading) {
     return <div className="flex items-center justify-center py-20"><Loader2 size={24} className="animate-spin text-muted-foreground" /></div>;
@@ -466,11 +458,7 @@ const LeaderboardTab = () => {
 
               const height = isFirst ? "h-[220px]" : isSecond ? "h-[190px]" : "h-[170px]";
               const width = isFirst ? "flex-[1.3]" : "flex-1";
-              const borderColor = isFirst
-                ? "ring-2 ring-yellow-400/60 shadow-[0_0_20px_rgba(250,204,21,0.2)]"
-                : isSecond
-                ? "ring-1 ring-gray-300/50"
-                : "ring-1 ring-amber-600/40";
+              const gradientWrapper = getRankGradientWrapper(rank);
 
               return (
                 <motion.div
@@ -478,51 +466,52 @@ const LeaderboardTab = () => {
                   initial={{ opacity: 0, y: 20 }}
                   animate={{ opacity: 1, y: 0 }}
                   transition={{ delay: idx * 0.1 }}
-                  className={`relative ${width} ${height} rounded-2xl overflow-hidden ${borderColor} bg-card`}
+                  className={`${width}`}
                 >
-                  <div className={`absolute top-2 left-2 z-10 w-6 h-6 rounded-full flex items-center justify-center text-[10px] font-bold shadow-md ${
-                    rank === 1 ? "bg-yellow-400 text-yellow-900" : rank === 2 ? "bg-gray-300 text-gray-700" : "bg-amber-600 text-amber-100"
-                  }`}>
-                    {rank}
-                  </div>
+                  <div className={gradientWrapper}>
+                    <div
+                      className={`relative ${height} rounded-2xl overflow-hidden bg-card cursor-pointer`}
+                      onClick={() => setSelectedEntry({ entry, rank })}
+                    >
+                      <button onClick={(e) => { e.stopPropagation(); handleShare(entry, rank); }}
+                        className="absolute top-2 right-2 z-10 w-6 h-6 rounded-full bg-foreground/30 backdrop-blur-sm flex items-center justify-center">
+                        <Share2 size={11} className="text-primary-foreground" />
+                      </button>
 
-                  <button onClick={() => handleShare(entry, rank)}
-                    className="absolute top-2 right-2 z-10 w-6 h-6 rounded-full bg-foreground/30 backdrop-blur-sm flex items-center justify-center">
-                    <Share2 size={11} className="text-primary-foreground" />
-                  </button>
-
-                  <div className="w-full h-full bg-secondary">
-                    {entry.image_url ? (
-                      <img src={entry.image_url} alt="" className="w-full h-full object-cover" />
-                    ) : (
-                      <div className="w-full h-full flex items-center justify-center"><Crown size={24} className="text-muted-foreground/30" /></div>
-                    )}
-                  </div>
-
-                  <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/80 via-black/50 to-transparent p-2.5 pt-10">
-                    <div className="flex items-center gap-1.5 mb-1">
-                      <div className="w-5 h-5 rounded-full bg-muted overflow-hidden flex-shrink-0">
-                        {entry.avatar_url ? (
-                          <img src={entry.avatar_url} alt="" className="w-full h-full object-cover" />
+                      <div className="w-full h-full bg-secondary">
+                        {entry.image_url ? (
+                          <img src={entry.image_url} alt="" className="w-full h-full object-cover" />
                         ) : (
-                          <div className="w-full h-full bg-muted flex items-center justify-center text-[8px] font-medium text-muted-foreground">
-                            {(entry.name || "?")?.[0]}
-                          </div>
+                          <div className="w-full h-full flex items-center justify-center"><Crown size={24} className="text-muted-foreground/30" /></div>
                         )}
                       </div>
-                      <span className="text-[10px] font-medium text-white truncate">
-                        {entry.user_id === user?.id ? "You" : entry.name || entry.username || "Anon"}
-                      </span>
-                    </div>
-                    {getRankTag(rank) && (
-                      <p className={`font-bold text-white leading-tight ${isFirst ? "text-sm" : "text-xs"}`}>
-                        {getRankTag(rank)}
-                      </p>
-                    )}
-                    <p className="text-lg font-bold text-white leading-none mt-0.5">{entry.score.toFixed(1)}</p>
-                  </div>
 
-                  {sharingId === entry.user_id && <ShareCard entry={entry} rank={rank} />}
+                      <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/80 via-black/50 to-transparent p-2.5 pt-10">
+                        <div className="flex items-center gap-1.5 mb-1">
+                          <div className="w-5 h-5 rounded-full bg-muted overflow-hidden flex-shrink-0">
+                            {entry.avatar_url ? (
+                              <img src={entry.avatar_url} alt="" className="w-full h-full object-cover" />
+                            ) : (
+                              <div className="w-full h-full bg-muted flex items-center justify-center text-[8px] font-medium text-muted-foreground">
+                                {(entry.name || "?")?.[0]}
+                              </div>
+                            )}
+                          </div>
+                          <span className="text-[10px] font-medium text-white truncate">
+                            {entry.user_id === user?.id ? "You" : entry.name || entry.username || "Anon"}
+                          </span>
+                        </div>
+                        {getRankTag(rank) && (
+                          <p className={`font-bold text-white leading-tight ${isFirst ? "text-sm" : "text-xs"}`}>
+                            {getRankTag(rank)}
+                          </p>
+                        )}
+                        <p className="text-lg font-bold text-white leading-none mt-0.5">{entry.score.toFixed(1)}</p>
+                      </div>
+
+                      {sharingId === entry.user_id && <ShareCard entry={entry} rank={rank} />}
+                    </div>
+                  </div>
                 </motion.div>
               );
             })}
@@ -535,7 +524,8 @@ const LeaderboardTab = () => {
               return (
                 <motion.div key={entry.user_id} initial={{ opacity: 0, x: -10 }} animate={{ opacity: 1, x: 0 }}
                   transition={{ delay: 0.3 + i * 0.05 }}
-                  className="flex items-center gap-3 p-3 rounded-xl bg-card border border-border/20">
+                  onClick={() => setSelectedEntry({ entry, rank })}
+                  className="flex items-center gap-3 p-3 rounded-xl bg-card border border-border/20 cursor-pointer">
                   <span className="w-6 text-center text-xs font-bold text-muted-foreground">#{rank}</span>
                   <div className="w-8 h-8 rounded-full bg-muted overflow-hidden flex-shrink-0">
                     {entry.avatar_url ? (
@@ -556,7 +546,7 @@ const LeaderboardTab = () => {
                     </div>
                   </div>
                   <p className="text-sm font-bold text-foreground">{entry.score.toFixed(1)}</p>
-                  <button onClick={() => handleShare(entry, rank)} className="w-7 h-7 rounded-full bg-secondary flex items-center justify-center flex-shrink-0">
+                  <button onClick={(e) => { e.stopPropagation(); handleShare(entry, rank); }} className="w-7 h-7 rounded-full bg-secondary flex items-center justify-center flex-shrink-0">
                     <Share2 size={12} className="text-muted-foreground" />
                   </button>
                   {sharingId === entry.user_id && <ShareCard entry={entry} rank={rank} />}
@@ -578,6 +568,88 @@ const LeaderboardTab = () => {
           )}
         </>
       )}
+
+      {/* Full-screen card view */}
+      <AnimatePresence>
+        {selectedEntry && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 bg-foreground/60 backdrop-blur-md z-[70] flex items-center justify-center p-6"
+            onClick={() => setSelectedEntry(null)}
+          >
+            <motion.div
+              initial={{ opacity: 0, scale: 0.9 }}
+              animate={{ opacity: 1, scale: 1 }}
+              exit={{ opacity: 0, scale: 0.9 }}
+              transition={{ type: "spring", damping: 25, stiffness: 300 }}
+              onClick={(e) => e.stopPropagation()}
+              className="w-full max-w-sm"
+            >
+              <div className={getRankGradientWrapper(selectedEntry.rank) || "rounded-2xl"}>
+                <div className="rounded-2xl overflow-hidden bg-card">
+                  {/* Close button */}
+                  <button onClick={() => setSelectedEntry(null)}
+                    className="absolute top-3 right-3 z-20 w-8 h-8 rounded-full bg-foreground/40 backdrop-blur-sm flex items-center justify-center">
+                    <X size={16} className="text-primary-foreground" />
+                  </button>
+
+                  {/* Image */}
+                  <div className="relative aspect-[3/4] bg-secondary">
+                    {selectedEntry.entry.image_url ? (
+                      <img src={selectedEntry.entry.image_url} alt="" className="w-full h-full object-cover" />
+                    ) : (
+                      <div className="w-full h-full flex items-center justify-center"><Crown size={48} className="text-muted-foreground/30" /></div>
+                    )}
+
+                    <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/90 via-black/60 to-transparent p-5 pt-16">
+                      <div className="flex items-center gap-2 mb-2">
+                        <div className="w-8 h-8 rounded-full bg-muted overflow-hidden flex-shrink-0">
+                          {selectedEntry.entry.avatar_url ? (
+                            <img src={selectedEntry.entry.avatar_url} alt="" className="w-full h-full object-cover" />
+                          ) : (
+                            <div className="w-full h-full flex items-center justify-center text-xs font-medium text-muted-foreground">
+                              {(selectedEntry.entry.name || "?")?.[0]}
+                            </div>
+                          )}
+                        </div>
+                        <div>
+                          <p className="text-sm font-semibold text-white">
+                            {selectedEntry.entry.user_id === user?.id ? "You" : selectedEntry.entry.name || selectedEntry.entry.username || "Anon"}
+                          </p>
+                          {selectedEntry.entry.username && (
+                            <p className="text-[10px] text-white/60">@{selectedEntry.entry.username}</p>
+                          )}
+                        </div>
+                      </div>
+
+                      {getRankTag(selectedEntry.rank) && (
+                        <p className="text-base font-bold text-white mb-1">{getRankTag(selectedEntry.rank)}</p>
+                      )}
+
+                      <div className="flex items-end justify-between">
+                        <p className="text-3xl font-bold text-white">{selectedEntry.entry.score.toFixed(1)}<span className="text-base text-white/50">/100</span></p>
+                        <button
+                          onClick={() => handleShare(selectedEntry.entry, selectedEntry.rank)}
+                          className="w-10 h-10 rounded-full bg-white/20 backdrop-blur-sm flex items-center justify-center"
+                        >
+                          <Share2 size={16} className="text-white" />
+                        </button>
+                      </div>
+
+                      {selectedEntry.entry.killer_tag && (
+                        <p className="text-xs text-white/50 mt-1">{selectedEntry.entry.killer_tag}</p>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </motion.div>
+            {sharingId === selectedEntry.entry.user_id && <ShareCard entry={selectedEntry.entry} rank={selectedEntry.rank} />}
+          </motion.div>
+        )}
+      </AnimatePresence>
     </div>
   );
 };
