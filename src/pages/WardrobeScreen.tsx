@@ -1,6 +1,6 @@
 import React, { useState, useRef, useEffect, useCallback, useMemo } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { Plus, Trash2, X, Loader2, Camera, Upload, Sparkles, Pencil, Save, Share2, CheckSquare, Square, SlidersHorizontal, RefreshCw, Pin, GripVertical, RotateCcw, Eye } from "lucide-react";
+import { Plus, Trash2, X, Loader2, Camera, Upload, Sparkles, Pencil, Save, Share2, CheckSquare, Square, SlidersHorizontal, RefreshCw, Pin, GripVertical, RotateCcw, Eye, FolderPlus } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { toast } from "sonner";
@@ -11,6 +11,7 @@ import { precacheImages } from "@/lib/imageCache";
 import { DndContext, closestCenter, PointerSensor, TouchSensor, useSensor, useSensors, type DragEndEvent } from "@dnd-kit/core";
 import { SortableContext, useSortable, rectSortingStrategy, arrayMove } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
+
 type ClothingItem = {
   id: string;
   image_url: string;
@@ -25,6 +26,7 @@ type ClothingItem = {
   style: string | null;
   pinned: boolean;
   pin_order: number;
+  custom_category: string | null;
 };
 
 type DetectedItem = {
@@ -42,7 +44,37 @@ type BackgroundJob = {
   active: boolean;
 };
 
-const categories = ["All", "Tops", "Bottoms", "Shoes", "Dresses", "Accessories"];
+type WardrobeCategory = {
+  id: string;
+  name: string;
+};
+
+const defaultCategories = ["All", "Tops", "Bottoms", "Shoes", "Accessories"];
+
+// --- AI Analysis Cache helpers ---
+const ANALYSIS_CACHE_KEY = "closetai-analysis-cache";
+
+function computeAnalysisCacheKey(file: File): string {
+  return `${file.name}-${file.size}-${file.lastModified}`;
+}
+
+function getCachedAnalysis(key: string): DetectedItem[] | null {
+  try {
+    const cache = JSON.parse(localStorage.getItem(ANALYSIS_CACHE_KEY) || "{}");
+    return cache[key] || null;
+  } catch { return null; }
+}
+
+function setCachedAnalysis(key: string, items: DetectedItem[]) {
+  try {
+    const cache = JSON.parse(localStorage.getItem(ANALYSIS_CACHE_KEY) || "{}");
+    cache[key] = items;
+    // Keep max 20 entries
+    const keys = Object.keys(cache);
+    if (keys.length > 20) delete cache[keys[0]];
+    localStorage.setItem(ANALYSIS_CACHE_KEY, JSON.stringify(cache));
+  } catch {}
+}
 
 // Shared card content component
 type CardContentProps = {
@@ -90,7 +122,6 @@ const WardrobeCardContent = ({ item, selectMode, selectedItems, failedImages, re
           </div>
         )}
         {dragHandle}
-        {/* Left column: pin, refresh */}
         <button onClick={(e) => { e.stopPropagation(); togglePin(item); }}
           className={`absolute ${item.pinned ? 'top-11' : 'top-2'} left-2 w-7 h-7 rounded-full bg-foreground/50 text-primary-foreground flex items-center justify-center opacity-100 sm:opacity-0 sm:group-hover:opacity-100 transition-opacity backdrop-blur-sm`}>
           <Pin size={13} className={item.pinned ? "fill-current" : ""} />
@@ -99,7 +130,6 @@ const WardrobeCardContent = ({ item, selectMode, selectedItems, failedImages, re
           className={`absolute ${item.pinned ? 'top-20' : 'top-11'} left-2 w-7 h-7 rounded-full bg-foreground/50 text-primary-foreground flex items-center justify-center opacity-100 sm:opacity-0 sm:group-hover:opacity-100 transition-opacity backdrop-blur-sm disabled:opacity-50`}>
           {retryingImages.has(item.id) ? <Loader2 size={13} className="animate-spin" /> : <RefreshCw size={13} />}
         </button>
-        {/* Right column: edit, delete */}
         <button onClick={(e) => { e.stopPropagation(); openEdit(item); }}
           className="absolute top-2 right-2 w-7 h-7 rounded-full bg-foreground/50 text-primary-foreground flex items-center justify-center opacity-100 sm:opacity-0 sm:group-hover:opacity-100 transition-opacity backdrop-blur-sm">
           <Pencil size={13} />
@@ -189,6 +219,11 @@ const WardrobeScreen = () => {
   const [detailItem, setDetailItem] = useState<ClothingItem | null>(null);
   const [showOriginal, setShowOriginal] = useState(false);
 
+  // Custom categories
+  const [customCategories, setCustomCategories] = useState<WardrobeCategory[]>([]);
+  const [showCategoryManager, setShowCategoryManager] = useState(false);
+  const [newCategoryName, setNewCategoryName] = useState("");
+
   // Filters
   const [showFilters, setShowFilters] = useState(false);
   const [filterColor, setFilterColor] = useState("");
@@ -203,20 +238,45 @@ const WardrobeScreen = () => {
     setFilterColor(""); setFilterQuality(""); setFilterMaterial(""); setFilterBrand(""); setFilterSeason("");
   };
 
-  useEffect(() => { if (user) { fetchItems(); fetchDeletedItems(); } }, [user]);
+  // All category names (default + custom)
+  const allCategories = useMemo(() => [...defaultCategories, ...customCategories.map(c => c.name)], [customCategories]);
+
+  useEffect(() => { if (user) { fetchItems(); fetchDeletedItems(); fetchCustomCategories(); } }, [user]);
+
+  const fetchCustomCategories = async () => {
+    if (!user) return;
+    const { data } = await supabase.from("wardrobe_categories").select("id, name").eq("user_id", user.id).order("created_at", { ascending: true });
+    if (data) setCustomCategories(data as WardrobeCategory[]);
+  };
+
+  const addCustomCategory = async () => {
+    if (!user || !newCategoryName.trim()) return;
+    const name = newCategoryName.trim();
+    if (allCategories.includes(name)) { toast.error("Category already exists"); return; }
+    const { error } = await supabase.from("wardrobe_categories").insert({ user_id: user.id, name } as any);
+    if (error) toast.error("Failed to add category");
+    else { toast.success(`"${name}" added!`); setNewCategoryName(""); fetchCustomCategories(); }
+  };
+
+  const deleteCustomCategory = async (cat: WardrobeCategory) => {
+    // Remove category tag from items
+    await supabase.from("wardrobe").update({ custom_category: null } as any).eq("user_id", user!.id).eq("custom_category", cat.name);
+    const { error } = await supabase.from("wardrobe_categories").delete().eq("id", cat.id);
+    if (error) toast.error("Failed to delete category");
+    else { toast.success(`"${cat.name}" deleted`); fetchCustomCategories(); if (activeCategory === cat.name) setActiveCategory("All"); }
+  };
 
   const fetchItems = async () => {
     if (!user) return;
     const { data, error } = await supabase
       .from("wardrobe")
-      .select("id, image_url, original_image_url, type, color, material, name, brand, quality, season, style, pinned, pin_order")
+      .select("id, image_url, original_image_url, type, color, material, name, brand, quality, season, style, pinned, pin_order, custom_category")
       .eq("user_id", user.id)
       .is("deleted_at", null)
       .order("created_at", { ascending: false });
     if (error) toast.error("Failed to load wardrobe");
     else {
       const wardrobeItems = ((data || []) as any[]).map(i => ({ ...i, pinned: !!i.pinned, pin_order: i.pin_order || 0 })) as ClothingItem[];
-      // Sort pinned first by pin_order, then unpinned by created_at (already ordered)
       wardrobeItems.sort((a, b) => {
         if (a.pinned && !b.pinned) return -1;
         if (!a.pinned && b.pinned) return 1;
@@ -248,10 +308,10 @@ const WardrobeScreen = () => {
     toast.success(newPinned ? "Pinned!" : "Unpinned", { duration: 1500 });
   };
 
-  // DnD sensors
+  // DnD sensors — increased tolerance for mobile
   const sensors = useSensors(
-    useSensor(PointerSensor, { activationConstraint: { distance: 8 } }),
-    useSensor(TouchSensor, { activationConstraint: { delay: 200, tolerance: 5 } })
+    useSensor(PointerSensor, { activationConstraint: { distance: 5 } }),
+    useSensor(TouchSensor, { activationConstraint: { delay: 150, tolerance: 10 } })
   );
 
   const handleDragEnd = async (event: DragEndEvent) => {
@@ -262,14 +322,12 @@ const WardrobeScreen = () => {
     const newIndex = pinnedItems.findIndex(i => i.id === over.id);
     if (oldIndex === -1 || newIndex === -1) return;
     const reordered = arrayMove(pinnedItems, oldIndex, newIndex);
-    // Update pin_order for each reordered item
     const updates = reordered.map((item, idx) => ({ id: item.id, pin_order: idx }));
     setItems(prev => {
       const unpinned = prev.filter(i => !i.pinned);
       const newPinned = reordered.map((item, idx) => ({ ...item, pin_order: idx }));
       return [...newPinned, ...unpinned];
     });
-    // Persist to DB
     for (const u of updates) {
       await supabase.from("wardrobe").update({ pin_order: u.pin_order } as any).eq("id", u.id);
     }
@@ -283,7 +341,15 @@ const WardrobeScreen = () => {
   const uniqueSeasons = useMemo(() => [...new Set(items.map(i => i.season).filter(Boolean))] as string[], [items]);
 
   const filtered = useMemo(() => {
-    let result = activeCategory === "All" ? items : items.filter((i) => i.type === activeCategory);
+    let result = items;
+    if (activeCategory === "All") {
+      // show all
+    } else if (defaultCategories.includes(activeCategory)) {
+      result = result.filter(i => i.type === activeCategory);
+    } else {
+      // Custom category — match by custom_category tag OR by type name match
+      result = result.filter(i => i.custom_category === activeCategory || i.type.toLowerCase() === activeCategory.toLowerCase());
+    }
     if (filterColor) result = result.filter(i => i.color?.toLowerCase() === filterColor.toLowerCase());
     if (filterQuality) result = result.filter(i => i.quality?.toLowerCase() === filterQuality.toLowerCase());
     if (filterMaterial) result = result.filter(i => i.material?.toLowerCase() === filterMaterial.toLowerCase());
@@ -299,7 +365,7 @@ const WardrobeScreen = () => {
     if (!user) return;
     const { data } = await supabase
       .from("wardrobe")
-      .select("id, image_url, original_image_url, type, color, material, name, brand, quality, season, style, pinned, pin_order")
+      .select("id, image_url, original_image_url, type, color, material, name, brand, quality, season, style, pinned, pin_order, custom_category")
       .eq("user_id", user.id)
       .not("deleted_at", "is", null)
       .order("created_at", { ascending: false });
@@ -355,6 +421,17 @@ const WardrobeScreen = () => {
     setDetectedItems([]);
     setSelectedDetected([]);
 
+    // Check cache first
+    const cacheKey = computeAnalysisCacheKey(file);
+    const cached = getCachedAnalysis(cacheKey);
+    if (cached && cached.length > 0) {
+      setDetectedItems(cached);
+      setSelectedDetected(cached.map((_: DetectedItem, i: number) => i));
+      toast.success(`Found ${cached.length} item(s) from cache!`);
+      setAnalyzing(false);
+      return;
+    }
+
     const tryAnalyze = async (base64: string, mimeType?: string): Promise<DetectedItem[]> => {
       const { data, error } = await supabase.functions.invoke("analyze-clothing", {
         body: { imageBase64: base64, ...(mimeType ? { mimeType } : {}) },
@@ -372,28 +449,20 @@ const WardrobeScreen = () => {
 
     try {
       let detected: DetectedItem[] = [];
-      // Attempt 1: compressed image
       try {
         const { base64 } = await compressImage(file);
         detected = await tryAnalyze(base64);
       } catch (err1: any) {
         const msg1 = err1?.message || "";
-        // If rate-limited, show specific message and stop
         if (msg1.includes("Rate limited") || msg1.includes("retryable")) {
           toast.error("Server is busy — please try again in a moment.");
           setAddMode("manual");
           setAnalyzing(false);
           return;
         }
-        // Attempt 2: retry with original file
         console.warn("Compressed analysis failed, retrying with original:", msg1);
         try {
-          const originalBase64 = await new Promise<string>((resolve, reject) => {
-            const reader = new FileReader();
-            reader.onload = () => resolve((reader.result as string).split(",")[1]);
-            reader.onerror = reject;
-            reader.readAsDataURL(file);
-          });
+          const originalBase64 = await fileToBase64(file);
           detected = await tryAnalyze(originalBase64, file.type || "image/jpeg");
         } catch (err2: any) {
           const msg2 = err2?.message || "";
@@ -409,7 +478,13 @@ const WardrobeScreen = () => {
       }
 
       if (detected.length === 0) { toast.info("No clothing items detected. You can add manually."); setAddMode("manual"); }
-      else { setDetectedItems(detected); setSelectedDetected(detected.map((_: DetectedItem, i: number) => i)); toast.success(`Found ${detected.length} item(s)!`); }
+      else {
+        // Cache the detected items
+        setCachedAnalysis(cacheKey, detected);
+        setDetectedItems(detected);
+        setSelectedDetected(detected.map((_: DetectedItem, i: number) => i));
+        toast.success(`Found ${detected.length} item(s)!`);
+      }
     } catch { toast.error("Something went wrong. Try again or add manually."); setAddMode("manual"); }
     finally { setAnalyzing(false); }
   };
@@ -423,7 +498,7 @@ const WardrobeScreen = () => {
       const job = bgQueueRef.current[0];
       try {
         const { base64, blob: compressedBlob } = await compressImage(job.file);
-        // Upload original photo once per job to get original_image_url
+        // Upload original photo once per job
         let originalImageUrl: string | null = null;
         try {
           const origPath = `${user.id}/original-${Date.now()}.jpg`;
@@ -453,13 +528,13 @@ const WardrobeScreen = () => {
           const { data: insertData, error: insertError } = await supabase
             .from("wardrobe")
             .insert({ user_id: user.id, image_url: imageUrl, original_image_url: originalImageUrl, type: item.type, name: item.name, color: item.color, material: item.material, quality: item.quality, brand: item.brand } as any)
-            .select("id, image_url, original_image_url, type, color, material, name, brand, quality, season, style")
+            .select("id, image_url, original_image_url, type, color, material, name, brand, quality, season, style, custom_category")
             .single();
           if (insertError || !insertData) {
             console.error("Insert failed:", insertError);
             totalFailed++;
           } else {
-            setItems((prev) => [insertData as ClothingItem, ...prev]);
+            setItems((prev) => [{ ...(insertData as any), pinned: false, pin_order: 0 } as ClothingItem, ...prev]);
             totalSuccess++;
           }
           setBgJob(prev => ({ ...prev, completedItems: prev.completedItems + 1 }));
@@ -480,7 +555,6 @@ const WardrobeScreen = () => {
     } else if (totalFailed > 0) {
       toast.error("Failed to save items. Please try again.");
     }
-    // Refresh from backend to ensure UI matches reality
     fetchItems();
   }, [user, styleProfile]);
 
@@ -506,9 +580,9 @@ const WardrobeScreen = () => {
       if (uploadError) throw uploadError;
       const { data: { publicUrl } } = supabase.storage.from("wardrobe").getPublicUrl(path);
       const { data, error } = await supabase.from("wardrobe").insert({ user_id: user.id, image_url: publicUrl, original_image_url: publicUrl, type: newType, name: "New Item" } as any)
-        .select("id, image_url, original_image_url, type, color, material, name, brand, quality, season, style").single();
+        .select("id, image_url, original_image_url, type, color, material, name, brand, quality, season, style, custom_category").single();
       if (error) throw error;
-      if (data) setItems((prev) => [data as ClothingItem, ...prev]);
+      if (data) setItems((prev) => [{ ...(data as any), pinned: false, pin_order: 0 } as ClothingItem, ...prev]);
       toast.success("Item added!"); resetModal();
     } catch { toast.error("Failed to save item"); }
     finally { setUploading(false); }
@@ -705,10 +779,10 @@ const WardrobeScreen = () => {
           )}
         </AnimatePresence>
 
-        {/* Categories + Filter Toggle */}
+        {/* Categories + Filter Toggle + Category Manager */}
         <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.1 }} className="flex gap-2 items-center">
           <div className="flex gap-2 overflow-x-auto pb-1 no-scrollbar flex-1">
-            {categories.map((cat) => (
+            {allCategories.map((cat) => (
               <button key={cat} onClick={() => setActiveCategory(cat)}
                 className={`px-4 py-2 rounded-full text-xs font-medium whitespace-nowrap transition-all duration-300 ${
                   activeCategory === cat ? "gradient-accent text-accent-foreground shadow-soft" : "bg-secondary text-secondary-foreground"}`}>
@@ -716,6 +790,10 @@ const WardrobeScreen = () => {
               </button>
             ))}
           </div>
+          <button onClick={() => setShowCategoryManager(true)}
+            className="flex-shrink-0 w-9 h-9 rounded-full flex items-center justify-center bg-secondary text-secondary-foreground transition-all">
+            <FolderPlus size={16} />
+          </button>
           <button onClick={() => setShowFilters(!showFilters)}
             className={`relative flex-shrink-0 w-9 h-9 rounded-full flex items-center justify-center transition-all ${showFilters ? "bg-primary text-primary-foreground" : "bg-secondary text-secondary-foreground"}`}>
             <SlidersHorizontal size={16} />
@@ -846,7 +924,6 @@ const WardrobeScreen = () => {
           </DndContext>
         )}
 
-
         {/* Hidden file inputs */}
         <input type="file" accept="image/*" ref={fileRef} className="hidden" onChange={handleFileSelected} onClick={(e) => { (e.target as HTMLInputElement).value = ""; }} />
         <input type="file" accept="image/*" capture="environment" ref={cameraRef} className="hidden" onChange={handleFileSelected} onClick={(e) => { (e.target as HTMLInputElement).value = ""; }} />
@@ -855,7 +932,7 @@ const WardrobeScreen = () => {
         <AnimatePresence>
           {showAdd && (
             <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
-              className="fixed inset-0 bg-foreground/30 backdrop-blur-sm z-50 flex items-center justify-center p-5" onClick={resetModal}>
+              className="fixed inset-0 bg-foreground/30 backdrop-blur-sm z-[60] flex items-center justify-center p-5" onClick={resetModal}>
               <motion.div initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0, scale: 0.95 }}
                 transition={{ type: "spring", damping: 25, stiffness: 300 }}
                 onClick={(e) => e.stopPropagation()}
@@ -921,7 +998,7 @@ const WardrobeScreen = () => {
                                 <div className="grid grid-cols-2 gap-2 pl-7">
                                   <select value={item.type} onChange={(e) => updateDetectedItem(idx, "type", e.target.value)}
                                     className="text-xs bg-card border border-border rounded-lg px-2 py-1.5 text-foreground">
-                                    {["Tops", "Bottoms", "Shoes", "Dresses", "Accessories"].map(t => (<option key={t} value={t}>{t}</option>))}
+                                    {["Tops", "Bottoms", "Shoes", "Accessories"].map(t => (<option key={t} value={t}>{t}</option>))}
                                   </select>
                                   <input value={item.color || ""} onChange={(e) => updateDetectedItem(idx, "color", e.target.value)}
                                     placeholder="Color" className="text-xs bg-card border border-border rounded-lg px-2 py-1.5 text-foreground placeholder:text-muted-foreground" />
@@ -958,7 +1035,7 @@ const WardrobeScreen = () => {
                     )}
                     <p className="text-sm text-muted-foreground">Select a category:</p>
                     <div className="flex gap-2 flex-wrap">
-                      {["Tops", "Bottoms", "Shoes", "Dresses", "Accessories"].map((t) => (
+                      {["Tops", "Bottoms", "Shoes", "Accessories"].map((t) => (
                         <button key={t} onClick={() => setNewType(t)}
                           className={`px-4 py-2 rounded-full text-xs font-medium transition-all ${newType === t ? "gradient-accent text-accent-foreground" : "bg-secondary text-secondary-foreground"}`}>
                           {t}
@@ -980,7 +1057,7 @@ const WardrobeScreen = () => {
         <AnimatePresence>
           {editingItem && (
             <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
-              className="fixed inset-0 bg-foreground/30 backdrop-blur-sm z-50 flex items-center justify-center p-5" onClick={() => setEditingItem(null)}>
+              className="fixed inset-0 bg-foreground/30 backdrop-blur-sm z-[60] flex items-center justify-center p-5" onClick={() => setEditingItem(null)}>
               <motion.div initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0, scale: 0.95 }}
                 transition={{ type: "spring", damping: 25, stiffness: 300 }} onClick={(e) => e.stopPropagation()}
                 className="w-full max-w-md bg-card rounded-3xl p-6 space-y-4 max-h-[80vh] overflow-y-auto pb-6">
@@ -1007,7 +1084,7 @@ const WardrobeScreen = () => {
                     <label className="text-xs font-medium text-muted-foreground">Category</label>
                     <select value={editForm.type} onChange={(e) => setEditForm(f => ({ ...f, type: e.target.value }))}
                       className="w-full px-3 py-2.5 rounded-xl bg-secondary border border-border text-foreground text-sm">
-                      {["Tops", "Bottoms", "Shoes", "Dresses", "Accessories"].map(t => (<option key={t} value={t}>{t}</option>))}
+                      {["Tops", "Bottoms", "Shoes", "Accessories"].map(t => (<option key={t} value={t}>{t}</option>))}
                     </select>
                   </div>
                   <div className="grid grid-cols-2 gap-3">
@@ -1042,11 +1119,67 @@ const WardrobeScreen = () => {
           )}
         </AnimatePresence>
 
+        {/* Category Manager Modal */}
+        <AnimatePresence>
+          {showCategoryManager && (
+            <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+              className="fixed inset-0 bg-foreground/30 backdrop-blur-sm z-[60] flex items-center justify-center p-5" onClick={() => setShowCategoryManager(false)}>
+              <motion.div initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0, scale: 0.95 }}
+                transition={{ type: "spring", damping: 25, stiffness: 300 }} onClick={(e) => e.stopPropagation()}
+                className="w-full max-w-sm bg-card rounded-3xl p-6 space-y-4">
+                <div className="flex items-center justify-between">
+                  <h3 className="font-semibold text-foreground text-lg">Manage Categories</h3>
+                  <button onClick={() => setShowCategoryManager(false)}><X size={20} className="text-muted-foreground" /></button>
+                </div>
+
+                {/* Default categories (non-deletable) */}
+                <div>
+                  <p className="text-[10px] uppercase tracking-wider text-muted-foreground mb-2">Default</p>
+                  <div className="flex flex-wrap gap-2">
+                    {defaultCategories.filter(c => c !== "All").map(cat => (
+                      <span key={cat} className="px-3 py-1.5 rounded-full bg-secondary text-secondary-foreground text-xs">{cat}</span>
+                    ))}
+                  </div>
+                </div>
+
+                {/* Custom categories */}
+                {customCategories.length > 0 && (
+                  <div>
+                    <p className="text-[10px] uppercase tracking-wider text-muted-foreground mb-2">Custom</p>
+                    <div className="space-y-2">
+                      {customCategories.map(cat => (
+                        <div key={cat.id} className="flex items-center justify-between rounded-xl bg-secondary px-3 py-2">
+                          <span className="text-sm text-foreground">{cat.name}</span>
+                          <button onClick={() => deleteCustomCategory(cat)} className="w-7 h-7 rounded-full flex items-center justify-center text-destructive hover:bg-destructive/10 transition-colors">
+                            <Trash2 size={14} />
+                          </button>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {/* Add new */}
+                <div className="flex gap-2">
+                  <input value={newCategoryName} onChange={(e) => setNewCategoryName(e.target.value)}
+                    placeholder="New category name..."
+                    className="flex-1 px-3 py-2.5 rounded-xl bg-secondary border border-border text-foreground text-sm placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-accent/30"
+                    onKeyDown={(e) => e.key === "Enter" && addCustomCategory()} />
+                  <button onClick={addCustomCategory} disabled={!newCategoryName.trim()}
+                    className="px-4 py-2.5 rounded-xl gradient-accent text-accent-foreground text-sm font-medium shadow-soft active:scale-[0.98] transition-transform disabled:opacity-50">
+                    Add
+                  </button>
+                </div>
+              </motion.div>
+            </motion.div>
+          )}
+        </AnimatePresence>
+
         {/* Item Detail Overlay */}
         <AnimatePresence>
           {detailItem && (
             <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
-              className="fixed inset-0 bg-background z-50 flex flex-col" onClick={() => { setDetailItem(null); setShowOriginal(false); }}>
+              className="fixed inset-0 bg-background z-[60] flex flex-col" onClick={() => { setDetailItem(null); setShowOriginal(false); }}>
               <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: 20 }}
                 transition={{ type: "spring", damping: 25, stiffness: 300 }} onClick={(e) => e.stopPropagation()}
                 className="flex flex-col h-full">
@@ -1060,7 +1193,7 @@ const WardrobeScreen = () => {
                 </div>
 
                 {/* Image */}
-                <div className="flex-1 relative overflow-hidden mx-5 rounded-2xl bg-secondary">
+                <div className="flex-1 relative overflow-hidden mx-5 rounded-2xl bg-secondary min-h-0">
                   <AnimatePresence mode="wait">
                     <motion.img
                       key={showOriginal ? "original" : "generated"}
@@ -1101,30 +1234,38 @@ const WardrobeScreen = () => {
                   </div>
                 </div>
 
-                {/* Action buttons */}
-                <div className="px-5 py-4 pb-8 flex gap-2">
-                  <button onClick={() => { togglePin(detailItem); setDetailItem(prev => prev ? { ...prev, pinned: !prev.pinned } : null); }}
-                    className={`flex-1 flex items-center justify-center gap-1.5 py-3 rounded-xl text-sm font-medium transition-all ${detailItem.pinned ? "bg-primary text-primary-foreground" : "bg-secondary text-secondary-foreground"}`}>
-                    <Pin size={15} className={detailItem.pinned ? "fill-current" : ""} /> {detailItem.pinned ? "Pinned" : "Pin"}
-                  </button>
-                  <button onClick={() => { setDetailItem(null); setShowOriginal(false); openEdit(detailItem); }}
-                    className="flex-1 flex items-center justify-center gap-1.5 py-3 rounded-xl bg-secondary text-secondary-foreground text-sm font-medium">
-                    <Pencil size={15} /> Edit
-                  </button>
-                  <button onClick={() => { setShowOriginal(!showOriginal); }}
-                    disabled={!detailItem.original_image_url}
-                    className={`flex-1 flex items-center justify-center gap-1.5 py-3 rounded-xl text-sm font-medium transition-all disabled:opacity-30 ${showOriginal ? "bg-primary text-primary-foreground" : "bg-secondary text-secondary-foreground"}`}>
-                    <Eye size={15} /> Original
-                  </button>
-                  <button onClick={() => { retryImageGeneration(detailItem); }}
-                    disabled={retryingImages.has(detailItem.id)}
-                    className="w-12 flex items-center justify-center py-3 rounded-xl bg-secondary text-secondary-foreground disabled:opacity-50">
-                    {retryingImages.has(detailItem.id) ? <Loader2 size={15} className="animate-spin" /> : <RefreshCw size={15} />}
-                  </button>
-                  <button onClick={() => { deleteItem(detailItem.id); setDetailItem(null); setShowOriginal(false); }}
-                    className="w-12 flex items-center justify-center py-3 rounded-xl bg-destructive/10 text-destructive">
-                    <Trash2 size={15} />
-                  </button>
+                {/* Action buttons — 2-row grid with pb-28 to clear bottom nav */}
+                <div className="px-5 pt-3 pb-28 space-y-2">
+                  <div className="grid grid-cols-3 gap-2">
+                    <button onClick={() => { togglePin(detailItem); setDetailItem(prev => prev ? { ...prev, pinned: !prev.pinned } : null); }}
+                      className={`flex items-center justify-center gap-1.5 py-3 rounded-xl text-sm font-medium transition-all ${detailItem.pinned ? "bg-primary text-primary-foreground" : "bg-secondary text-secondary-foreground"}`}>
+                      <Pin size={15} className={detailItem.pinned ? "fill-current" : ""} /> {detailItem.pinned ? "Pinned" : "Pin"}
+                    </button>
+                    <button onClick={() => { setDetailItem(null); setShowOriginal(false); openEdit(detailItem); }}
+                      className="flex items-center justify-center gap-1.5 py-3 rounded-xl bg-secondary text-secondary-foreground text-sm font-medium">
+                      <Pencil size={15} /> Edit
+                    </button>
+                    <button onClick={() => { setShowOriginal(!showOriginal); }}
+                      disabled={!detailItem.original_image_url}
+                      className={`flex items-center justify-center gap-1.5 py-3 rounded-xl text-sm font-medium transition-all disabled:opacity-30 ${showOriginal ? "bg-primary text-primary-foreground" : "bg-secondary text-secondary-foreground"}`}>
+                      <Eye size={15} /> Original
+                    </button>
+                  </div>
+                  <div className="grid grid-cols-3 gap-2">
+                    <button onClick={() => { retryImageGeneration(detailItem); }}
+                      disabled={retryingImages.has(detailItem.id)}
+                      className="flex items-center justify-center gap-1.5 py-3 rounded-xl bg-secondary text-secondary-foreground text-sm font-medium disabled:opacity-50">
+                      {retryingImages.has(detailItem.id) ? <Loader2 size={15} className="animate-spin" /> : <RefreshCw size={15} />} Refresh
+                    </button>
+                    <button onClick={() => shareItem(detailItem)}
+                      className="flex items-center justify-center gap-1.5 py-3 rounded-xl bg-secondary text-secondary-foreground text-sm font-medium">
+                      <Share2 size={15} /> Share
+                    </button>
+                    <button onClick={() => { deleteItem(detailItem.id); setDetailItem(null); setShowOriginal(false); }}
+                      className="flex items-center justify-center gap-1.5 py-3 rounded-xl bg-destructive/10 text-destructive text-sm font-medium">
+                      <Trash2 size={15} /> Delete
+                    </button>
+                  </div>
                 </div>
               </motion.div>
             </motion.div>
@@ -1136,12 +1277,10 @@ const WardrobeScreen = () => {
             position: "fixed", left: "-9999px", top: 0, width: 390, zIndex: -1,
             background: "#1a1a1a", borderRadius: 24, overflow: "hidden", fontFamily: "'Inter', sans-serif",
           }}>
-            {/* Brand */}
             <div style={{ padding: "16px 20px 8px", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
               <span style={{ fontSize: 10, letterSpacing: 5, color: "rgba(255,255,255,0.6)", fontWeight: 300 }}>ClosetAI</span>
               <span style={{ fontSize: 9, color: "rgba(255,255,255,0.3)", letterSpacing: 2, textTransform: "uppercase" }}>My Collection</span>
             </div>
-            {/* Items grid */}
             <div style={{ padding: "8px 16px 16px", display: "grid", gridTemplateColumns: shareCardItems.length === 1 ? "1fr" : "1fr 1fr", gap: 8 }}>
               {shareCardItems.map((item, i) => (
                 <div key={i} style={{ borderRadius: 16, overflow: "hidden", background: "#252525" }}>
@@ -1157,7 +1296,6 @@ const WardrobeScreen = () => {
                 </div>
               ))}
             </div>
-            {/* CTA */}
             <div style={{ padding: "4px 20px 16px", textAlign: "center" }}>
               <p style={{ fontSize: 9, color: "rgba(255,255,255,0.25)", letterSpacing: 4, textTransform: "uppercase" }}>closetaireal.lovable.app</p>
             </div>
