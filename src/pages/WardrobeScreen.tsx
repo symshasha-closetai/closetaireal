@@ -230,6 +230,9 @@ const WardrobeScreen = () => {
   const [customCategories, setCustomCategories] = useState<WardrobeCategory[]>([]);
   const [showCategoryManager, setShowCategoryManager] = useState(false);
   const [newCategoryName, setNewCategoryName] = useState("");
+  const [hiddenDefaults, setHiddenDefaults] = useState<string[]>(() => {
+    try { return JSON.parse(localStorage.getItem(HIDDEN_DEFAULTS_KEY) || "[]"); } catch { return []; }
+  });
 
   // Filters
   const [showFilters, setShowFilters] = useState(false);
