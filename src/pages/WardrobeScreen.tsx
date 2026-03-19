@@ -88,24 +88,22 @@ const WardrobeCardContent = ({ item, selectMode, selectedItems, failedImages, re
           </div>
         )}
         {dragHandle}
+        {/* Left column: pin, refresh */}
         <button onClick={(e) => { e.stopPropagation(); togglePin(item); }}
-          className={`absolute top-2 ${item.pinned ? 'left-11' : 'left-2'} w-7 h-7 rounded-full bg-foreground/50 text-primary-foreground flex items-center justify-center opacity-100 sm:opacity-0 sm:group-hover:opacity-100 transition-opacity backdrop-blur-sm`}>
+          className={`absolute ${item.pinned ? 'top-11' : 'top-2'} left-2 w-7 h-7 rounded-full bg-foreground/50 text-primary-foreground flex items-center justify-center opacity-100 sm:opacity-0 sm:group-hover:opacity-100 transition-opacity backdrop-blur-sm`}>
           <Pin size={13} className={item.pinned ? "fill-current" : ""} />
         </button>
-        <button onClick={(e) => { e.stopPropagation(); openEdit(item); }}
-          className={`absolute top-2 ${item.pinned ? 'left-20' : 'left-11'} w-7 h-7 rounded-full bg-foreground/50 text-primary-foreground flex items-center justify-center opacity-100 sm:opacity-0 sm:group-hover:opacity-100 transition-opacity backdrop-blur-sm`}>
-          <Pencil size={13} />
-        </button>
-        <button onClick={(e) => { e.stopPropagation(); shareItem(item); }}
-          className="absolute top-11 left-2 w-7 h-7 rounded-full bg-foreground/50 text-primary-foreground flex items-center justify-center opacity-100 sm:opacity-0 sm:group-hover:opacity-100 transition-opacity backdrop-blur-sm">
-          <Share2 size={13} />
-        </button>
         <button onClick={(e) => { e.stopPropagation(); retryImageGeneration(item); }} disabled={retryingImages.has(item.id)}
-          className="absolute top-2 right-11 w-7 h-7 rounded-full bg-foreground/50 text-primary-foreground flex items-center justify-center opacity-100 sm:opacity-0 sm:group-hover:opacity-100 transition-opacity backdrop-blur-sm disabled:opacity-50">
+          className={`absolute ${item.pinned ? 'top-20' : 'top-11'} left-2 w-7 h-7 rounded-full bg-foreground/50 text-primary-foreground flex items-center justify-center opacity-100 sm:opacity-0 sm:group-hover:opacity-100 transition-opacity backdrop-blur-sm disabled:opacity-50`}>
           {retryingImages.has(item.id) ? <Loader2 size={13} className="animate-spin" /> : <RefreshCw size={13} />}
         </button>
-        <button onClick={(e) => { e.stopPropagation(); deleteItem(item.id); }}
+        {/* Right column: edit, delete */}
+        <button onClick={(e) => { e.stopPropagation(); openEdit(item); }}
           className="absolute top-2 right-2 w-7 h-7 rounded-full bg-foreground/50 text-primary-foreground flex items-center justify-center opacity-100 sm:opacity-0 sm:group-hover:opacity-100 transition-opacity backdrop-blur-sm">
+          <Pencil size={13} />
+        </button>
+        <button onClick={(e) => { e.stopPropagation(); deleteItem(item.id); }}
+          className="absolute top-11 right-2 w-7 h-7 rounded-full bg-foreground/50 text-primary-foreground flex items-center justify-center opacity-100 sm:opacity-0 sm:group-hover:opacity-100 transition-opacity backdrop-blur-sm">
           <Trash2 size={13} />
         </button>
       </>
