@@ -356,6 +356,7 @@ export type Database = {
           brand: string | null
           color: string | null
           created_at: string
+          custom_category: string | null
           deleted_at: string | null
           id: string
           image_url: string
@@ -374,6 +375,7 @@ export type Database = {
           brand?: string | null
           color?: string | null
           created_at?: string
+          custom_category?: string | null
           deleted_at?: string | null
           id?: string
           image_url: string
@@ -392,6 +394,7 @@ export type Database = {
           brand?: string | null
           color?: string | null
           created_at?: string
+          custom_category?: string | null
           deleted_at?: string | null
           id?: string
           image_url?: string
@@ -404,6 +407,27 @@ export type Database = {
           season?: string | null
           style?: string | null
           type?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      wardrobe_categories: {
+        Row: {
+          created_at: string
+          id: string
+          name: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          name: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          name?: string
           user_id?: string
         }
         Relationships: []
