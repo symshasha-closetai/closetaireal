@@ -209,22 +209,48 @@ const HomeScreen = () => {
       const { error: uploadError } = await supabase.storage.from("wardrobe").upload(path, compressedBlob, { upsert: true, contentType: "image/jpeg" });
       if (uploadError) throw uploadError;
       const { data: { publicUrl } } = supabase.storage.from("wardrobe").getPublicUrl(path);
+
+      // Calculate streak from DB
+      const yesterday = new Date(Date.now() - 86400000).toISOString().split("T")[0];
+      const { data: yesterdayData } = await supabase
+        .from("daily_looks")
+        .select("streak")
+        .eq("user_id", user.id)
+        .eq("look_date", yesterday)
+        .maybeSingle();
+
+      const today = new Date().toISOString().split("T")[0];
+      // Check if we already have today's entry
+      const { data: todayData } = await supabase
+        .from("daily_looks")
+        .select("streak")
+        .eq("user_id", user.id)
+        .eq("look_date", today)
+        .maybeSingle();
+
+      let newStreak: number;
+      if (todayData) {
+        // Re-uploading today — keep same streak
+        newStreak = todayData.streak;
+      } else if (yesterdayData) {
+        newStreak = yesterdayData.streak + 1;
+      } else {
+        newStreak = 1;
+      }
+
+      // Upsert into daily_looks
+      const { error: upsertError } = await supabase
+        .from("daily_looks")
+        .upsert(
+          { user_id: user.id, image_url: publicUrl, look_date: today, streak: newStreak },
+          { onConflict: "user_id,look_date" }
+        );
+      if (upsertError) console.error("Failed to save daily look:", upsertError);
+
       setTodayPhoto(publicUrl);
-      localStorage.setItem(`today-look-${user.id}`, JSON.stringify({ url: publicUrl, date: new Date().toDateString() }));
-      // Update streak
-      const today = new Date().toDateString();
-      const yesterday = new Date(Date.now() - 86400000).toDateString();
-      let newStreak = 1;
-      try {
-        const raw = localStorage.getItem(`streak-${user.id}`);
-        if (raw) {
-          const { count, lastDate } = JSON.parse(raw);
-          if (lastDate === yesterday) newStreak = count + 1;
-          else if (lastDate === today) newStreak = count;
-        }
-      } catch {}
       setStreak(newStreak);
-      localStorage.setItem(`streak-${user.id}`, JSON.stringify({ count: newStreak, lastDate: today }));
+      localStorage.setItem(`today-look-${user.id}`, JSON.stringify({ url: publicUrl, date: new Date().toDateString() }));
+      localStorage.setItem(`streak-${user.id}`, JSON.stringify({ count: newStreak, lastDate: new Date().toDateString() }));
       toast.success("Looking great! 🔥");
     } catch {
       toast.error("Failed to upload photo");
