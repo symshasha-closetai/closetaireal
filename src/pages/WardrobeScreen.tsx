@@ -423,6 +423,16 @@ const WardrobeScreen = () => {
       const job = bgQueueRef.current[0];
       try {
         const { base64, blob: compressedBlob } = await compressImage(job.file);
+        // Upload original photo once per job to get original_image_url
+        let originalImageUrl: string | null = null;
+        try {
+          const origPath = `${user.id}/original-${Date.now()}.jpg`;
+          const { error: origUpErr } = await supabase.storage.from("wardrobe").upload(origPath, compressedBlob, { contentType: "image/jpeg" });
+          if (!origUpErr) {
+            const { data: { publicUrl } } = supabase.storage.from("wardrobe").getPublicUrl(origPath);
+            originalImageUrl = publicUrl;
+          }
+        } catch {}
         for (let i = 0; i < job.selected.length; i++) {
           const idx = job.selected[i];
           const item = job.items[idx];
@@ -442,8 +452,8 @@ const WardrobeScreen = () => {
           }
           const { data: insertData, error: insertError } = await supabase
             .from("wardrobe")
-            .insert({ user_id: user.id, image_url: imageUrl, type: item.type, name: item.name, color: item.color, material: item.material, quality: item.quality, brand: item.brand } as any)
-            .select("id, image_url, type, color, material, name, brand, quality, season, style")
+            .insert({ user_id: user.id, image_url: imageUrl, original_image_url: originalImageUrl, type: item.type, name: item.name, color: item.color, material: item.material, quality: item.quality, brand: item.brand } as any)
+            .select("id, image_url, original_image_url, type, color, material, name, brand, quality, season, style")
             .single();
           if (insertError || !insertData) {
             console.error("Insert failed:", insertError);
