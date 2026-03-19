@@ -233,6 +233,10 @@ const WardrobeScreen = () => {
   const [hiddenDefaults, setHiddenDefaults] = useState<string[]>(() => {
     try { return JSON.parse(localStorage.getItem(HIDDEN_DEFAULTS_KEY) || "[]"); } catch { return []; }
   });
+  const CATEGORY_ORDER_KEY = "closetai-category-order";
+  const [categoryOrder, setCategoryOrder] = useState<string[]>(() => {
+    try { return JSON.parse(localStorage.getItem("closetai-category-order") || "[]"); } catch { return []; }
+  });
 
   // Filters
   const [showFilters, setShowFilters] = useState(false);
