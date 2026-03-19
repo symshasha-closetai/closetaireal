@@ -360,8 +360,13 @@ const WardrobeScreen = () => {
     } else if (defaultCategories.includes(activeCategory)) {
       result = result.filter(i => i.type === activeCategory);
     } else {
-      // Custom category — match by custom_category tag OR by type name match
-      result = result.filter(i => i.custom_category === activeCategory || i.type.toLowerCase() === activeCategory.toLowerCase());
+      // Custom category — match by custom_category tag, type name, or item name (with plural normalization)
+      const norm = normalizeCategory(activeCategory);
+      result = result.filter(i =>
+        i.custom_category === activeCategory ||
+        normalizeCategory(i.type) === norm ||
+        (i.name && normalizeCategory(i.name).includes(norm))
+      );
     }
     if (filterColor) result = result.filter(i => i.color?.toLowerCase() === filterColor.toLowerCase());
     if (filterQuality) result = result.filter(i => i.quality?.toLowerCase() === filterQuality.toLowerCase());
