@@ -587,7 +587,7 @@ const WardrobeScreen = () => {
   };
 
   return (
-    <div className="min-h-screen pb-24 px-5 pt-14">
+    <div className="min-h-screen pb-24 px-5 pt-4">
       <div className="max-w-lg mx-auto space-y-5">
         <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }}><AppHeader /></motion.div>
 
