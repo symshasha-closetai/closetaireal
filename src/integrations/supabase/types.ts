@@ -14,6 +14,33 @@ export type Database = {
   }
   public: {
     Tables: {
+      daily_looks: {
+        Row: {
+          created_at: string
+          id: string
+          image_url: string
+          look_date: string
+          streak: number
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          image_url: string
+          look_date?: string
+          streak?: number
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          image_url?: string
+          look_date?: string
+          streak?: number
+          user_id?: string
+        }
+        Relationships: []
+      }
       daily_ratings: {
         Row: {
           ai_feedback: string | null
