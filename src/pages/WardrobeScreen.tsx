@@ -385,8 +385,15 @@ const WardrobeScreen = () => {
 
   const filtered = useMemo(() => {
     let result = items;
+    const accessoryTypes = ["eyewear", "glasses", "sunglasses", "shades", "watch", "wristwatch", "jewelry", "jewellery", "bracelet", "necklace", "ring", "earring", "purse", "bag", "handbag", "belt", "hat", "scarf", "chain", "pendant", "anklet", "bangle", "accessories"];
     if (activeCategory === "All") {
       // show all
+    } else if (activeCategory === "Accessories") {
+      result = result.filter(i => {
+        const t = (i.type || "").toLowerCase();
+        const n = (i.name || "").toLowerCase();
+        return accessoryTypes.some(a => t.includes(a) || n.includes(a)) || i.type === "Accessories";
+      });
     } else if (defaultCategories.includes(activeCategory)) {
       result = result.filter(i => i.type === activeCategory);
     } else {
