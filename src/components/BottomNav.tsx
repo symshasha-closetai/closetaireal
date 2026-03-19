@@ -1,4 +1,4 @@
-import { Home, Camera, ShirtIcon, MessageCircle } from "lucide-react";
+import { Home, Camera, ShirtIcon, User } from "lucide-react";
 import { useLocation, useNavigate } from "react-router-dom";
 import { motion } from "framer-motion";
 import { useState, useEffect } from "react";
@@ -9,7 +9,7 @@ const tabs = [
   { path: "/", icon: Home, label: "Home" },
   { path: "/camera", icon: Camera, label: "Camera" },
   { path: "/wardrobe", icon: ShirtIcon, label: "Wardrobe" },
-  { path: "/messages", icon: MessageCircle, label: "Messages" },
+  { path: "/profile", icon: User, label: "Profile" },
 ];
 
 const BottomNav = () => {
@@ -17,7 +17,6 @@ const BottomNav = () => {
   const navigate = useNavigate();
   const { user } = useAuth();
   const [myRank, setMyRank] = useState<number | null>(null);
-  const [unreadCount, setUnreadCount] = useState(0);
 
   useEffect(() => {
     if (!user) return;
@@ -58,11 +57,14 @@ const BottomNav = () => {
     fetchRank();
   }, [user?.id, location.pathname]);
 
+  // Hide on chat screens
+  if (location.pathname.startsWith("/chat") || location.pathname === "/messages") return null;
+
   return (
     <nav className="fixed bottom-0 left-0 right-0 z-50 bg-card/90 backdrop-blur-xl rounded-t-3xl safe-bottom">
       <div className="flex items-center justify-around px-6 pt-3 pb-2 max-w-lg mx-auto">
         {tabs.map((tab) => {
-          const isActive = location.pathname === tab.path || (tab.path === "/messages" && location.pathname.startsWith("/chat"));
+          const isActive = location.pathname === tab.path;
           const showRank = tab.path === "/camera" && myRank !== null;
           return (
             <button
