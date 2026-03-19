@@ -551,6 +551,8 @@ const CameraScreen = () => {
             </motion.div>
           )}
         </AnimatePresence>
+        </>
+        )}
       </div>
     </div>
   );
