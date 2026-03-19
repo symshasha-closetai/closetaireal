@@ -38,14 +38,25 @@ serve(async (req) => {
     const isJewelry = ["jewelry", "jewellery", "necklace", "bracelet", "ring", "watch", "earring", "chain", "pendant", "anklet"].some(k => combined.includes(k));
     const genderWord = gender === "female" ? "female" : gender === "male" ? "male" : "";
 
+    const isWatch = ["watch", "wristwatch"].some(k => combined.includes(k));
+    const isBracelet = ["bracelet", "anklet", "bangle"].some(k => combined.includes(k));
+    const isNecklace = ["necklace", "chain", "pendant"].some(k => combined.includes(k));
+    const isEarring = ["earring"].some(k => combined.includes(k));
+
     let prompt: string;
     const colorEmphasis = itemColor ? ` The color MUST be exactly ${itemColor} — this is critical, do not use any other color.` : "";
     if (isEyewear) {
-      prompt = `A photorealistic close-up portrait of a ${genderWord} person wearing ${itemName || itemType}${colorDesc}${materialDesc}. Focus on the face showing the eyewear clearly, pure white background, professional fashion photography, well-lit with soft even lighting, minimal shadows.${colorEmphasis}`;
+      prompt = `A photorealistic close-up of a mannequin face wearing ${itemName || itemType}${colorDesc}${materialDesc}. Show only the face and eyewear, no body. Pure white background, professional fashion photography, well-lit with soft even lighting, minimal shadows.${colorEmphasis}`;
+    } else if (isWatch || isBracelet) {
+      prompt = `A photorealistic close-up of a mannequin wrist wearing ${itemName || itemType}${colorDesc}${materialDesc}. Show only the wrist area. Pure white background, professional fashion photography, well-lit with soft even lighting, minimal shadows.${colorEmphasis}`;
+    } else if (isNecklace) {
+      prompt = `A photorealistic close-up of a mannequin neck wearing ${itemName || itemType}${colorDesc}${materialDesc}. Show only the neck and upper chest area. Pure white background, professional fashion photography, well-lit with soft even lighting, minimal shadows.${colorEmphasis}`;
+    } else if (isEarring) {
+      prompt = `A photorealistic close-up of a mannequin ear wearing ${itemName || itemType}${colorDesc}${materialDesc}. Show only the ear area. Pure white background, professional fashion photography, well-lit with soft even lighting, minimal shadows.${colorEmphasis}`;
     } else if (isJewelry) {
-      prompt = `A photorealistic close-up photograph of a ${genderWord} person wearing ${itemName || itemType}${colorDesc}${materialDesc}. Focus on the jewelry piece, pure white background, professional fashion photography, well-lit with soft even lighting, minimal shadows.${colorEmphasis}`;
+      prompt = `A photorealistic close-up of a mannequin wearing ${itemName || itemType}${colorDesc}${materialDesc}. Focus on the jewelry piece on the appropriate body part. Pure white background, professional fashion photography, well-lit with soft even lighting, minimal shadows.${colorEmphasis}`;
     } else {
-      prompt = `A photorealistic flat-lay product photograph of exactly one ${itemColor ? itemColor + " " : ""}${itemName || itemType}${materialDesc} neatly arranged on a pure white background. No mannequin, no person, no dress form. Clean e-commerce style product shot, natural fabric texture, well-lit with soft even lighting, minimal shadows, top-down view.${colorEmphasis}`;
+      prompt = `A photorealistic product photograph of exactly one ${itemColor ? itemColor + " " : ""}${itemName || itemType}${materialDesc} with background removed, floating on a pure white background. No mannequin, no person, no dress form. Clean e-commerce style, natural fabric texture, well-lit with soft even lighting, minimal shadows.${colorEmphasis}`;
     }
 
     const createRes = await fetch("https://api.replicate.com/v1/models/black-forest-labs/flux-schnell/predictions", {

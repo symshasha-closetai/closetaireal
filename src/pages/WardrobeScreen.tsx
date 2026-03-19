@@ -1,6 +1,7 @@
 import React, { useState, useRef, useEffect, useCallback, useMemo } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { Plus, Trash2, X, Loader2, Camera, Upload, Sparkles, Pencil, Save, Share2, CheckSquare, Square, SlidersHorizontal, RefreshCw, Pin, GripVertical } from "lucide-react";
+import { Plus, Trash2, X, Loader2, Camera, Upload, Sparkles, Pencil, Save, Share2, CheckSquare, Square, SlidersHorizontal, RefreshCw, Pin, GripVertical, ChevronDown, RotateCcw } from "lucide-react";
+import { Collapsible, CollapsibleTrigger, CollapsibleContent } from "@/components/ui/collapsible";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { toast } from "sonner";
@@ -88,24 +89,22 @@ const WardrobeCardContent = ({ item, selectMode, selectedItems, failedImages, re
           </div>
         )}
         {dragHandle}
+        {/* Left column: pin, refresh */}
         <button onClick={(e) => { e.stopPropagation(); togglePin(item); }}
-          className={`absolute top-2 ${item.pinned ? 'left-11' : 'left-2'} w-7 h-7 rounded-full bg-foreground/50 text-primary-foreground flex items-center justify-center opacity-100 sm:opacity-0 sm:group-hover:opacity-100 transition-opacity backdrop-blur-sm`}>
+          className={`absolute ${item.pinned ? 'top-11' : 'top-2'} left-2 w-7 h-7 rounded-full bg-foreground/50 text-primary-foreground flex items-center justify-center opacity-100 sm:opacity-0 sm:group-hover:opacity-100 transition-opacity backdrop-blur-sm`}>
           <Pin size={13} className={item.pinned ? "fill-current" : ""} />
         </button>
-        <button onClick={(e) => { e.stopPropagation(); openEdit(item); }}
-          className={`absolute top-2 ${item.pinned ? 'left-20' : 'left-11'} w-7 h-7 rounded-full bg-foreground/50 text-primary-foreground flex items-center justify-center opacity-100 sm:opacity-0 sm:group-hover:opacity-100 transition-opacity backdrop-blur-sm`}>
-          <Pencil size={13} />
-        </button>
-        <button onClick={(e) => { e.stopPropagation(); shareItem(item); }}
-          className="absolute top-11 left-2 w-7 h-7 rounded-full bg-foreground/50 text-primary-foreground flex items-center justify-center opacity-100 sm:opacity-0 sm:group-hover:opacity-100 transition-opacity backdrop-blur-sm">
-          <Share2 size={13} />
-        </button>
         <button onClick={(e) => { e.stopPropagation(); retryImageGeneration(item); }} disabled={retryingImages.has(item.id)}
-          className="absolute top-2 right-11 w-7 h-7 rounded-full bg-foreground/50 text-primary-foreground flex items-center justify-center opacity-100 sm:opacity-0 sm:group-hover:opacity-100 transition-opacity backdrop-blur-sm disabled:opacity-50">
+          className={`absolute ${item.pinned ? 'top-20' : 'top-11'} left-2 w-7 h-7 rounded-full bg-foreground/50 text-primary-foreground flex items-center justify-center opacity-100 sm:opacity-0 sm:group-hover:opacity-100 transition-opacity backdrop-blur-sm disabled:opacity-50`}>
           {retryingImages.has(item.id) ? <Loader2 size={13} className="animate-spin" /> : <RefreshCw size={13} />}
         </button>
-        <button onClick={(e) => { e.stopPropagation(); deleteItem(item.id); }}
+        {/* Right column: edit, delete */}
+        <button onClick={(e) => { e.stopPropagation(); openEdit(item); }}
           className="absolute top-2 right-2 w-7 h-7 rounded-full bg-foreground/50 text-primary-foreground flex items-center justify-center opacity-100 sm:opacity-0 sm:group-hover:opacity-100 transition-opacity backdrop-blur-sm">
+          <Pencil size={13} />
+        </button>
+        <button onClick={(e) => { e.stopPropagation(); deleteItem(item.id); }}
+          className="absolute top-11 right-2 w-7 h-7 rounded-full bg-foreground/50 text-primary-foreground flex items-center justify-center opacity-100 sm:opacity-0 sm:group-hover:opacity-100 transition-opacity backdrop-blur-sm">
           <Trash2 size={13} />
         </button>
       </>
@@ -199,7 +198,7 @@ const WardrobeScreen = () => {
     setFilterColor(""); setFilterQuality(""); setFilterMaterial(""); setFilterBrand(""); setFilterSeason("");
   };
 
-  useEffect(() => { if (user) fetchItems(); }, [user]);
+  useEffect(() => { if (user) { fetchItems(); fetchDeletedItems(); } }, [user]);
 
   const fetchItems = async () => {
     if (!user) return;
@@ -207,6 +206,7 @@ const WardrobeScreen = () => {
       .from("wardrobe")
       .select("id, image_url, type, color, material, name, brand, quality, season, style, pinned, pin_order")
       .eq("user_id", user.id)
+      .is("deleted_at", null)
       .order("created_at", { ascending: false });
     if (error) toast.error("Failed to load wardrobe");
     else {
@@ -287,10 +287,49 @@ const WardrobeScreen = () => {
     return result;
   }, [items, activeCategory, filterColor, filterQuality, filterMaterial, filterBrand, filterSeason]);
 
+  // Soft-delete + deleted items state
+  const [deletedItems, setDeletedItems] = useState<ClothingItem[]>([]);
+
+  const fetchDeletedItems = async () => {
+    if (!user) return;
+    const { data } = await supabase
+      .from("wardrobe")
+      .select("id, image_url, type, color, material, name, brand, quality, season, style, pinned, pin_order")
+      .eq("user_id", user.id)
+      .not("deleted_at", "is", null)
+      .order("created_at", { ascending: false });
+    if (data) setDeletedItems(data as any[]);
+  };
+
   const deleteItem = async (id: string) => {
-    const { error } = await supabase.from("wardrobe").delete().eq("id", id);
+    const { error } = await supabase.from("wardrobe").update({ deleted_at: new Date().toISOString() } as any).eq("id", id);
     if (error) toast.error("Failed to delete item");
-    else { setItems((prev) => prev.filter((i) => i.id !== id)); toast.success("Item removed"); }
+    else {
+      const item = items.find(i => i.id === id);
+      setItems((prev) => prev.filter((i) => i.id !== id));
+      if (item) setDeletedItems(prev => [item, ...prev]);
+      toast.success("Item moved to history");
+    }
+  };
+
+  const restoreItem = async (id: string) => {
+    const { error } = await supabase.from("wardrobe").update({ deleted_at: null } as any).eq("id", id);
+    if (error) toast.error("Failed to restore item");
+    else {
+      const item = deletedItems.find(i => i.id === id);
+      setDeletedItems(prev => prev.filter(i => i.id !== id));
+      if (item) setItems(prev => [item, ...prev]);
+      toast.success("Item restored!");
+    }
+  };
+
+  const permanentlyDeleteItem = async (id: string) => {
+    const { error } = await supabase.from("wardrobe").delete().eq("id", id);
+    if (error) toast.error("Failed to delete permanently");
+    else {
+      setDeletedItems(prev => prev.filter(i => i.id !== id));
+      toast.success("Permanently deleted");
+    }
   };
 
   const fileToBase64 = (file: File): Promise<string> =>
@@ -587,7 +626,7 @@ const WardrobeScreen = () => {
   };
 
   return (
-    <div className="min-h-screen pb-24 px-5 pt-14">
+    <div className="min-h-screen pb-24 px-5 pt-4">
       <div className="max-w-lg mx-auto space-y-5">
         <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }}><AppHeader /></motion.div>
 
@@ -790,6 +829,41 @@ const WardrobeScreen = () => {
               </motion.div>
             </SortableContext>
           </DndContext>
+        )}
+
+        {/* Deleted Items History */}
+        {deletedItems.length > 0 && (
+          <Collapsible className="mt-4">
+            <CollapsibleTrigger className="flex items-center gap-2 text-xs uppercase tracking-[0.15em] text-foreground/50 hover:text-foreground/70 transition-colors w-full">
+              <Trash2 size={12} /> Deleted Items ({deletedItems.length})
+              <ChevronDown size={12} className="transition-transform [[data-state=open]>&]:rotate-180 ml-auto" />
+            </CollapsibleTrigger>
+            <CollapsibleContent className="mt-3">
+              <div className="grid grid-cols-2 gap-3">
+                {deletedItems.map((item) => (
+                  <div key={item.id} className="glass-card overflow-hidden group relative opacity-70">
+                    <div className="aspect-square bg-secondary">
+                      <img src={item.image_url} alt={item.name || item.type} className="w-full h-full object-cover" loading="lazy" />
+                    </div>
+                    <div className="p-3">
+                      <p className="text-sm font-medium text-foreground truncate">{item.name || "Unnamed"}</p>
+                      <p className="text-[11px] text-muted-foreground">{item.color || item.type}</p>
+                    </div>
+                    <div className="absolute top-2 right-2 flex flex-col gap-1.5">
+                      <button onClick={() => restoreItem(item.id)}
+                        className="w-7 h-7 rounded-full bg-primary text-primary-foreground flex items-center justify-center backdrop-blur-sm" title="Re-add">
+                        <RotateCcw size={13} />
+                      </button>
+                      <button onClick={() => permanentlyDeleteItem(item.id)}
+                        className="w-7 h-7 rounded-full bg-destructive text-destructive-foreground flex items-center justify-center backdrop-blur-sm" title="Delete permanently">
+                        <Trash2 size={13} />
+                      </button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </CollapsibleContent>
+          </Collapsible>
         )}
 
         {/* Hidden file inputs */}

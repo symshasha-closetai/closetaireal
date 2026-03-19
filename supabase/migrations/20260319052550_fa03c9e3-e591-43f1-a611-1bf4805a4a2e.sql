@@ -1,0 +1,1 @@
+ALTER TABLE public.wardrobe ADD COLUMN deleted_at timestamptz DEFAULT NULL;

@@ -627,26 +627,6 @@ const HomeScreen = () => {
             )}
           </div>
 
-          {/* Pinned Items */}
-          {allWardrobeItems.filter(i => i.pinned).length > 0 && (
-            <div className="glass-card-elevated p-4">
-              <div className="flex items-center gap-2 mb-3">
-                <Pin size={14} className="text-primary" />
-                <h2 className="text-sm font-semibold text-foreground">Pinned Items</h2>
-              </div>
-              <div className="flex gap-2 overflow-x-auto pb-1 no-scrollbar">
-                {allWardrobeItems.filter(i => i.pinned).map((wi) => (
-                  <div key={wi.id} className="relative flex-shrink-0 w-20 aspect-square rounded-xl overflow-hidden bg-secondary">
-                    <img src={wi.image_url} alt={wi.name || wi.type} className="w-full h-full object-cover" loading="lazy" />
-                    <div className="absolute bottom-0 left-0 right-0 bg-foreground/40 backdrop-blur-sm px-1 py-0.5">
-                      <p className="text-[7px] text-primary-foreground truncate text-center font-medium">{wi.name || wi.type}</p>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </div>
-          )}
-
           {/* My Wardrobe Card */}
           <div className="glass-card-elevated p-4">
             <div className="flex items-center justify-between mb-3">
