@@ -1,6 +1,7 @@
 import { useState, useRef, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { ArrowLeft, Camera, LogOut, User, Save, Trash2, AlertTriangle, Loader2, Lock, X, Share2, Download, RefreshCw, RotateCcw, Clock, Sparkles, Shield, Send, MessageSquare, Bookmark, Heart, ShoppingBag, Palette, Briefcase, Leaf, Droplet, Shirt, Smile, Sun } from "lucide-react";
+import { ArrowLeft, Camera, LogOut, User, Save, Trash2, AlertTriangle, Loader2, Lock, X, Share2, Download, RefreshCw, RotateCcw, Clock, Sparkles, Shield, Send, MessageSquare, Bookmark, Heart, ShoppingBag, Palette, Briefcase, Leaf, Droplet, Shirt, Smile, Sun, ChevronDown } from "lucide-react";
+import { Collapsible, CollapsibleTrigger, CollapsibleContent } from "@/components/ui/collapsible";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "../hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";

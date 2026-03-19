@@ -197,7 +197,7 @@ const WardrobeScreen = () => {
     setFilterColor(""); setFilterQuality(""); setFilterMaterial(""); setFilterBrand(""); setFilterSeason("");
   };
 
-  useEffect(() => { if (user) fetchItems(); }, [user]);
+  useEffect(() => { if (user) { fetchItems(); fetchDeletedItems(); } }, [user]);
 
   const fetchItems = async () => {
     if (!user) return;
