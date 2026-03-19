@@ -268,9 +268,13 @@ const WardrobeScreen = () => {
 
   // All category names (default + custom), filtered and ordered
   const allCategories = useMemo(() => {
+    const defaultVisible = defaultCategories.filter(c => c !== "All" && !hiddenDefaults.includes(c));
+    const defaultNormalized = defaultVisible.map(c => c.toLowerCase());
     const visible = [
-      ...defaultCategories.filter(c => c !== "All" && !hiddenDefaults.includes(c)),
-      ...customCategories.map(c => c.name)
+      ...defaultVisible,
+      ...customCategories
+        .filter(c => !defaultNormalized.includes(c.name.toLowerCase()))
+        .map(c => c.name)
     ];
     // Sort by saved order, put unknowns at end
     const ordered = [...visible].sort((a, b) => {
