@@ -58,6 +58,20 @@ function normalizeCategory(s: string): string {
 
 const HIDDEN_DEFAULTS_KEY = "closetai-hidden-defaults";
 
+// Sortable category row for reordering in manage modal
+const SortableCategoryRow = ({ id, children }: { id: string; children: React.ReactNode }) => {
+  const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id });
+  const style = { transform: CSS.Transform.toString(transform), transition, opacity: isDragging ? 0.5 : 1, zIndex: isDragging ? 10 : 0 };
+  return (
+    <div ref={setNodeRef} style={style} className="flex items-center gap-2 rounded-xl bg-secondary px-3 py-2">
+      <button {...attributes} {...listeners} className="cursor-grab active:cursor-grabbing text-muted-foreground touch-none">
+        <GripVertical size={14} />
+      </button>
+      <div className="flex-1 flex items-center justify-between">{children}</div>
+    </div>
+  );
+};
+
 // --- AI Analysis Cache helpers ---
 const ANALYSIS_CACHE_KEY = "closetai-analysis-cache";
 
