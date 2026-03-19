@@ -185,6 +185,10 @@ const WardrobeScreen = () => {
   const [retryingImages, setRetryingImages] = useState<Set<string>>(new Set());
   const [regeneratingEdit, setRegeneratingEdit] = useState(false);
 
+  // Detail view state
+  const [detailItem, setDetailItem] = useState<ClothingItem | null>(null);
+  const [showOriginal, setShowOriginal] = useState(false);
+
   // Filters
   const [showFilters, setShowFilters] = useState(false);
   const [filterColor, setFilterColor] = useState("");
