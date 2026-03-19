@@ -18,8 +18,8 @@ const occasions = [
   { label: "Formal", icon: Briefcase, color: "bg-gray-100 text-gray-600" },
   { label: "Date Night", icon: Heart, color: "bg-red-100 text-red-600" },
   { label: "College", icon: GraduationCap, color: "bg-green-100 text-green-600" },
-  { label: "Cultural", icon: Flame, color: "bg-amber-100 text-amber-600" },
-  { label: "Festival", icon: Sparkles, color: "bg-purple-100 text-purple-600" },
+  { label: "Cultural", icon: Landmark, color: "bg-amber-100 text-amber-600" },
+  { label: "Festival", icon: PartyPopper, color: "bg-purple-100 text-purple-600" },
   { label: "Creative", icon: Palette, color: "bg-teal-100 text-teal-600" },
 ];
 
