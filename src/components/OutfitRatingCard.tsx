@@ -87,6 +87,9 @@ const OutfitRatingCard = ({ image, imageBase64, result, wardrobeItems = [],
   const [extracting, setExtracting] = useState(false);
   const [savingExtracted, setSavingExtracted] = useState(false);
 
+  // Send to friend
+  const [showSendPicker, setShowSendPicker] = useState(false);
+
   const fetchSuggestions = async (type: "wardrobe" | "shopping") => {
     const setLoading = type === "wardrobe" ? setLoadingWardrobe : setLoadingShopping;
     const setData = type === "wardrobe" ? onWardrobeSuggestionsChange : onShoppingSuggestionsChange;
