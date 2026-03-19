@@ -810,7 +810,7 @@ const WardrobeScreen = () => {
           </div>
           <button onClick={() => setShowCategoryManager(true)}
             className="flex-shrink-0 w-9 h-9 rounded-full flex items-center justify-center bg-secondary text-secondary-foreground transition-all">
-            <FolderPlus size={16} />
+            <Pencil size={16} />
           </button>
           <button onClick={() => setShowFilters(!showFilters)}
             className={`relative flex-shrink-0 w-9 h-9 rounded-full flex items-center justify-center transition-all ${showFilters ? "bg-primary text-primary-foreground" : "bg-secondary text-secondary-foreground"}`}>
