@@ -1,6 +1,7 @@
 import { useState, useRef, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { Camera, Upload, X, Sparkles, Check, Loader2 } from "lucide-react";
+import LeaderboardTab from "../components/LeaderboardTab";
 import AppHeader from "../components/AppHeader";
 import OutfitRatingCard from "../components/OutfitRatingCard";
 import { supabase } from "@/integrations/supabase/client";
@@ -430,10 +431,29 @@ const CameraScreen = () => {
       wardrobeSuggestions: null, shoppingSuggestions: null, detectedItems: null, suggestionImages: {}, savedSuggestions: [] });
   };
 
+  const [activeTab, setActiveTab] = useState<"drip" | "leaderboard">("drip");
+
   return (
     <div className="min-h-screen pb-24 px-5 pt-4">
       <div className="max-w-lg mx-auto space-y-6">
         <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }}><AppHeader /></motion.div>
+
+        {/* Tab switcher */}
+        <div className="flex gap-1 p-1 rounded-xl bg-secondary/50">
+          <button onClick={() => setActiveTab("drip")}
+            className={`flex-1 py-2 rounded-lg text-sm font-medium transition-all ${activeTab === "drip" ? "bg-card shadow-sm text-foreground" : "text-muted-foreground"}`}>
+            Drip Check
+          </button>
+          <button onClick={() => setActiveTab("leaderboard")}
+            className={`flex-1 py-2 rounded-lg text-sm font-medium transition-all ${activeTab === "leaderboard" ? "bg-card shadow-sm text-foreground" : "text-muted-foreground"}`}>
+            Leaderboard
+          </button>
+        </div>
+
+        {activeTab === "leaderboard" ? (
+          <LeaderboardTab />
+        ) : (
+        <>
         <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.05 }}>
           <h1 className="font-display text-2xl font-semibold text-foreground">Drip Check</h1>
           <p className="text-sm text-muted-foreground mt-1">Upload or capture your outfit for styling insights</p>
@@ -532,6 +552,8 @@ const CameraScreen = () => {
             </motion.div>
           )}
         </AnimatePresence>
+        </>
+        )}
       </div>
     </div>
   );

@@ -70,6 +70,8 @@ const ProfileScreen = () => {
   const navigate = useNavigate();
   const fileRef = useRef<HTMLInputElement>(null);
   const [name, setName] = useState(profile?.name || "");
+  const [username, setUsername] = useState("");
+  const [usernameError, setUsernameError] = useState<string | null>(null);
   const [avatarPreview, setAvatarPreview] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
   const [uploading, setUploading] = useState(false);
@@ -298,12 +300,27 @@ const ProfileScreen = () => {
     setUploading(false);
   };
 
+  // Fetch username on mount
+  useEffect(() => {
+    if (!user) return;
+    supabase.from("profiles").select("username").eq("user_id", user.id).maybeSingle().then(({ data }: any) => {
+      if (data?.username) setUsername(data.username);
+    });
+  }, [user?.id]);
+
   const handleSavePersonal = async () => {
     if (!user) return;
+    if (usernameError) { toast.error("Fix username errors first"); return; }
     setSaving(true);
-    const { error } = await supabase.from("profiles").update({ name }).eq("user_id", user.id);
+    const updateData: any = { name };
+    if (username && username.length >= 3) updateData.username = username;
+    const { error } = await supabase.from("profiles").update(updateData).eq("user_id", user.id);
     await supabase.from("style_profiles").upsert({ user_id: user.id, gender: styleActions.gender || null }, { onConflict: "user_id" });
-    if (error) { toast.error("Failed to update profile"); }
+    if (error) {
+      if (error.message?.includes("Username")) toast.error(error.message);
+      else if (error.message?.includes("duplicate") || error.message?.includes("unique")) toast.error("Username already taken");
+      else toast.error("Failed to update profile");
+    }
     else { await refreshProfile(); toast.success("Profile updated!", { duration: 2000 }); }
     setSaving(false);
   };
@@ -638,6 +655,31 @@ const ProfileScreen = () => {
                 <input type="text" value={name} onChange={(e) => setName(e.target.value)}
                   className="w-full px-4 py-3 rounded-xl bg-secondary border border-border text-foreground text-sm placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-accent/30 transition-all"
                   placeholder="Your name" />
+              </div>
+
+              <div className="space-y-2">
+                <label className="text-xs font-medium text-foreground">Username</label>
+                <div className="relative">
+                  <span className="absolute left-4 top-1/2 -translate-y-1/2 text-muted-foreground text-sm">@</span>
+                  <input type="text" value={username} onChange={(e) => {
+                    const val = e.target.value.replace(/[^a-zA-Z0-9_.]/g, "").slice(0, 30);
+                    setUsername(val);
+                    setUsernameError(null);
+                  }}
+                    onBlur={async () => {
+                      if (!username || username.length < 3) {
+                        if (username.length > 0) setUsernameError("At least 3 characters");
+                        return;
+                      }
+                      const { data } = await supabase.from("profiles").select("user_id").eq("username", username).neq("user_id", user?.id || "").limit(1) as any;
+                      if (data && data.length > 0) setUsernameError("Username taken");
+                      else setUsernameError(null);
+                    }}
+                    className="w-full pl-8 pr-4 py-3 rounded-xl bg-secondary border border-border text-foreground text-sm placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-accent/30 transition-all"
+                    placeholder="your.username" />
+                </div>
+                {usernameError && <p className="text-[10px] text-destructive">{usernameError}</p>}
+                <p className="text-[10px] text-muted-foreground">Letters, numbers, underscores, and dots only</p>
               </div>
 
               <GenderPicker gender={styleActions.gender} setGender={styleActions.setGender} />
