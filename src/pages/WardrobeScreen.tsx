@@ -14,6 +14,7 @@ import { CSS } from "@dnd-kit/utilities";
 type ClothingItem = {
   id: string;
   image_url: string;
+  original_image_url: string | null;
   type: string;
   color: string | null;
   material: string | null;
