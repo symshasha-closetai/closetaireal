@@ -1180,44 +1180,49 @@ const WardrobeScreen = () => {
                   <button onClick={() => setShowCategoryManager(false)}><X size={20} className="text-muted-foreground" /></button>
                 </div>
 
-                {/* Default categories (deletable/hideable) */}
-                <div>
-                  <p className="text-[10px] uppercase tracking-wider text-muted-foreground mb-2">Default</p>
-                  <div className="space-y-2">
-                    {defaultCategories.filter(c => c !== "All").map(cat => (
-                      <div key={cat} className="flex items-center justify-between rounded-xl bg-secondary px-3 py-2">
-                        <span className={`text-sm ${hiddenDefaults.includes(cat) ? 'text-muted-foreground line-through' : 'text-foreground'}`}>{cat}</span>
-                        <button onClick={() => {
-                          const next = hiddenDefaults.includes(cat)
-                            ? hiddenDefaults.filter(c => c !== cat)
-                            : [...hiddenDefaults, cat];
-                          setHiddenDefaults(next);
-                          localStorage.setItem(HIDDEN_DEFAULTS_KEY, JSON.stringify(next));
-                          if (activeCategory === cat) setActiveCategory("All");
-                        }} className="w-7 h-7 rounded-full flex items-center justify-center text-destructive hover:bg-destructive/10 transition-colors">
-                          {hiddenDefaults.includes(cat) ? <RotateCcw size={14} /> : <Trash2 size={14} />}
-                        </button>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-
-                {/* Custom categories */}
-                {customCategories.length > 0 && (
-                  <div>
-                    <p className="text-[10px] uppercase tracking-wider text-muted-foreground mb-2">Custom</p>
+                {/* Draggable category list */}
+                <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={(event) => {
+                  const { active, over } = event;
+                  if (!over || active.id === over.id) return;
+                  const catList = allCategories.filter(c => c !== "All");
+                  const oldIdx = catList.indexOf(active.id as string);
+                  const newIdx = catList.indexOf(over.id as string);
+                  if (oldIdx === -1 || newIdx === -1) return;
+                  const reordered = arrayMove(catList, oldIdx, newIdx);
+                  setCategoryOrder(reordered);
+                  localStorage.setItem("closetai-category-order", JSON.stringify(reordered));
+                }}>
+                  <SortableContext items={allCategories.filter(c => c !== "All")} strategy={rectSortingStrategy}>
                     <div className="space-y-2">
-                      {customCategories.map(cat => (
-                        <div key={cat.id} className="flex items-center justify-between rounded-xl bg-secondary px-3 py-2">
-                          <span className="text-sm text-foreground">{cat.name}</span>
-                          <button onClick={() => deleteCustomCategory(cat)} className="w-7 h-7 rounded-full flex items-center justify-center text-destructive hover:bg-destructive/10 transition-colors">
-                            <Trash2 size={14} />
-                          </button>
-                        </div>
-                      ))}
+                      {allCategories.filter(c => c !== "All").map(cat => {
+                        const isDefault = defaultCategories.includes(cat);
+                        const isHidden = hiddenDefaults.includes(cat);
+                        const customCat = customCategories.find(c => c.name === cat);
+                        return (
+                          <SortableCategoryRow key={cat} id={cat}>
+                            <span className={`text-sm ${isHidden ? 'text-muted-foreground line-through' : 'text-foreground'}`}>{cat}</span>
+                            {isDefault ? (
+                              <button onClick={() => {
+                                const next = isHidden
+                                  ? hiddenDefaults.filter(c => c !== cat)
+                                  : [...hiddenDefaults, cat];
+                                setHiddenDefaults(next);
+                                localStorage.setItem(HIDDEN_DEFAULTS_KEY, JSON.stringify(next));
+                                if (activeCategory === cat) setActiveCategory("All");
+                              }} className="w-7 h-7 rounded-full flex items-center justify-center text-destructive hover:bg-destructive/10 transition-colors">
+                                {isHidden ? <RotateCcw size={14} /> : <Trash2 size={14} />}
+                              </button>
+                            ) : customCat ? (
+                              <button onClick={() => deleteCustomCategory(customCat)} className="w-7 h-7 rounded-full flex items-center justify-center text-destructive hover:bg-destructive/10 transition-colors">
+                                <Trash2 size={14} />
+                              </button>
+                            ) : null}
+                          </SortableCategoryRow>
+                        );
+                      })}
                     </div>
-                  </div>
-                )}
+                  </SortableContext>
+                </DndContext>
 
                 {/* Add new */}
                 <div className="flex gap-2">
