@@ -51,6 +51,13 @@ type WardrobeCategory = {
 
 const defaultCategories = ["All", "Tops", "Bottoms", "Shoes", "Accessories"];
 
+// Normalize for singular/plural matching: "shirts" → "shirt", "hoodies" → "hoodie", "pants" → "pant"
+function normalizeCategory(s: string): string {
+  return s.toLowerCase().replace(/ies$/, 'y').replace(/es$/, 'e').replace(/s$/, '');
+}
+
+const HIDDEN_DEFAULTS_KEY = "closetai-hidden-defaults";
+
 // --- AI Analysis Cache helpers ---
 const ANALYSIS_CACHE_KEY = "closetai-analysis-cache";
 
