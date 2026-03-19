@@ -133,7 +133,7 @@ const SortableWardrobeCard = (props: CardContentProps & { index: number; toggleS
     <motion.div ref={setNodeRef} style={style} layout initial={{ opacity: 0, scale: 0.9 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0, scale: 0.9 }}
       transition={{ duration: 0.3, delay: index * 0.05 }}
       className={`glass-card overflow-hidden group relative ${selectMode && props.selectedItems.has(item.id) ? "ring-2 ring-primary" : ""}`}
-      onClick={() => selectMode && toggleSelectItem(item.id)}>
+      onClick={() => selectMode ? toggleSelectItem(item.id) : rest.onItemClick?.(item)}>
       <WardrobeCardContent item={item} selectMode={selectMode} {...rest}
         dragHandle={
           !selectMode ? (
