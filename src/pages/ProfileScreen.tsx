@@ -736,6 +736,119 @@ const ProfileScreen = () => {
 
           {/* === HISTORY TAB === */}
           <TabsContent value="history" className="mt-4">
+            {/* Fullscreen "View All" overlay */}
+            <AnimatePresence>
+              {viewAllSection && (
+                <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+                  className="fixed inset-0 z-[55] bg-background overflow-y-auto">
+                  <div className="max-w-lg mx-auto px-5 py-6 pb-32">
+                    <div className="flex items-center gap-3 mb-5">
+                      <button onClick={() => setViewAllSection(null)} className="w-9 h-9 rounded-full bg-secondary flex items-center justify-center">
+                        <ChevronLeft size={18} className="text-foreground" />
+                      </button>
+                      <h2 className="font-display text-lg font-semibold text-foreground">
+                        {viewAllSection === "drip" ? "Drip History" : viewAllSection === "outfits" ? "Saved Outfits" : viewAllSection === "suggestions" ? "Saved Suggestions" : "Deleted Items"}
+                      </h2>
+                    </div>
+
+                    {viewAllSection === "drip" && (
+                      <div className="grid grid-cols-3 gap-2">
+                        {dripHistory.map((entry) => (
+                          <motion.div key={entry.id} initial={{ opacity: 0, scale: 0.9 }} animate={{ opacity: 1, scale: 1 }}
+                            className="relative group cursor-pointer" onClick={() => { setViewAllSection(null); setViewingCard(entry); }}>
+                            <div className="aspect-square rounded-xl overflow-hidden bg-secondary">
+                              <img src={entry.image} alt="Drip" className="w-full h-full object-cover" />
+                            </div>
+                            <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/70 to-transparent rounded-b-xl p-2">
+                              <p className="text-[10px] font-medium text-white">{entry.score}/10</p>
+                              <p className="text-[8px] text-white/50 truncate">{entry.killerTag}</p>
+                            </div>
+                            <button onClick={(e) => { e.stopPropagation(); deleteDripEntry(entry.id, entry.dbId); }}
+                              className="absolute top-1 right-1 w-5 h-5 rounded-full bg-black/50 flex items-center justify-center opacity-70">
+                              <X size={10} className="text-white" />
+                            </button>
+                          </motion.div>
+                        ))}
+                      </div>
+                    )}
+
+                    {viewAllSection === "outfits" && (
+                      <div className="space-y-2">
+                        {savedOutfits.map((o: any) => (
+                          <div key={o.id} className="glass-card p-3 flex items-center gap-3 cursor-pointer active:scale-[0.98] transition-transform" onClick={() => { setViewAllSection(null); setViewingSavedOutfit(o); }}>
+                            <div className="w-10 h-10 rounded-lg bg-secondary flex items-center justify-center flex-shrink-0">
+                              <Bookmark size={16} className="text-primary" />
+                            </div>
+                            <div className="flex-1 min-w-0">
+                              <div className="flex items-center justify-between">
+                                <span className="text-sm font-medium text-foreground truncate">{o.name}</span>
+                                <span className="text-[10px] text-muted-foreground">{o.score?.toFixed(1)}/10</span>
+                              </div>
+                              <p className="text-[11px] text-muted-foreground truncate mt-0.5">{o.occasion} • {new Date(o.created_at).toLocaleDateString()}</p>
+                            </div>
+                            <button onClick={(e) => { e.stopPropagation(); deleteSavedOutfit(o.id); }}
+                              className="flex-shrink-0 w-6 h-6 rounded-full bg-destructive/10 flex items-center justify-center">
+                              <X size={10} className="text-destructive" />
+                            </button>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+
+                    {viewAllSection === "suggestions" && (
+                      <div className="space-y-2">
+                        {savedSuggestions.map((s: any) => (
+                          <div key={s.id} className="glass-card p-3 flex items-center gap-3">
+                            {s.image ? (
+                              <img src={s.image} alt={s.item_name} className="w-10 h-10 rounded-lg object-cover flex-shrink-0" />
+                            ) : (
+                              <div className="w-10 h-10 rounded-lg bg-secondary flex items-center justify-center flex-shrink-0">
+                                {s.suggestion_type === "shopping" ? <ShoppingBag size={16} className="text-primary" /> : <Heart size={16} className="text-primary" />}
+                              </div>
+                            )}
+                            <div className="flex-1 min-w-0">
+                              <span className="text-sm font-medium text-foreground truncate block">{s.item_name}</span>
+                              <p className="text-[11px] text-muted-foreground truncate mt-0.5">{s.reason}</p>
+                            </div>
+                            <button onClick={() => deleteSavedSuggestion(s.id)}
+                              className="flex-shrink-0 w-6 h-6 rounded-full bg-destructive/10 flex items-center justify-center">
+                              <X size={10} className="text-destructive" />
+                            </button>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+
+                    {viewAllSection === "deleted" && (
+                      <div className="grid grid-cols-2 gap-3">
+                        {deletedItems.map((item: any) => (
+                          <div key={item.id} className="glass-card overflow-hidden group relative opacity-80">
+                            <div className="aspect-square bg-secondary">
+                              <img src={item.image_url} alt={item.name || item.type} className="w-full h-full object-cover" loading="lazy" />
+                            </div>
+                            <div className="p-3">
+                              <p className="text-sm font-medium text-foreground truncate">{item.name || "Unnamed"}</p>
+                              <p className="text-[11px] text-muted-foreground">{item.color || item.type}</p>
+                            </div>
+                            <div className="absolute top-2 right-2 flex flex-col gap-1.5">
+                              <button onClick={() => restoreItem(item.id)}
+                                className="w-7 h-7 rounded-full bg-primary text-primary-foreground flex items-center justify-center backdrop-blur-sm" title="Re-add">
+                                <RotateCcw size={13} />
+                              </button>
+                              <button onClick={() => permanentlyDeleteItem(item.id)}
+                                className="w-7 h-7 rounded-full bg-destructive text-destructive-foreground flex items-center justify-center backdrop-blur-sm" title="Delete permanently">
+                                <Trash2 size={13} />
+                              </button>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                </motion.div>
+              )}
+            </AnimatePresence>
+
             <div
               ref={pullRef}
               className="space-y-5"
@@ -751,9 +864,7 @@ const ProfileScreen = () => {
                 if (delta > 0) setPullDistance(Math.min(delta * 0.5, 100));
               }}
               onTouchEnd={() => {
-                if (pullDistance >= PULL_THRESHOLD && !isRefreshing) {
-                  handlePullRefresh();
-                }
+                if (pullDistance >= PULL_THRESHOLD && !isRefreshing) handlePullRefresh();
                 setPullDistance(0);
                 setIsPulling(false);
               }}
@@ -771,142 +882,189 @@ const ProfileScreen = () => {
                 </div>
               </div>
 
-            {/* Drip History */}
-            <Collapsible>
-              <div className="flex items-center justify-between">
-                <CollapsibleTrigger className="flex items-center gap-2 text-xs uppercase tracking-[0.15em] text-foreground/50 hover:text-foreground/70 transition-colors">
-                  <Sparkles size={12} /> Drip History ({dripHistory.length})
-                  <ChevronDown size={12} className="transition-transform [[data-state=open]>&]:rotate-180" />
-                </CollapsibleTrigger>
-                {dripHistory.length > 0 && (
-                  <button onClick={async () => {
-                    if (user) await supabase.from("drip_history" as any).delete().eq("user_id", user.id);
-                    setDripHistory([]);
-                    toast.success("Drip history cleared", { duration: 2000 });
-                  }}
-                    className="text-[10px] text-destructive/60 font-medium">Clear All</button>
+              {historyLoading && (
+                <div className="flex items-center justify-center py-8">
+                  <Loader2 size={20} className="animate-spin text-muted-foreground" />
+                </div>
+              )}
+
+              {/* Drip History Section */}
+              <div className="space-y-2">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <Sparkles size={14} className="text-primary" />
+                    <span className="text-sm font-semibold text-foreground">Drip History</span>
+                    {dripHistory.length > 0 && (
+                      <span className="text-[10px] bg-primary/10 text-primary rounded-full px-2 py-0.5 font-medium">{dripHistory.length}</span>
+                    )}
+                  </div>
+                  <div className="flex items-center gap-2">
+                    {dripHistory.length > 0 && (
+                      <button onClick={async () => {
+                        if (user) await supabase.from("drip_history" as any).delete().eq("user_id", user.id);
+                        setDripHistory([]);
+                        toast.success("Drip history cleared", { duration: 2000 });
+                      }} className="text-[10px] text-destructive/60 font-medium">Clear</button>
+                    )}
+                    {dripHistory.length > 4 && (
+                      <button onClick={() => setViewAllSection("drip")} className="flex items-center gap-1 text-[10px] text-primary font-medium">
+                        View all <ChevronRight size={12} />
+                      </button>
+                    )}
+                  </div>
+                </div>
+                {dripHistory.length === 0 ? (
+                  <p className="text-xs text-muted-foreground py-3 text-center">No drip checks yet</p>
+                ) : (
+                  <div className="flex gap-2.5 overflow-x-auto pb-2 -mx-1 px-1 scrollbar-hide">
+                    {dripHistory.slice(0, 6).map((entry) => (
+                      <motion.div key={entry.id} initial={{ opacity: 0, scale: 0.9 }} animate={{ opacity: 1, scale: 1 }}
+                        className="relative flex-shrink-0 w-24 cursor-pointer" onClick={() => setViewingCard(entry)}>
+                        <div className="aspect-square rounded-xl overflow-hidden bg-secondary">
+                          <img src={entry.image} alt="Drip" className="w-full h-full object-cover" />
+                        </div>
+                        <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/70 to-transparent rounded-b-xl p-1.5">
+                          <p className="text-[10px] font-medium text-white">{entry.score}/10</p>
+                        </div>
+                      </motion.div>
+                    ))}
+                  </div>
                 )}
               </div>
-              <CollapsibleContent className="mt-3">
-                {dripHistory.length === 0 ? (
-                  <p className="text-xs text-muted-foreground py-4 text-center">No drip checks saved yet. Rate an outfit to see it here!</p>
+
+              {/* Saved Outfits Section */}
+              <div className="space-y-2">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <Bookmark size={14} className="text-primary" />
+                    <span className="text-sm font-semibold text-foreground">Saved Outfits</span>
+                    {savedOutfits.length > 0 && (
+                      <span className="text-[10px] bg-primary/10 text-primary rounded-full px-2 py-0.5 font-medium">{savedOutfits.length}</span>
+                    )}
+                  </div>
+                  <div className="flex items-center gap-2">
+                    {savedOutfits.length > 0 && (
+                      <button onClick={async () => {
+                        await Promise.all(savedOutfits.map(o => supabase.from("saved_outfits" as any).delete().eq("id", o.id)));
+                        setSavedOutfits([]); localStorage.setItem("saved-outfits", "[]");
+                        toast.success("All saved outfits cleared", { duration: 2000 });
+                      }} className="text-[10px] text-destructive/60 font-medium">Clear</button>
+                    )}
+                    {savedOutfits.length > 4 && (
+                      <button onClick={() => setViewAllSection("outfits")} className="flex items-center gap-1 text-[10px] text-primary font-medium">
+                        View all <ChevronRight size={12} />
+                      </button>
+                    )}
+                  </div>
+                </div>
+                {savedOutfits.length === 0 ? (
+                  <p className="text-xs text-muted-foreground py-3 text-center">No saved outfits yet</p>
                 ) : (
-                  <div className="grid grid-cols-3 gap-2">
-                    {dripHistory.map((entry) => (
-                      <motion.div key={entry.id} initial={{ opacity: 0, scale: 0.9 }} animate={{ opacity: 1, scale: 1 }}
-                        className="relative group cursor-pointer" onClick={() => setViewingCard(entry)}>
-                        <div className="aspect-[3/4] rounded-xl overflow-hidden bg-secondary">
-                          <img src={entry.image} alt="Drip card" className="w-full h-full object-cover" />
+                  <div className="flex gap-2.5 overflow-x-auto pb-2 -mx-1 px-1 scrollbar-hide">
+                    {savedOutfits.slice(0, 6).map((o: any) => (
+                      <motion.div key={o.id} initial={{ opacity: 0, scale: 0.9 }} animate={{ opacity: 1, scale: 1 }}
+                        className="relative flex-shrink-0 w-24 cursor-pointer" onClick={() => setViewingSavedOutfit(o)}>
+                        <div className="aspect-square rounded-xl overflow-hidden bg-secondary flex items-center justify-center">
+                          <Bookmark size={24} className="text-primary/30" />
                         </div>
-                        <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/70 to-transparent rounded-b-xl p-2">
-                          <p className="text-[10px] font-medium text-white">{entry.score}/10</p>
-                          <p className="text-[8px] text-white/50 truncate">{entry.killerTag}</p>
+                        <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/70 to-transparent rounded-b-xl p-1.5">
+                          <p className="text-[10px] font-medium text-white truncate">{o.name}</p>
+                          <p className="text-[8px] text-white/60">{o.score?.toFixed(1)}/10</p>
                         </div>
-                        <button onClick={(e) => { e.stopPropagation(); deleteDripEntry(entry.id, entry.dbId); }}
-                          className="absolute top-1 right-1 w-5 h-5 rounded-full bg-black/50 flex items-center justify-center opacity-70 group-hover:opacity-100 transition-opacity">
-                          <X size={10} className="text-white" />
+                      </motion.div>
+                    ))}
+                  </div>
+                )}
+              </div>
+
+              {/* Saved Suggestions Section */}
+              <div className="space-y-2">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <Heart size={14} className="text-primary" />
+                    <span className="text-sm font-semibold text-foreground">Saved Suggestions</span>
+                    {savedSuggestions.length > 0 && (
+                      <span className="text-[10px] bg-primary/10 text-primary rounded-full px-2 py-0.5 font-medium">{savedSuggestions.length}</span>
+                    )}
+                  </div>
+                  <div className="flex items-center gap-2">
+                    {savedSuggestions.length > 0 && (
+                      <button onClick={async () => {
+                        await Promise.all(savedSuggestions.map(s => supabase.from("saved_suggestions" as any).delete().eq("id", s.id)));
+                        setSavedSuggestions([]); localStorage.setItem("saved-suggestions", "[]");
+                        toast.success("All saved suggestions cleared", { duration: 2000 });
+                      }} className="text-[10px] text-destructive/60 font-medium">Clear</button>
+                    )}
+                    {savedSuggestions.length > 4 && (
+                      <button onClick={() => setViewAllSection("suggestions")} className="flex items-center gap-1 text-[10px] text-primary font-medium">
+                        View all <ChevronRight size={12} />
+                      </button>
+                    )}
+                  </div>
+                </div>
+                {savedSuggestions.length === 0 ? (
+                  <p className="text-xs text-muted-foreground py-3 text-center">No saved suggestions yet</p>
+                ) : (
+                  <div className="flex gap-2.5 overflow-x-auto pb-2 -mx-1 px-1 scrollbar-hide">
+                    {savedSuggestions.slice(0, 6).map((s: any) => (
+                      <motion.div key={s.id} initial={{ opacity: 0, scale: 0.9 }} animate={{ opacity: 1, scale: 1 }}
+                        className="relative flex-shrink-0 w-24">
+                        <div className="aspect-square rounded-xl overflow-hidden bg-secondary">
+                          {s.image ? (
+                            <img src={s.image} alt={s.item_name} className="w-full h-full object-cover" />
+                          ) : (
+                            <div className="w-full h-full flex items-center justify-center">
+                              {s.suggestion_type === "shopping" ? <ShoppingBag size={24} className="text-primary/30" /> : <Heart size={24} className="text-primary/30" />}
+                            </div>
+                          )}
+                        </div>
+                        <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/70 to-transparent rounded-b-xl p-1.5">
+                          <p className="text-[10px] font-medium text-white truncate">{s.item_name}</p>
+                        </div>
+                      </motion.div>
+                    ))}
+                  </div>
+                )}
+              </div>
+
+              {/* Deleted Items Section */}
+              <div className="space-y-2">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <Trash2 size={14} className="text-muted-foreground" />
+                    <span className="text-sm font-semibold text-foreground">Deleted Items</span>
+                    {deletedItems.length > 0 && (
+                      <span className="text-[10px] bg-destructive/10 text-destructive rounded-full px-2 py-0.5 font-medium">{deletedItems.length}</span>
+                    )}
+                  </div>
+                  {deletedItems.length > 4 && (
+                    <button onClick={() => setViewAllSection("deleted")} className="flex items-center gap-1 text-[10px] text-primary font-medium">
+                      View all <ChevronRight size={12} />
+                    </button>
+                  )}
+                </div>
+                {deletedItems.length === 0 ? (
+                  <p className="text-xs text-muted-foreground py-3 text-center">No deleted items</p>
+                ) : (
+                  <div className="flex gap-2.5 overflow-x-auto pb-2 -mx-1 px-1 scrollbar-hide">
+                    {deletedItems.slice(0, 6).map((item: any) => (
+                      <motion.div key={item.id} initial={{ opacity: 0, scale: 0.9 }} animate={{ opacity: 1, scale: 1 }}
+                        className="relative flex-shrink-0 w-24 opacity-80">
+                        <div className="aspect-square rounded-xl overflow-hidden bg-secondary">
+                          <img src={item.image_url} alt={item.name || item.type} className="w-full h-full object-cover" loading="lazy" />
+                        </div>
+                        <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/70 to-transparent rounded-b-xl p-1.5">
+                          <p className="text-[10px] font-medium text-white truncate">{item.name || item.type}</p>
+                        </div>
+                        <button onClick={() => restoreItem(item.id)}
+                          className="absolute top-1 right-1 w-6 h-6 rounded-full bg-primary text-primary-foreground flex items-center justify-center" title="Re-add">
+                          <RotateCcw size={11} />
                         </button>
                       </motion.div>
                     ))}
                   </div>
                 )}
-              </CollapsibleContent>
-            </Collapsible>
-
-            {/* Saved Outfits */}
-            <Collapsible>
-              <div className="flex items-center justify-between">
-                <CollapsibleTrigger className="flex items-center gap-2 text-xs uppercase tracking-[0.15em] text-foreground/50 hover:text-foreground/70 transition-colors">
-                  <Bookmark size={12} /> Saved Outfits ({savedOutfits.length})
-                  <ChevronDown size={12} className="transition-transform [[data-state=open]>&]:rotate-180" />
-                </CollapsibleTrigger>
-                {savedOutfits.length > 0 && (
-                  <button onClick={async () => {
-                    await Promise.all(savedOutfits.map(o => supabase.from("saved_outfits" as any).delete().eq("id", o.id)));
-                    setSavedOutfits([]); localStorage.setItem("saved-outfits", "[]");
-                    toast.success("All saved outfits cleared", { duration: 2000 });
-                  }} className="text-[10px] text-destructive/60 font-medium">Clear All</button>
-                )}
               </div>
-              <CollapsibleContent className="mt-3">
-                {savedOutfits.length === 0 ? (
-                  <p className="text-xs text-muted-foreground py-4 text-center">No saved outfits yet. Save an outfit from Style Me!</p>
-                ) : (
-                  <div className="space-y-2">
-                    {savedOutfits.map((o: any) => (
-                      <div key={o.id} className="glass-card p-3 flex items-center gap-3 cursor-pointer active:scale-[0.98] transition-transform" onClick={() => setViewingSavedOutfit(o)}>
-                        <div className="w-10 h-10 rounded-lg bg-secondary flex items-center justify-center flex-shrink-0">
-                          <Bookmark size={16} className="text-primary" />
-                        </div>
-                        <div className="flex-1 min-w-0">
-                          <div className="flex items-center justify-between">
-                            <span className="text-sm font-medium text-foreground truncate">{o.name}</span>
-                            <span className="text-[10px] text-muted-foreground">{o.score?.toFixed(1)}/10</span>
-                          </div>
-                          <p className="text-[11px] text-muted-foreground truncate mt-0.5">{o.occasion} • {new Date(o.created_at).toLocaleDateString()}</p>
-                        </div>
-                        <button onClick={(e) => { e.stopPropagation(); deleteSavedOutfit(o.id); }}
-                          className="flex-shrink-0 w-6 h-6 rounded-full bg-destructive/10 flex items-center justify-center">
-                          <X size={10} className="text-destructive" />
-                        </button>
-                      </div>
-                    ))}
-                  </div>
-                )}
-              </CollapsibleContent>
-            </Collapsible>
-
-            {/* Saved Suggestions */}
-            <Collapsible>
-              <div className="flex items-center justify-between">
-                <CollapsibleTrigger className="flex items-center gap-2 text-xs uppercase tracking-[0.15em] text-foreground/50 hover:text-foreground/70 transition-colors">
-                  <Heart size={12} /> Saved Suggestions ({savedSuggestions.length})
-                  <ChevronDown size={12} className="transition-transform [[data-state=open]>&]:rotate-180" />
-                </CollapsibleTrigger>
-                {savedSuggestions.length > 0 && (
-                  <button onClick={async () => {
-                    await Promise.all(savedSuggestions.map(s => supabase.from("saved_suggestions" as any).delete().eq("id", s.id)));
-                    setSavedSuggestions([]); localStorage.setItem("saved-suggestions", "[]");
-                    toast.success("All saved suggestions cleared", { duration: 2000 });
-                  }} className="text-[10px] text-destructive/60 font-medium">Clear All</button>
-                )}
-              </div>
-              <CollapsibleContent className="mt-3">
-                {savedSuggestions.length === 0 ? (
-                  <p className="text-xs text-muted-foreground py-4 text-center">No saved suggestions yet. Favourite items from Drip Check!</p>
-                ) : (
-                  <div className="space-y-2">
-                    {savedSuggestions.map((s: any) => (
-                      <div key={s.id} className="glass-card p-3 flex items-center gap-3">
-                        {s.image ? (
-                          <img src={s.image} alt={s.item_name} className="w-10 h-10 rounded-lg object-cover flex-shrink-0" />
-                        ) : (
-                          <div className="w-10 h-10 rounded-lg bg-secondary flex items-center justify-center flex-shrink-0">
-                            {s.suggestion_type === "shopping" ? (
-                              <ShoppingBag size={16} className="text-primary" />
-                            ) : (
-                              <Heart size={16} className="text-primary" />
-                            )}
-                          </div>
-                        )}
-                        <div className="flex-1 min-w-0">
-                          <div className="flex items-center justify-between">
-                            <span className="text-sm font-medium text-foreground truncate">{s.item_name}</span>
-                            <span className="text-[9px] uppercase tracking-wider text-muted-foreground/60 border border-border/30 rounded-full px-2 py-0.5">{s.category}</span>
-                          </div>
-                          <p className="text-[11px] text-muted-foreground truncate mt-0.5">{s.reason}</p>
-                          {s.drip_score && <p className="text-[10px] text-primary mt-0.5">Drip: {s.drip_score}/10</p>}
-                        </div>
-                        <button onClick={() => deleteSavedSuggestion(s.id)}
-                          className="flex-shrink-0 w-6 h-6 rounded-full bg-destructive/10 flex items-center justify-center">
-                          <X size={10} className="text-destructive" />
-                        </button>
-                      </div>
-                    ))}
-                  </div>
-                )}
-              </CollapsibleContent>
-            </Collapsible>
             </div>
           </TabsContent>
         </Tabs>
