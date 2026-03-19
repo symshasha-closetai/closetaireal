@@ -14,7 +14,7 @@ import { compressImage } from "@/lib/imageCompression";
 
 const occasions = [
   { label: "Casual", icon: Shirt, color: "bg-blue-100 text-blue-600" },
-  { label: "Party", icon: PartyPopper, color: "bg-pink-100 text-pink-600" },
+  { label: "Party", icon: Music, color: "bg-pink-100 text-pink-600" },
   { label: "Formal", icon: Briefcase, color: "bg-gray-100 text-gray-600" },
   { label: "Date Night", icon: Heart, color: "bg-red-100 text-red-600" },
   { label: "College", icon: GraduationCap, color: "bg-green-100 text-green-600" },
