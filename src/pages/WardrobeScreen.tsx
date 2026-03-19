@@ -205,6 +205,7 @@ const WardrobeScreen = () => {
       .from("wardrobe")
       .select("id, image_url, type, color, material, name, brand, quality, season, style, pinned, pin_order")
       .eq("user_id", user.id)
+      .is("deleted_at", null)
       .order("created_at", { ascending: false });
     if (error) toast.error("Failed to load wardrobe");
     else {
