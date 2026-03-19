@@ -110,6 +110,7 @@ type CardContentProps = {
   togglePin: (item: ClothingItem) => void;
   openEdit: (item: ClothingItem) => void;
   shareItem: (item: ClothingItem) => void;
+  sendToFriend: (item: ClothingItem) => void;
   deleteItem: (id: string) => void;
   onItemClick?: (item: ClothingItem) => void;
   dragHandle?: React.ReactNode;
