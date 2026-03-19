@@ -116,7 +116,7 @@ type CardContentProps = {
   dragHandle?: React.ReactNode;
 };
 
-const WardrobeCardContent = ({ item, selectMode, selectedItems, failedImages, retryingImages, setFailedImages, retryImageGeneration, togglePin, openEdit, shareItem, deleteItem, dragHandle }: CardContentProps) => (
+const WardrobeCardContent = ({ item, selectMode, selectedItems, failedImages, retryingImages, setFailedImages, retryImageGeneration, togglePin, openEdit, shareItem, sendToFriend, deleteItem, dragHandle }: CardContentProps) => (
   <>
     <div className="aspect-square overflow-hidden rounded-t-2xl relative">
       <img src={item.image_url} alt={item.name || "Clothing"} className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105" loading="lazy"
