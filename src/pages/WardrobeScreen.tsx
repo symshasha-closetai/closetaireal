@@ -1004,7 +1004,7 @@ const WardrobeScreen = () => {
                         <WardrobeCardContent item={item} selectMode={selectMode} selectedItems={selectedItems}
                           failedImages={failedImages} retryingImages={retryingImages} setFailedImages={setFailedImages}
                           retryImageGeneration={retryImageGeneration} togglePin={togglePin} openEdit={openEdit}
-                          shareItem={shareItem} deleteItem={deleteItem} onItemClick={setDetailItem} />
+                          shareItem={shareItem} sendToFriend={setSendFriendItem} deleteItem={deleteItem} onItemClick={setDetailItem} />
                       </motion.div>
                     )
                   ))}
