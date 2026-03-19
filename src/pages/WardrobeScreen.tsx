@@ -831,6 +831,41 @@ const WardrobeScreen = () => {
           </DndContext>
         )}
 
+        {/* Deleted Items History */}
+        {deletedItems.length > 0 && (
+          <Collapsible className="mt-4">
+            <CollapsibleTrigger className="flex items-center gap-2 text-xs uppercase tracking-[0.15em] text-foreground/50 hover:text-foreground/70 transition-colors w-full">
+              <Trash2 size={12} /> Deleted Items ({deletedItems.length})
+              <ChevronDown size={12} className="transition-transform [[data-state=open]>&]:rotate-180 ml-auto" />
+            </CollapsibleTrigger>
+            <CollapsibleContent className="mt-3">
+              <div className="grid grid-cols-2 gap-3">
+                {deletedItems.map((item) => (
+                  <div key={item.id} className="glass-card overflow-hidden group relative opacity-70">
+                    <div className="aspect-square bg-secondary">
+                      <img src={item.image_url} alt={item.name || item.type} className="w-full h-full object-cover" loading="lazy" />
+                    </div>
+                    <div className="p-3">
+                      <p className="text-sm font-medium text-foreground truncate">{item.name || "Unnamed"}</p>
+                      <p className="text-[11px] text-muted-foreground">{item.color || item.type}</p>
+                    </div>
+                    <div className="absolute top-2 right-2 flex flex-col gap-1.5">
+                      <button onClick={() => restoreItem(item.id)}
+                        className="w-7 h-7 rounded-full bg-primary text-primary-foreground flex items-center justify-center backdrop-blur-sm" title="Re-add">
+                        <RotateCcw size={13} />
+                      </button>
+                      <button onClick={() => permanentlyDeleteItem(item.id)}
+                        className="w-7 h-7 rounded-full bg-destructive text-destructive-foreground flex items-center justify-center backdrop-blur-sm" title="Delete permanently">
+                        <Trash2 size={13} />
+                      </button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </CollapsibleContent>
+          </Collapsible>
+        )}
+
         {/* Hidden file inputs */}
         <input type="file" accept="image/*" ref={fileRef} className="hidden" onChange={handleFileSelected} onClick={(e) => { (e.target as HTMLInputElement).value = ""; }} />
         <input type="file" accept="image/*" capture="environment" ref={cameraRef} className="hidden" onChange={handleFileSelected} onClick={(e) => { (e.target as HTMLInputElement).value = ""; }} />
