@@ -14,6 +14,8 @@ const WardrobeScreen = lazy(() => import("./pages/WardrobeScreen"));
 import AuthScreen from "./pages/AuthScreen";
 const ProfileScreen = lazy(() => import("./pages/ProfileScreen"));
 const OnboardingScreen = lazy(() => import("./pages/OnboardingScreen"));
+const MessagesScreen = lazy(() => import("./pages/MessagesScreen"));
+const ChatScreen = lazy(() => import("./pages/ChatScreen"));
 const NotFound = lazy(() => import("./pages/NotFound"));
 import BottomNav from "./components/BottomNav";
 
