@@ -995,7 +995,7 @@ const WardrobeScreen = () => {
                       <SortableWardrobeCard key={item.id} item={item} index={i} selectMode={selectMode} selectedItems={selectedItems}
                         toggleSelectItem={toggleSelectItem} failedImages={failedImages} retryingImages={retryingImages}
                         setFailedImages={setFailedImages} retryImageGeneration={retryImageGeneration}
-                        togglePin={togglePin} openEdit={openEdit} shareItem={shareItem} deleteItem={deleteItem} onItemClick={setDetailItem} />
+                        togglePin={togglePin} openEdit={openEdit} shareItem={shareItem} sendToFriend={setSendFriendItem} deleteItem={deleteItem} onItemClick={setDetailItem} />
                     ) : (
                       <motion.div key={item.id} layout initial={{ opacity: 0, scale: 0.9 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0, scale: 0.9 }}
                         transition={{ duration: 0.3, delay: i * 0.05 }}
