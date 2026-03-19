@@ -356,6 +356,7 @@ export type Database = {
           brand: string | null
           color: string | null
           created_at: string
+          deleted_at: string | null
           id: string
           image_url: string
           material: string | null
@@ -372,6 +373,7 @@ export type Database = {
           brand?: string | null
           color?: string | null
           created_at?: string
+          deleted_at?: string | null
           id?: string
           image_url: string
           material?: string | null
@@ -388,6 +390,7 @@ export type Database = {
           brand?: string | null
           color?: string | null
           created_at?: string
+          deleted_at?: string | null
           id?: string
           image_url?: string
           material?: string | null
