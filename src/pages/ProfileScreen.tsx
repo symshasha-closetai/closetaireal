@@ -70,6 +70,8 @@ const ProfileScreen = () => {
   const navigate = useNavigate();
   const fileRef = useRef<HTMLInputElement>(null);
   const [name, setName] = useState(profile?.name || "");
+  const [username, setUsername] = useState("");
+  const [usernameError, setUsernameError] = useState<string | null>(null);
   const [avatarPreview, setAvatarPreview] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
   const [uploading, setUploading] = useState(false);
