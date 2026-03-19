@@ -285,10 +285,49 @@ const WardrobeScreen = () => {
     return result;
   }, [items, activeCategory, filterColor, filterQuality, filterMaterial, filterBrand, filterSeason]);
 
+  // Soft-delete + deleted items state
+  const [deletedItems, setDeletedItems] = useState<ClothingItem[]>([]);
+
+  const fetchDeletedItems = async () => {
+    if (!user) return;
+    const { data } = await supabase
+      .from("wardrobe")
+      .select("id, image_url, type, color, material, name, brand, quality, season, style, pinned, pin_order")
+      .eq("user_id", user.id)
+      .not("deleted_at", "is", null)
+      .order("created_at", { ascending: false });
+    if (data) setDeletedItems(data as any[]);
+  };
+
   const deleteItem = async (id: string) => {
-    const { error } = await supabase.from("wardrobe").delete().eq("id", id);
+    const { error } = await supabase.from("wardrobe").update({ deleted_at: new Date().toISOString() } as any).eq("id", id);
     if (error) toast.error("Failed to delete item");
-    else { setItems((prev) => prev.filter((i) => i.id !== id)); toast.success("Item removed"); }
+    else {
+      const item = items.find(i => i.id === id);
+      setItems((prev) => prev.filter((i) => i.id !== id));
+      if (item) setDeletedItems(prev => [item, ...prev]);
+      toast.success("Item moved to history");
+    }
+  };
+
+  const restoreItem = async (id: string) => {
+    const { error } = await supabase.from("wardrobe").update({ deleted_at: null } as any).eq("id", id);
+    if (error) toast.error("Failed to restore item");
+    else {
+      const item = deletedItems.find(i => i.id === id);
+      setDeletedItems(prev => prev.filter(i => i.id !== id));
+      if (item) setItems(prev => [item, ...prev]);
+      toast.success("Item restored!");
+    }
+  };
+
+  const permanentlyDeleteItem = async (id: string) => {
+    const { error } = await supabase.from("wardrobe").delete().eq("id", id);
+    if (error) toast.error("Failed to delete permanently");
+    else {
+      setDeletedItems(prev => prev.filter(i => i.id !== id));
+      toast.success("Permanently deleted");
+    }
   };
 
   const fileToBase64 = (file: File): Promise<string> =>
