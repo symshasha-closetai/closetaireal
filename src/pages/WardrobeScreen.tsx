@@ -248,8 +248,11 @@ const WardrobeScreen = () => {
     setFilterColor(""); setFilterQuality(""); setFilterMaterial(""); setFilterBrand(""); setFilterSeason("");
   };
 
-  // All category names (default + custom)
-  const allCategories = useMemo(() => [...defaultCategories, ...customCategories.map(c => c.name)], [customCategories]);
+  // All category names (default + custom), filtering out hidden defaults
+  const allCategories = useMemo(() => [
+    ...defaultCategories.filter(c => c === "All" || !hiddenDefaults.includes(c)),
+    ...customCategories.map(c => c.name)
+  ], [customCategories, hiddenDefaults]);
 
   useEffect(() => { if (user) { fetchItems(); fetchDeletedItems(); fetchCustomCategories(); } }, [user]);
 
