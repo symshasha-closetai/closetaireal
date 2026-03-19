@@ -190,6 +190,35 @@ const ProfileScreen = () => {
     }
   }, [profile?.name]);
 
+  const fetchDeletedItems = async () => {
+    if (!user) return;
+    const { data } = await supabase
+      .from("wardrobe")
+      .select("id, image_url, type, color, material, name, brand, quality, season, style, pinned, pin_order")
+      .eq("user_id", user.id)
+      .not("deleted_at", "is", null)
+      .order("created_at", { ascending: false });
+    if (data) setDeletedItems(data as any[]);
+  };
+
+  const restoreItem = async (id: string) => {
+    const { error } = await supabase.from("wardrobe").update({ deleted_at: null } as any).eq("id", id);
+    if (error) toast.error("Failed to restore item");
+    else {
+      setDeletedItems(prev => prev.filter(i => i.id !== id));
+      toast.success("Item restored to wardrobe!");
+    }
+  };
+
+  const permanentlyDeleteItem = async (id: string) => {
+    const { error } = await supabase.from("wardrobe").delete().eq("id", id);
+    if (error) toast.error("Failed to delete permanently");
+    else {
+      setDeletedItems(prev => prev.filter(i => i.id !== id));
+      toast.success("Permanently deleted");
+    }
+  };
+
   const syncHistoryFromDb = async () => {
     if (!user) return;
     setHistoryLoading(true);
@@ -205,7 +234,6 @@ const ProfileScreen = () => {
 
     // Map drip_history DB rows to DripHistoryEntry
     const dripRows = (dripRes.data || []) as any[];
-    // Filter out entries older than 14 days
     const fourteenDaysAgo = Date.now() - 14 * 24 * 60 * 60 * 1000;
     const dripEntries: DripHistoryEntry[] = dripRows
       .filter((r: any) => new Date(r.created_at).getTime() > fourteenDaysAgo)
@@ -220,6 +248,9 @@ const ProfileScreen = () => {
         fullResult: r.full_result || null,
       }));
     setDripHistory(dripEntries);
+
+    // Also fetch deleted wardrobe items
+    await fetchDeletedItems();
 
     try {
       localStorage.setItem("saved-outfits", JSON.stringify(outfits));
