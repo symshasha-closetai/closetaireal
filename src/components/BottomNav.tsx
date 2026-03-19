@@ -1,4 +1,4 @@
-import { Home, Camera, ShirtIcon, Sparkles, User } from "lucide-react";
+import { Home, Camera, ShirtIcon, MessageCircle } from "lucide-react";
 import { useLocation, useNavigate } from "react-router-dom";
 import { motion } from "framer-motion";
 import { useState, useEffect } from "react";
@@ -9,7 +9,7 @@ const tabs = [
   { path: "/", icon: Home, label: "Home" },
   { path: "/camera", icon: Camera, label: "Camera" },
   { path: "/wardrobe", icon: ShirtIcon, label: "Wardrobe" },
-  { path: "/profile", icon: User, label: "Profile" },
+  { path: "/messages", icon: MessageCircle, label: "Messages" },
 ];
 
 const BottomNav = () => {
@@ -17,16 +17,17 @@ const BottomNav = () => {
   const navigate = useNavigate();
   const { user } = useAuth();
   const [myRank, setMyRank] = useState<number | null>(null);
+  const [unreadCount, setUnreadCount] = useState(0);
 
   useEffect(() => {
     if (!user) return;
     const fetchRank = async () => {
       const today = new Date().toISOString().split("T")[0];
-      // Get friends
       const { data: friendData } = await supabase
         .from("friends" as any)
         .select("user_id, friend_id")
-        .or(`user_id.eq.${user.id},friend_id.eq.${user.id}`) as any;
+        .or(`user_id.eq.${user.id},friend_id.eq.${user.id}`)
+        .eq("status", "accepted") as any;
       const friendIds = (friendData || []).map((f: any) =>
         f.user_id === user.id ? f.friend_id : f.user_id
       );
@@ -61,7 +62,7 @@ const BottomNav = () => {
     <nav className="fixed bottom-0 left-0 right-0 z-50 bg-card/90 backdrop-blur-xl rounded-t-3xl safe-bottom">
       <div className="flex items-center justify-around px-6 pt-3 pb-2 max-w-lg mx-auto">
         {tabs.map((tab) => {
-          const isActive = location.pathname === tab.path;
+          const isActive = location.pathname === tab.path || (tab.path === "/messages" && location.pathname.startsWith("/chat"));
           const showRank = tab.path === "/camera" && myRank !== null;
           return (
             <button

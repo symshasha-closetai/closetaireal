@@ -51,12 +51,13 @@ const AddFriendDialog = ({ open, onOpenChange, existingFriendIds, onFriendAdded 
     const { error } = await supabase.from("friends" as any).insert({
       user_id: user.id,
       friend_id: friendUserId,
+      status: "pending",
     } as any);
     if (error) {
-      if (error.code === "23505") toast.info("Already friends!");
-      else toast.error("Failed to add friend");
+      if (error.code === "23505") toast.info("Request already sent!");
+      else toast.error("Failed to send request");
     } else {
-      toast.success("Friend added! 🎉");
+      toast.success("Friend request sent! 📩");
       onFriendAdded();
     }
     setAdding(null);

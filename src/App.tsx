@@ -14,6 +14,8 @@ const WardrobeScreen = lazy(() => import("./pages/WardrobeScreen"));
 import AuthScreen from "./pages/AuthScreen";
 const ProfileScreen = lazy(() => import("./pages/ProfileScreen"));
 const OnboardingScreen = lazy(() => import("./pages/OnboardingScreen"));
+const MessagesScreen = lazy(() => import("./pages/MessagesScreen"));
+const ChatScreen = lazy(() => import("./pages/ChatScreen"));
 const NotFound = lazy(() => import("./pages/NotFound"));
 import BottomNav from "./components/BottomNav";
 
@@ -45,6 +47,8 @@ const AppRoutes = () => {
         <Route path="/camera" element={<ProtectedRoute><CameraScreen /></ProtectedRoute>} />
         <Route path="/wardrobe" element={<ProtectedRoute><WardrobeScreen /></ProtectedRoute>} />
         <Route path="/profile" element={<ProtectedRoute><ProfileScreen /></ProtectedRoute>} />
+        <Route path="/messages" element={<ProtectedRoute><MessagesScreen /></ProtectedRoute>} />
+        <Route path="/chat/:conversationId" element={<ProtectedRoute><ChatScreen /></ProtectedRoute>} />
         <Route path="*" element={<NotFound />} />
       </Routes>
       {user && hasCompletedOnboarding !== false && <BottomNav />}
