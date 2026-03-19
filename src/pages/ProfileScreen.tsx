@@ -95,6 +95,10 @@ const ProfileScreen = () => {
   const [historyLoading, setHistoryLoading] = useState(false);
   const [viewingCard, setViewingCard] = useState<DripHistoryEntry | null>(null);
   const [viewingSavedOutfit, setViewingSavedOutfit] = useState<any>(null);
+  const [viewAllSection, setViewAllSection] = useState<"drip" | "outfits" | "suggestions" | "deleted" | null>(null);
+
+  // Deleted wardrobe items
+  const [deletedItems, setDeletedItems] = useState<any[]>([]);
 
   // Pull-to-refresh
   const pullRef = useRef<HTMLDivElement>(null);
