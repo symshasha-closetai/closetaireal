@@ -1150,12 +1150,24 @@ const WardrobeScreen = () => {
                   <button onClick={() => setShowCategoryManager(false)}><X size={20} className="text-muted-foreground" /></button>
                 </div>
 
-                {/* Default categories (non-deletable) */}
+                {/* Default categories (deletable/hideable) */}
                 <div>
                   <p className="text-[10px] uppercase tracking-wider text-muted-foreground mb-2">Default</p>
-                  <div className="flex flex-wrap gap-2">
+                  <div className="space-y-2">
                     {defaultCategories.filter(c => c !== "All").map(cat => (
-                      <span key={cat} className="px-3 py-1.5 rounded-full bg-secondary text-secondary-foreground text-xs">{cat}</span>
+                      <div key={cat} className="flex items-center justify-between rounded-xl bg-secondary px-3 py-2">
+                        <span className={`text-sm ${hiddenDefaults.includes(cat) ? 'text-muted-foreground line-through' : 'text-foreground'}`}>{cat}</span>
+                        <button onClick={() => {
+                          const next = hiddenDefaults.includes(cat)
+                            ? hiddenDefaults.filter(c => c !== cat)
+                            : [...hiddenDefaults, cat];
+                          setHiddenDefaults(next);
+                          localStorage.setItem(HIDDEN_DEFAULTS_KEY, JSON.stringify(next));
+                          if (activeCategory === cat) setActiveCategory("All");
+                        }} className="w-7 h-7 rounded-full flex items-center justify-center text-destructive hover:bg-destructive/10 transition-colors">
+                          {hiddenDefaults.includes(cat) ? <RotateCcw size={14} /> : <Trash2 size={14} />}
+                        </button>
+                      </div>
                     ))}
                   </div>
                 </div>
