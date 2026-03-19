@@ -265,7 +265,7 @@ const WardrobeScreen = () => {
   const addCustomCategory = async () => {
     if (!user || !newCategoryName.trim()) return;
     const name = newCategoryName.trim();
-    if (allCategories.includes(name)) { toast.error("Category already exists"); return; }
+    if (allCategories.some(c => normalizeCategory(c) === normalizeCategory(name))) { toast.error("Category already exists"); return; }
     const { error } = await supabase.from("wardrobe_categories").insert({ user_id: user.id, name } as any);
     if (error) toast.error("Failed to add category");
     else { toast.success(`"${name}" added!`); setNewCategoryName(""); fetchCustomCategories(); }
