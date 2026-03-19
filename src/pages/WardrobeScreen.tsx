@@ -246,6 +246,9 @@ const WardrobeScreen = () => {
   const [detailItem, setDetailItem] = useState<ClothingItem | null>(null);
   const [showOriginal, setShowOriginal] = useState(false);
 
+  // Send to friend state
+  const [sendFriendItem, setSendFriendItem] = useState<ClothingItem | null>(null);
+
   // Custom categories
   const [customCategories, setCustomCategories] = useState<WardrobeCategory[]>([]);
   const [showCategoryManager, setShowCategoryManager] = useState(false);
