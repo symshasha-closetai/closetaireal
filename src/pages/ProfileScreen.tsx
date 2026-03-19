@@ -300,12 +300,27 @@ const ProfileScreen = () => {
     setUploading(false);
   };
 
+  // Fetch username on mount
+  useEffect(() => {
+    if (!user) return;
+    supabase.from("profiles").select("username").eq("user_id", user.id).maybeSingle().then(({ data }: any) => {
+      if (data?.username) setUsername(data.username);
+    });
+  }, [user?.id]);
+
   const handleSavePersonal = async () => {
     if (!user) return;
+    if (usernameError) { toast.error("Fix username errors first"); return; }
     setSaving(true);
-    const { error } = await supabase.from("profiles").update({ name }).eq("user_id", user.id);
+    const updateData: any = { name };
+    if (username && username.length >= 3) updateData.username = username;
+    const { error } = await supabase.from("profiles").update(updateData).eq("user_id", user.id);
     await supabase.from("style_profiles").upsert({ user_id: user.id, gender: styleActions.gender || null }, { onConflict: "user_id" });
-    if (error) { toast.error("Failed to update profile"); }
+    if (error) {
+      if (error.message?.includes("Username")) toast.error(error.message);
+      else if (error.message?.includes("duplicate") || error.message?.includes("unique")) toast.error("Username already taken");
+      else toast.error("Failed to update profile");
+    }
     else { await refreshProfile(); toast.success("Profile updated!", { duration: 2000 }); }
     setSaving(false);
   };

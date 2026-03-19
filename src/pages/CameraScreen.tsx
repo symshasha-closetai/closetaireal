@@ -1,6 +1,7 @@
 import { useState, useRef, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { Camera, Upload, X, Sparkles, Check, Loader2 } from "lucide-react";
+import LeaderboardTab from "../components/LeaderboardTab";
 import AppHeader from "../components/AppHeader";
 import OutfitRatingCard from "../components/OutfitRatingCard";
 import { supabase } from "@/integrations/supabase/client";
