@@ -1409,6 +1409,14 @@ const WardrobeScreen = () => {
           </div>
         )}
       </div>
+
+      <SendToFriendPicker
+        open={!!sendFriendItem}
+        onOpenChange={(open) => { if (!open) setSendFriendItem(null); }}
+        contentType="wardrobe_item"
+        content={sendFriendItem?.name || ""}
+        metadata={sendFriendItem ? { image_url: sendFriendItem.image_url, name: sendFriendItem.name, type: sendFriendItem.type } : undefined}
+      />
     </div>
   );
 };
