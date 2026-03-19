@@ -1,6 +1,6 @@
 import React, { useState, useRef, useEffect, useCallback, useMemo } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { Plus, Trash2, X, Loader2, Camera, Upload, Sparkles, Pencil, Save, Share2, CheckSquare, Square, SlidersHorizontal, RefreshCw, Pin, GripVertical, RotateCcw } from "lucide-react";
+import { Plus, Trash2, X, Loader2, Camera, Upload, Sparkles, Pencil, Save, Share2, CheckSquare, Square, SlidersHorizontal, RefreshCw, Pin, GripVertical, RotateCcw, Eye } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { toast } from "sonner";
@@ -14,6 +14,7 @@ import { CSS } from "@dnd-kit/utilities";
 type ClothingItem = {
   id: string;
   image_url: string;
+  original_image_url: string | null;
   type: string;
   color: string | null;
   material: string | null;
@@ -56,6 +57,7 @@ type CardContentProps = {
   openEdit: (item: ClothingItem) => void;
   shareItem: (item: ClothingItem) => void;
   deleteItem: (id: string) => void;
+  onItemClick?: (item: ClothingItem) => void;
   dragHandle?: React.ReactNode;
 };
 
@@ -131,7 +133,7 @@ const SortableWardrobeCard = (props: CardContentProps & { index: number; toggleS
     <motion.div ref={setNodeRef} style={style} layout initial={{ opacity: 0, scale: 0.9 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0, scale: 0.9 }}
       transition={{ duration: 0.3, delay: index * 0.05 }}
       className={`glass-card overflow-hidden group relative ${selectMode && props.selectedItems.has(item.id) ? "ring-2 ring-primary" : ""}`}
-      onClick={() => selectMode && toggleSelectItem(item.id)}>
+      onClick={() => selectMode ? toggleSelectItem(item.id) : rest.onItemClick?.(item)}>
       <WardrobeCardContent item={item} selectMode={selectMode} {...rest}
         dragHandle={
           !selectMode ? (
@@ -183,6 +185,10 @@ const WardrobeScreen = () => {
   const [retryingImages, setRetryingImages] = useState<Set<string>>(new Set());
   const [regeneratingEdit, setRegeneratingEdit] = useState(false);
 
+  // Detail view state
+  const [detailItem, setDetailItem] = useState<ClothingItem | null>(null);
+  const [showOriginal, setShowOriginal] = useState(false);
+
   // Filters
   const [showFilters, setShowFilters] = useState(false);
   const [filterColor, setFilterColor] = useState("");
@@ -203,7 +209,7 @@ const WardrobeScreen = () => {
     if (!user) return;
     const { data, error } = await supabase
       .from("wardrobe")
-      .select("id, image_url, type, color, material, name, brand, quality, season, style, pinned, pin_order")
+      .select("id, image_url, original_image_url, type, color, material, name, brand, quality, season, style, pinned, pin_order")
       .eq("user_id", user.id)
       .is("deleted_at", null)
       .order("created_at", { ascending: false });
@@ -218,7 +224,7 @@ const WardrobeScreen = () => {
         return 0;
       });
       setItems(wardrobeItems);
-      precacheImages(wardrobeItems.map((i) => i.image_url).filter(Boolean));
+      precacheImages(wardrobeItems.flatMap((i) => [i.image_url, i.original_image_url].filter(Boolean) as string[]));
     }
     setLoading(false);
   };
@@ -293,7 +299,7 @@ const WardrobeScreen = () => {
     if (!user) return;
     const { data } = await supabase
       .from("wardrobe")
-      .select("id, image_url, type, color, material, name, brand, quality, season, style, pinned, pin_order")
+      .select("id, image_url, original_image_url, type, color, material, name, brand, quality, season, style, pinned, pin_order")
       .eq("user_id", user.id)
       .not("deleted_at", "is", null)
       .order("created_at", { ascending: false });
@@ -417,6 +423,16 @@ const WardrobeScreen = () => {
       const job = bgQueueRef.current[0];
       try {
         const { base64, blob: compressedBlob } = await compressImage(job.file);
+        // Upload original photo once per job to get original_image_url
+        let originalImageUrl: string | null = null;
+        try {
+          const origPath = `${user.id}/original-${Date.now()}.jpg`;
+          const { error: origUpErr } = await supabase.storage.from("wardrobe").upload(origPath, compressedBlob, { contentType: "image/jpeg" });
+          if (!origUpErr) {
+            const { data: { publicUrl } } = supabase.storage.from("wardrobe").getPublicUrl(origPath);
+            originalImageUrl = publicUrl;
+          }
+        } catch {}
         for (let i = 0; i < job.selected.length; i++) {
           const idx = job.selected[i];
           const item = job.items[idx];
@@ -436,8 +452,8 @@ const WardrobeScreen = () => {
           }
           const { data: insertData, error: insertError } = await supabase
             .from("wardrobe")
-            .insert({ user_id: user.id, image_url: imageUrl, type: item.type, name: item.name, color: item.color, material: item.material, quality: item.quality, brand: item.brand } as any)
-            .select("id, image_url, type, color, material, name, brand, quality, season, style")
+            .insert({ user_id: user.id, image_url: imageUrl, original_image_url: originalImageUrl, type: item.type, name: item.name, color: item.color, material: item.material, quality: item.quality, brand: item.brand } as any)
+            .select("id, image_url, original_image_url, type, color, material, name, brand, quality, season, style")
             .single();
           if (insertError || !insertData) {
             console.error("Insert failed:", insertError);
@@ -489,8 +505,8 @@ const WardrobeScreen = () => {
       const { error: uploadError } = await supabase.storage.from("wardrobe").upload(path, compressedBlob, { contentType: "image/jpeg" });
       if (uploadError) throw uploadError;
       const { data: { publicUrl } } = supabase.storage.from("wardrobe").getPublicUrl(path);
-      const { data, error } = await supabase.from("wardrobe").insert({ user_id: user.id, image_url: publicUrl, type: newType, name: "New Item" })
-        .select("id, image_url, type, color, material, name, brand, quality, season, style").single();
+      const { data, error } = await supabase.from("wardrobe").insert({ user_id: user.id, image_url: publicUrl, original_image_url: publicUrl, type: newType, name: "New Item" } as any)
+        .select("id, image_url, original_image_url, type, color, material, name, brand, quality, season, style").single();
       if (error) throw error;
       if (data) setItems((prev) => [data as ClothingItem, ...prev]);
       toast.success("Item added!"); resetModal();
@@ -811,16 +827,16 @@ const WardrobeScreen = () => {
                       <SortableWardrobeCard key={item.id} item={item} index={i} selectMode={selectMode} selectedItems={selectedItems}
                         toggleSelectItem={toggleSelectItem} failedImages={failedImages} retryingImages={retryingImages}
                         setFailedImages={setFailedImages} retryImageGeneration={retryImageGeneration}
-                        togglePin={togglePin} openEdit={openEdit} shareItem={shareItem} deleteItem={deleteItem} />
+                        togglePin={togglePin} openEdit={openEdit} shareItem={shareItem} deleteItem={deleteItem} onItemClick={setDetailItem} />
                     ) : (
                       <motion.div key={item.id} layout initial={{ opacity: 0, scale: 0.9 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0, scale: 0.9 }}
                         transition={{ duration: 0.3, delay: i * 0.05 }}
                         className={`glass-card overflow-hidden group relative ${selectMode && selectedItems.has(item.id) ? "ring-2 ring-primary" : ""}`}
-                        onClick={() => selectMode && toggleSelectItem(item.id)}>
+                        onClick={() => selectMode ? toggleSelectItem(item.id) : setDetailItem(item)}>
                         <WardrobeCardContent item={item} selectMode={selectMode} selectedItems={selectedItems}
                           failedImages={failedImages} retryingImages={retryingImages} setFailedImages={setFailedImages}
                           retryImageGeneration={retryImageGeneration} togglePin={togglePin} openEdit={openEdit}
-                          shareItem={shareItem} deleteItem={deleteItem} />
+                          shareItem={shareItem} deleteItem={deleteItem} onItemClick={setDetailItem} />
                       </motion.div>
                     )
                   ))}
@@ -1026,7 +1042,95 @@ const WardrobeScreen = () => {
           )}
         </AnimatePresence>
 
-        {/* Hidden Share Card */}
+        {/* Item Detail Overlay */}
+        <AnimatePresence>
+          {detailItem && (
+            <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+              className="fixed inset-0 bg-background z-50 flex flex-col" onClick={() => { setDetailItem(null); setShowOriginal(false); }}>
+              <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: 20 }}
+                transition={{ type: "spring", damping: 25, stiffness: 300 }} onClick={(e) => e.stopPropagation()}
+                className="flex flex-col h-full">
+                {/* Top bar */}
+                <div className="flex items-center justify-between px-5 py-4">
+                  <h3 className="font-semibold text-foreground text-lg truncate">{detailItem.name || "Unnamed"}</h3>
+                  <button onClick={() => { setDetailItem(null); setShowOriginal(false); }}
+                    className="w-9 h-9 rounded-full bg-secondary flex items-center justify-center">
+                    <X size={18} className="text-foreground" />
+                  </button>
+                </div>
+
+                {/* Image */}
+                <div className="flex-1 relative overflow-hidden mx-5 rounded-2xl bg-secondary">
+                  <AnimatePresence mode="wait">
+                    <motion.img
+                      key={showOriginal ? "original" : "generated"}
+                      initial={{ opacity: 0 }}
+                      animate={{ opacity: 1 }}
+                      exit={{ opacity: 0 }}
+                      transition={{ duration: 0.2 }}
+                      src={showOriginal && detailItem.original_image_url ? detailItem.original_image_url : detailItem.image_url}
+                      alt={detailItem.name || "Item"}
+                      className="w-full h-full object-contain"
+                    />
+                  </AnimatePresence>
+                  {showOriginal && (
+                    <div className="absolute top-3 left-3 px-2.5 py-1 rounded-full bg-primary/80 text-primary-foreground text-[10px] font-medium backdrop-blur-sm">
+                      Original Photo
+                    </div>
+                  )}
+                </div>
+
+                {/* Metadata */}
+                <div className="px-5 pt-3 pb-1">
+                  <div className="flex flex-wrap gap-2">
+                    {detailItem.color && (
+                      <span className="text-xs px-2.5 py-1 rounded-full bg-secondary text-secondary-foreground">{detailItem.color}</span>
+                    )}
+                    {detailItem.material && (
+                      <span className="text-xs px-2.5 py-1 rounded-full bg-secondary text-secondary-foreground">{detailItem.material}</span>
+                    )}
+                    <span className="text-xs px-2.5 py-1 rounded-full bg-secondary text-secondary-foreground">{detailItem.type}</span>
+                    {detailItem.brand && (
+                      <span className="text-[10px] uppercase tracking-wider px-2.5 py-1 rounded-full border border-primary/20 text-primary/70">{detailItem.brand}</span>
+                    )}
+                    {detailItem.quality && (
+                      <span className={`text-[10px] font-medium px-2.5 py-1 rounded-full ${
+                        detailItem.quality === "Premium" ? "bg-green-500/10 text-green-500" : detailItem.quality === "Mid-range" ? "bg-blue-500/10 text-blue-500" : "bg-orange-500/10 text-orange-500"
+                      }`}>{detailItem.quality}</span>
+                    )}
+                  </div>
+                </div>
+
+                {/* Action buttons */}
+                <div className="px-5 py-4 pb-8 flex gap-2">
+                  <button onClick={() => { togglePin(detailItem); setDetailItem(prev => prev ? { ...prev, pinned: !prev.pinned } : null); }}
+                    className={`flex-1 flex items-center justify-center gap-1.5 py-3 rounded-xl text-sm font-medium transition-all ${detailItem.pinned ? "bg-primary text-primary-foreground" : "bg-secondary text-secondary-foreground"}`}>
+                    <Pin size={15} className={detailItem.pinned ? "fill-current" : ""} /> {detailItem.pinned ? "Pinned" : "Pin"}
+                  </button>
+                  <button onClick={() => { setDetailItem(null); setShowOriginal(false); openEdit(detailItem); }}
+                    className="flex-1 flex items-center justify-center gap-1.5 py-3 rounded-xl bg-secondary text-secondary-foreground text-sm font-medium">
+                    <Pencil size={15} /> Edit
+                  </button>
+                  <button onClick={() => { setShowOriginal(!showOriginal); }}
+                    disabled={!detailItem.original_image_url}
+                    className={`flex-1 flex items-center justify-center gap-1.5 py-3 rounded-xl text-sm font-medium transition-all disabled:opacity-30 ${showOriginal ? "bg-primary text-primary-foreground" : "bg-secondary text-secondary-foreground"}`}>
+                    <Eye size={15} /> Original
+                  </button>
+                  <button onClick={() => { retryImageGeneration(detailItem); }}
+                    disabled={retryingImages.has(detailItem.id)}
+                    className="w-12 flex items-center justify-center py-3 rounded-xl bg-secondary text-secondary-foreground disabled:opacity-50">
+                    {retryingImages.has(detailItem.id) ? <Loader2 size={15} className="animate-spin" /> : <RefreshCw size={15} />}
+                  </button>
+                  <button onClick={() => { deleteItem(detailItem.id); setDetailItem(null); setShowOriginal(false); }}
+                    className="w-12 flex items-center justify-center py-3 rounded-xl bg-destructive/10 text-destructive">
+                    <Trash2 size={15} />
+                  </button>
+                </div>
+              </motion.div>
+            </motion.div>
+          )}
+        </AnimatePresence>
+
         {showShareCard && (
           <div ref={shareCardRef} style={{
             position: "fixed", left: "-9999px", top: 0, width: 390, zIndex: -1,

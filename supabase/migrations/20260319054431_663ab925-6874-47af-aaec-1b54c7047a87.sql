@@ -1,0 +1,1 @@
+ALTER TABLE public.wardrobe ADD COLUMN original_image_url text DEFAULT NULL;
