@@ -57,6 +57,7 @@ type CardContentProps = {
   openEdit: (item: ClothingItem) => void;
   shareItem: (item: ClothingItem) => void;
   deleteItem: (id: string) => void;
+  onItemClick?: (item: ClothingItem) => void;
   dragHandle?: React.ReactNode;
 };
 
