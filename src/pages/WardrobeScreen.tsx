@@ -252,11 +252,23 @@ const WardrobeScreen = () => {
     setFilterColor(""); setFilterQuality(""); setFilterMaterial(""); setFilterBrand(""); setFilterSeason("");
   };
 
-  // All category names (default + custom), filtering out hidden defaults
-  const allCategories = useMemo(() => [
-    ...defaultCategories.filter(c => c === "All" || !hiddenDefaults.includes(c)),
-    ...customCategories.map(c => c.name)
-  ], [customCategories, hiddenDefaults]);
+  // All category names (default + custom), filtered and ordered
+  const allCategories = useMemo(() => {
+    const visible = [
+      ...defaultCategories.filter(c => c !== "All" && !hiddenDefaults.includes(c)),
+      ...customCategories.map(c => c.name)
+    ];
+    // Sort by saved order, put unknowns at end
+    const ordered = [...visible].sort((a, b) => {
+      const ia = categoryOrder.indexOf(a);
+      const ib = categoryOrder.indexOf(b);
+      if (ia === -1 && ib === -1) return 0;
+      if (ia === -1) return 1;
+      if (ib === -1) return 1;
+      return ia - ib;
+    });
+    return ["All", ...ordered];
+  }, [customCategories, hiddenDefaults, categoryOrder]);
 
   useEffect(() => { if (user) { fetchItems(); fetchDeletedItems(); fetchCustomCategories(); } }, [user]);
 
