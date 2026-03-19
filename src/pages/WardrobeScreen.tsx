@@ -1,6 +1,6 @@
 import React, { useState, useRef, useEffect, useCallback, useMemo } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { Plus, Trash2, X, Loader2, Camera, Upload, Sparkles, Pencil, Save, Share2, CheckSquare, Square, SlidersHorizontal, RefreshCw, Pin, GripVertical, RotateCcw, Eye, FolderPlus } from "lucide-react";
+import { Plus, Trash2, X, Loader2, Camera, Upload, Sparkles, Pencil, Save, Share2, CheckSquare, Square, SlidersHorizontal, RefreshCw, Pin, GripVertical, RotateCcw, Eye } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { toast } from "sonner";
@@ -50,6 +50,13 @@ type WardrobeCategory = {
 };
 
 const defaultCategories = ["All", "Tops", "Bottoms", "Shoes", "Accessories"];
+
+// Normalize for singular/plural matching: "shirts" → "shirt", "hoodies" → "hoodie", "pants" → "pant"
+function normalizeCategory(s: string): string {
+  return s.toLowerCase().replace(/ies$/, 'y').replace(/es$/, 'e').replace(/s$/, '');
+}
+
+const HIDDEN_DEFAULTS_KEY = "closetai-hidden-defaults";
 
 // --- AI Analysis Cache helpers ---
 const ANALYSIS_CACHE_KEY = "closetai-analysis-cache";
@@ -223,6 +230,9 @@ const WardrobeScreen = () => {
   const [customCategories, setCustomCategories] = useState<WardrobeCategory[]>([]);
   const [showCategoryManager, setShowCategoryManager] = useState(false);
   const [newCategoryName, setNewCategoryName] = useState("");
+  const [hiddenDefaults, setHiddenDefaults] = useState<string[]>(() => {
+    try { return JSON.parse(localStorage.getItem(HIDDEN_DEFAULTS_KEY) || "[]"); } catch { return []; }
+  });
 
   // Filters
   const [showFilters, setShowFilters] = useState(false);
@@ -238,8 +248,11 @@ const WardrobeScreen = () => {
     setFilterColor(""); setFilterQuality(""); setFilterMaterial(""); setFilterBrand(""); setFilterSeason("");
   };
 
-  // All category names (default + custom)
-  const allCategories = useMemo(() => [...defaultCategories, ...customCategories.map(c => c.name)], [customCategories]);
+  // All category names (default + custom), filtering out hidden defaults
+  const allCategories = useMemo(() => [
+    ...defaultCategories.filter(c => c === "All" || !hiddenDefaults.includes(c)),
+    ...customCategories.map(c => c.name)
+  ], [customCategories, hiddenDefaults]);
 
   useEffect(() => { if (user) { fetchItems(); fetchDeletedItems(); fetchCustomCategories(); } }, [user]);
 
@@ -252,7 +265,7 @@ const WardrobeScreen = () => {
   const addCustomCategory = async () => {
     if (!user || !newCategoryName.trim()) return;
     const name = newCategoryName.trim();
-    if (allCategories.includes(name)) { toast.error("Category already exists"); return; }
+    if (allCategories.some(c => normalizeCategory(c) === normalizeCategory(name))) { toast.error("Category already exists"); return; }
     const { error } = await supabase.from("wardrobe_categories").insert({ user_id: user.id, name } as any);
     if (error) toast.error("Failed to add category");
     else { toast.success(`"${name}" added!`); setNewCategoryName(""); fetchCustomCategories(); }
@@ -347,8 +360,13 @@ const WardrobeScreen = () => {
     } else if (defaultCategories.includes(activeCategory)) {
       result = result.filter(i => i.type === activeCategory);
     } else {
-      // Custom category — match by custom_category tag OR by type name match
-      result = result.filter(i => i.custom_category === activeCategory || i.type.toLowerCase() === activeCategory.toLowerCase());
+      // Custom category — match by custom_category tag, type name, or item name (with plural normalization)
+      const norm = normalizeCategory(activeCategory);
+      result = result.filter(i =>
+        i.custom_category === activeCategory ||
+        normalizeCategory(i.type) === norm ||
+        (i.name && normalizeCategory(i.name).includes(norm))
+      );
     }
     if (filterColor) result = result.filter(i => i.color?.toLowerCase() === filterColor.toLowerCase());
     if (filterQuality) result = result.filter(i => i.quality?.toLowerCase() === filterQuality.toLowerCase());
@@ -792,7 +810,7 @@ const WardrobeScreen = () => {
           </div>
           <button onClick={() => setShowCategoryManager(true)}
             className="flex-shrink-0 w-9 h-9 rounded-full flex items-center justify-center bg-secondary text-secondary-foreground transition-all">
-            <FolderPlus size={16} />
+            <Pencil size={16} />
           </button>
           <button onClick={() => setShowFilters(!showFilters)}
             className={`relative flex-shrink-0 w-9 h-9 rounded-full flex items-center justify-center transition-all ${showFilters ? "bg-primary text-primary-foreground" : "bg-secondary text-secondary-foreground"}`}>
@@ -1132,12 +1150,24 @@ const WardrobeScreen = () => {
                   <button onClick={() => setShowCategoryManager(false)}><X size={20} className="text-muted-foreground" /></button>
                 </div>
 
-                {/* Default categories (non-deletable) */}
+                {/* Default categories (deletable/hideable) */}
                 <div>
                   <p className="text-[10px] uppercase tracking-wider text-muted-foreground mb-2">Default</p>
-                  <div className="flex flex-wrap gap-2">
+                  <div className="space-y-2">
                     {defaultCategories.filter(c => c !== "All").map(cat => (
-                      <span key={cat} className="px-3 py-1.5 rounded-full bg-secondary text-secondary-foreground text-xs">{cat}</span>
+                      <div key={cat} className="flex items-center justify-between rounded-xl bg-secondary px-3 py-2">
+                        <span className={`text-sm ${hiddenDefaults.includes(cat) ? 'text-muted-foreground line-through' : 'text-foreground'}`}>{cat}</span>
+                        <button onClick={() => {
+                          const next = hiddenDefaults.includes(cat)
+                            ? hiddenDefaults.filter(c => c !== cat)
+                            : [...hiddenDefaults, cat];
+                          setHiddenDefaults(next);
+                          localStorage.setItem(HIDDEN_DEFAULTS_KEY, JSON.stringify(next));
+                          if (activeCategory === cat) setActiveCategory("All");
+                        }} className="w-7 h-7 rounded-full flex items-center justify-center text-destructive hover:bg-destructive/10 transition-colors">
+                          {hiddenDefaults.includes(cat) ? <RotateCcw size={14} /> : <Trash2 size={14} />}
+                        </button>
+                      </div>
                     ))}
                   </div>
                 </div>
