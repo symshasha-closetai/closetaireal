@@ -737,11 +737,12 @@ const ProfileScreen = () => {
               </div>
 
             {/* Drip History */}
-            <div className="space-y-3">
+            <Collapsible>
               <div className="flex items-center justify-between">
-                <h3 className="text-xs uppercase tracking-[0.15em] text-foreground/50 flex items-center gap-2">
-                  <Sparkles size={12} /> Drip History
-                </h3>
+                <CollapsibleTrigger className="flex items-center gap-2 text-xs uppercase tracking-[0.15em] text-foreground/50 hover:text-foreground/70 transition-colors">
+                  <Sparkles size={12} /> Drip History ({dripHistory.length})
+                  <ChevronDown size={12} className="transition-transform [[data-state=open]>&]:rotate-180" />
+                </CollapsibleTrigger>
                 {dripHistory.length > 0 && (
                   <button onClick={async () => {
                     if (user) await supabase.from("drip_history" as any).delete().eq("user_id", user.id);
@@ -751,36 +752,39 @@ const ProfileScreen = () => {
                     className="text-[10px] text-destructive/60 font-medium">Clear All</button>
                 )}
               </div>
-              {dripHistory.length === 0 ? (
-                <p className="text-xs text-muted-foreground py-4 text-center">No drip checks saved yet. Rate an outfit to see it here!</p>
-              ) : (
-                <div className="grid grid-cols-3 gap-2">
-                  {dripHistory.map((entry) => (
-                    <motion.div key={entry.id} initial={{ opacity: 0, scale: 0.9 }} animate={{ opacity: 1, scale: 1 }}
-                      className="relative group cursor-pointer" onClick={() => setViewingCard(entry)}>
-                      <div className="aspect-[3/4] rounded-xl overflow-hidden bg-secondary">
-                        <img src={entry.image} alt="Drip card" className="w-full h-full object-cover" />
-                      </div>
-                      <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/70 to-transparent rounded-b-xl p-2">
-                        <p className="text-[10px] font-medium text-white">{entry.score}/10</p>
-                        <p className="text-[8px] text-white/50 truncate">{entry.killerTag}</p>
-                      </div>
-                      <button onClick={(e) => { e.stopPropagation(); deleteDripEntry(entry.id, entry.dbId); }}
-                        className="absolute top-1 right-1 w-5 h-5 rounded-full bg-black/50 flex items-center justify-center opacity-70 group-hover:opacity-100 transition-opacity">
-                        <X size={10} className="text-white" />
-                      </button>
-                    </motion.div>
-                  ))}
-                </div>
-              )}
-            </div>
+              <CollapsibleContent className="mt-3">
+                {dripHistory.length === 0 ? (
+                  <p className="text-xs text-muted-foreground py-4 text-center">No drip checks saved yet. Rate an outfit to see it here!</p>
+                ) : (
+                  <div className="grid grid-cols-3 gap-2">
+                    {dripHistory.map((entry) => (
+                      <motion.div key={entry.id} initial={{ opacity: 0, scale: 0.9 }} animate={{ opacity: 1, scale: 1 }}
+                        className="relative group cursor-pointer" onClick={() => setViewingCard(entry)}>
+                        <div className="aspect-[3/4] rounded-xl overflow-hidden bg-secondary">
+                          <img src={entry.image} alt="Drip card" className="w-full h-full object-cover" />
+                        </div>
+                        <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/70 to-transparent rounded-b-xl p-2">
+                          <p className="text-[10px] font-medium text-white">{entry.score}/10</p>
+                          <p className="text-[8px] text-white/50 truncate">{entry.killerTag}</p>
+                        </div>
+                        <button onClick={(e) => { e.stopPropagation(); deleteDripEntry(entry.id, entry.dbId); }}
+                          className="absolute top-1 right-1 w-5 h-5 rounded-full bg-black/50 flex items-center justify-center opacity-70 group-hover:opacity-100 transition-opacity">
+                          <X size={10} className="text-white" />
+                        </button>
+                      </motion.div>
+                    ))}
+                  </div>
+                )}
+              </CollapsibleContent>
+            </Collapsible>
 
             {/* Saved Outfits */}
-            <div className="space-y-3">
+            <Collapsible>
               <div className="flex items-center justify-between">
-                <h3 className="text-xs uppercase tracking-[0.15em] text-foreground/50 flex items-center gap-2">
-                  <Bookmark size={12} /> Saved Outfits
-                </h3>
+                <CollapsibleTrigger className="flex items-center gap-2 text-xs uppercase tracking-[0.15em] text-foreground/50 hover:text-foreground/70 transition-colors">
+                  <Bookmark size={12} /> Saved Outfits ({savedOutfits.length})
+                  <ChevronDown size={12} className="transition-transform [[data-state=open]>&]:rotate-180" />
+                </CollapsibleTrigger>
                 {savedOutfits.length > 0 && (
                   <button onClick={async () => {
                     await Promise.all(savedOutfits.map(o => supabase.from("saved_outfits" as any).delete().eq("id", o.id)));
@@ -789,38 +793,41 @@ const ProfileScreen = () => {
                   }} className="text-[10px] text-destructive/60 font-medium">Clear All</button>
                 )}
               </div>
-              {savedOutfits.length === 0 ? (
-                <p className="text-xs text-muted-foreground py-4 text-center">No saved outfits yet. Save an outfit from Style Me!</p>
-              ) : (
-                <div className="space-y-2">
-                  {savedOutfits.map((o: any) => (
-                    <div key={o.id} className="glass-card p-3 flex items-center gap-3 cursor-pointer active:scale-[0.98] transition-transform" onClick={() => setViewingSavedOutfit(o)}>
-                      <div className="w-10 h-10 rounded-lg bg-secondary flex items-center justify-center flex-shrink-0">
-                        <Bookmark size={16} className="text-primary" />
-                      </div>
-                      <div className="flex-1 min-w-0">
-                        <div className="flex items-center justify-between">
-                          <span className="text-sm font-medium text-foreground truncate">{o.name}</span>
-                          <span className="text-[10px] text-muted-foreground">{o.score?.toFixed(1)}/10</span>
+              <CollapsibleContent className="mt-3">
+                {savedOutfits.length === 0 ? (
+                  <p className="text-xs text-muted-foreground py-4 text-center">No saved outfits yet. Save an outfit from Style Me!</p>
+                ) : (
+                  <div className="space-y-2">
+                    {savedOutfits.map((o: any) => (
+                      <div key={o.id} className="glass-card p-3 flex items-center gap-3 cursor-pointer active:scale-[0.98] transition-transform" onClick={() => setViewingSavedOutfit(o)}>
+                        <div className="w-10 h-10 rounded-lg bg-secondary flex items-center justify-center flex-shrink-0">
+                          <Bookmark size={16} className="text-primary" />
                         </div>
-                        <p className="text-[11px] text-muted-foreground truncate mt-0.5">{o.occasion} • {new Date(o.created_at).toLocaleDateString()}</p>
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-center justify-between">
+                            <span className="text-sm font-medium text-foreground truncate">{o.name}</span>
+                            <span className="text-[10px] text-muted-foreground">{o.score?.toFixed(1)}/10</span>
+                          </div>
+                          <p className="text-[11px] text-muted-foreground truncate mt-0.5">{o.occasion} • {new Date(o.created_at).toLocaleDateString()}</p>
+                        </div>
+                        <button onClick={(e) => { e.stopPropagation(); deleteSavedOutfit(o.id); }}
+                          className="flex-shrink-0 w-6 h-6 rounded-full bg-destructive/10 flex items-center justify-center">
+                          <X size={10} className="text-destructive" />
+                        </button>
                       </div>
-                      <button onClick={(e) => { e.stopPropagation(); deleteSavedOutfit(o.id); }}
-                        className="flex-shrink-0 w-6 h-6 rounded-full bg-destructive/10 flex items-center justify-center">
-                        <X size={10} className="text-destructive" />
-                      </button>
-                    </div>
-                  ))}
-                </div>
-              )}
-            </div>
+                    ))}
+                  </div>
+                )}
+              </CollapsibleContent>
+            </Collapsible>
 
             {/* Saved Suggestions */}
-            <div className="space-y-3">
+            <Collapsible>
               <div className="flex items-center justify-between">
-                <h3 className="text-xs uppercase tracking-[0.15em] text-foreground/50 flex items-center gap-2">
-                  <Heart size={12} /> Saved Suggestions
-                </h3>
+                <CollapsibleTrigger className="flex items-center gap-2 text-xs uppercase tracking-[0.15em] text-foreground/50 hover:text-foreground/70 transition-colors">
+                  <Heart size={12} /> Saved Suggestions ({savedSuggestions.length})
+                  <ChevronDown size={12} className="transition-transform [[data-state=open]>&]:rotate-180" />
+                </CollapsibleTrigger>
                 {savedSuggestions.length > 0 && (
                   <button onClick={async () => {
                     await Promise.all(savedSuggestions.map(s => supabase.from("saved_suggestions" as any).delete().eq("id", s.id)));
@@ -829,40 +836,42 @@ const ProfileScreen = () => {
                   }} className="text-[10px] text-destructive/60 font-medium">Clear All</button>
                 )}
               </div>
-              {savedSuggestions.length === 0 ? (
-                <p className="text-xs text-muted-foreground py-4 text-center">No saved suggestions yet. Favourite items from Drip Check!</p>
-              ) : (
-                <div className="space-y-2">
-                  {savedSuggestions.map((s: any) => (
-                    <div key={s.id} className="glass-card p-3 flex items-center gap-3">
-                      {s.image ? (
-                        <img src={s.image} alt={s.item_name} className="w-10 h-10 rounded-lg object-cover flex-shrink-0" />
-                      ) : (
-                        <div className="w-10 h-10 rounded-lg bg-secondary flex items-center justify-center flex-shrink-0">
-                          {s.suggestion_type === "shopping" ? (
-                            <ShoppingBag size={16} className="text-primary" />
-                          ) : (
-                            <Heart size={16} className="text-primary" />
-                          )}
+              <CollapsibleContent className="mt-3">
+                {savedSuggestions.length === 0 ? (
+                  <p className="text-xs text-muted-foreground py-4 text-center">No saved suggestions yet. Favourite items from Drip Check!</p>
+                ) : (
+                  <div className="space-y-2">
+                    {savedSuggestions.map((s: any) => (
+                      <div key={s.id} className="glass-card p-3 flex items-center gap-3">
+                        {s.image ? (
+                          <img src={s.image} alt={s.item_name} className="w-10 h-10 rounded-lg object-cover flex-shrink-0" />
+                        ) : (
+                          <div className="w-10 h-10 rounded-lg bg-secondary flex items-center justify-center flex-shrink-0">
+                            {s.suggestion_type === "shopping" ? (
+                              <ShoppingBag size={16} className="text-primary" />
+                            ) : (
+                              <Heart size={16} className="text-primary" />
+                            )}
+                          </div>
+                        )}
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-center justify-between">
+                            <span className="text-sm font-medium text-foreground truncate">{s.item_name}</span>
+                            <span className="text-[9px] uppercase tracking-wider text-muted-foreground/60 border border-border/30 rounded-full px-2 py-0.5">{s.category}</span>
+                          </div>
+                          <p className="text-[11px] text-muted-foreground truncate mt-0.5">{s.reason}</p>
+                          {s.drip_score && <p className="text-[10px] text-primary mt-0.5">Drip: {s.drip_score}/10</p>}
                         </div>
-                      )}
-                      <div className="flex-1 min-w-0">
-                        <div className="flex items-center justify-between">
-                          <span className="text-sm font-medium text-foreground truncate">{s.item_name}</span>
-                          <span className="text-[9px] uppercase tracking-wider text-muted-foreground/60 border border-border/30 rounded-full px-2 py-0.5">{s.category}</span>
-                        </div>
-                        <p className="text-[11px] text-muted-foreground truncate mt-0.5">{s.reason}</p>
-                        {s.drip_score && <p className="text-[10px] text-primary mt-0.5">Drip: {s.drip_score}/10</p>}
+                        <button onClick={() => deleteSavedSuggestion(s.id)}
+                          className="flex-shrink-0 w-6 h-6 rounded-full bg-destructive/10 flex items-center justify-center">
+                          <X size={10} className="text-destructive" />
+                        </button>
                       </div>
-                      <button onClick={() => deleteSavedSuggestion(s.id)}
-                        className="flex-shrink-0 w-6 h-6 rounded-full bg-destructive/10 flex items-center justify-center">
-                        <X size={10} className="text-destructive" />
-                      </button>
-                    </div>
-                  ))}
-                </div>
-              )}
-            </div>
+                    ))}
+                  </div>
+                )}
+              </CollapsibleContent>
+            </Collapsible>
             </div>
           </TabsContent>
         </Tabs>
