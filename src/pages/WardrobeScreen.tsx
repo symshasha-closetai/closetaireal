@@ -224,7 +224,7 @@ const WardrobeScreen = () => {
         return 0;
       });
       setItems(wardrobeItems);
-      precacheImages(wardrobeItems.map((i) => i.image_url).filter(Boolean));
+      precacheImages(wardrobeItems.flatMap((i) => [i.image_url, i.original_image_url].filter(Boolean) as string[]));
     }
     setLoading(false);
   };
