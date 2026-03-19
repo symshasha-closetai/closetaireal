@@ -161,6 +161,10 @@ const WardrobeCardContent = ({ item, selectMode, selectedItems, failedImages, re
           className="absolute top-11 right-2 w-7 h-7 rounded-full bg-foreground/50 text-primary-foreground flex items-center justify-center opacity-100 sm:opacity-0 sm:group-hover:opacity-100 transition-opacity backdrop-blur-sm">
           <Trash2 size={13} />
         </button>
+        <button onClick={(e) => { e.stopPropagation(); sendToFriend(item); }}
+          className="absolute top-20 right-2 w-7 h-7 rounded-full bg-foreground/50 text-primary-foreground flex items-center justify-center opacity-100 sm:opacity-0 sm:group-hover:opacity-100 transition-opacity backdrop-blur-sm">
+          <Send size={13} />
+        </button>
       </>
     )}
     {selectMode && (
