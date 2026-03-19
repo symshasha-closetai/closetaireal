@@ -578,24 +578,46 @@ const WardrobeScreen = () => {
             if (!genError && genData?.imageUrl) imageUrl = genData.imageUrl;
           } catch {}
           if (!imageUrl) {
-            const path = `${user.id}/${Date.now()}-${i}.jpg`;
-            const { error: uploadErr } = await supabase.storage.from("wardrobe").upload(path, compressedBlob, { contentType: "image/jpeg" });
-            if (uploadErr) { console.error("Upload failed:", uploadErr); totalFailed++; setBgJob(prev => ({ ...prev, completedItems: prev.completedItems + 1 })); continue; }
-            const { data: { publicUrl } } = supabase.storage.from("wardrobe").getPublicUrl(path);
-            imageUrl = publicUrl;
+            // Retry upload up to 2 times
+            let uploadSuccess = false;
+            for (let attempt = 0; attempt < 3; attempt++) {
+              try {
+                const path = `${user.id}/${Date.now()}-${i}-${attempt}.jpg`;
+                const { error: uploadErr } = await supabase.storage.from("wardrobe").upload(path, compressedBlob, { contentType: "image/jpeg" });
+                if (uploadErr) throw uploadErr;
+                const { data: { publicUrl } } = supabase.storage.from("wardrobe").getPublicUrl(path);
+                imageUrl = publicUrl;
+                uploadSuccess = true;
+                break;
+              } catch (uploadErr) {
+                console.error(`Upload attempt ${attempt + 1} failed:`, uploadErr);
+                if (attempt < 2) await new Promise(r => setTimeout(r, 1000 * (attempt + 1)));
+              }
+            }
+            if (!uploadSuccess) { totalFailed++; setBgJob(prev => ({ ...prev, completedItems: prev.completedItems + 1 })); continue; }
           }
-          const { data: insertData, error: insertError } = await supabase
-            .from("wardrobe")
-            .insert({ user_id: user.id, image_url: imageUrl, original_image_url: originalImageUrl, type: item.type, name: item.name, color: item.color, material: item.material, quality: item.quality, brand: item.brand } as any)
-            .select("id, image_url, original_image_url, type, color, material, name, brand, quality, season, style, custom_category")
-            .single();
-          if (insertError || !insertData) {
-            console.error("Insert failed:", insertError);
-            totalFailed++;
-          } else {
-            setItems((prev) => [{ ...(insertData as any), pinned: false, pin_order: 0 } as ClothingItem, ...prev]);
-            totalSuccess++;
+          // Retry DB insert up to 2 times
+          let inserted = false;
+          for (let attempt = 0; attempt < 3; attempt++) {
+            try {
+              const { data: insertData, error: insertError } = await supabase
+                .from("wardrobe")
+                .insert({ user_id: user.id, image_url: imageUrl, original_image_url: originalImageUrl, type: item.type, name: item.name, color: item.color, material: item.material, quality: item.quality, brand: item.brand } as any)
+                .select("id, image_url, original_image_url, type, color, material, name, brand, quality, season, style, custom_category")
+                .single();
+              if (insertError) throw insertError;
+              if (insertData) {
+                setItems((prev) => [{ ...(insertData as any), pinned: false, pin_order: 0 } as ClothingItem, ...prev]);
+                totalSuccess++;
+                inserted = true;
+                break;
+              }
+            } catch (dbErr) {
+              console.error(`DB insert attempt ${attempt + 1} failed:`, dbErr);
+              if (attempt < 2) await new Promise(r => setTimeout(r, 1000 * (attempt + 1)));
+            }
           }
+          if (!inserted) totalFailed++;
           setBgJob(prev => ({ ...prev, completedItems: prev.completedItems + 1 }));
         }
       } catch (err) {

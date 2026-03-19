@@ -170,15 +170,21 @@ const updateGlobal = (patch: Partial<DripState>) => {
   notifyListeners();
 };
 
-// Simple image hash for cache lookups
+// Improved image hash for cache lookups — samples evenly across the string
 const computeImageHash = (base64: string): string => {
-  const sample = base64.substring(0, 200) + base64.substring(base64.length - 200);
+  const len = base64.length;
+  const sampleSize = 1000;
+  let sample = "";
+  const step = Math.max(1, Math.floor(len / sampleSize));
+  for (let i = 0; i < len && sample.length < sampleSize; i += step) {
+    sample += base64[i];
+  }
   let hash = 0;
   for (let i = 0; i < sample.length; i++) {
     hash = ((hash << 5) - hash) + sample.charCodeAt(i);
     hash |= 0;
   }
-  return `img_${base64.length}_${hash}`;
+  return `img_${len}_${hash}`;
 };
 
 // Save drip card to DB + localStorage cache
