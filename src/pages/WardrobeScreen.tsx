@@ -299,7 +299,7 @@ const WardrobeScreen = () => {
     if (!user) return;
     const { data } = await supabase
       .from("wardrobe")
-      .select("id, image_url, type, color, material, name, brand, quality, season, style, pinned, pin_order")
+      .select("id, image_url, original_image_url, type, color, material, name, brand, quality, season, style, pinned, pin_order")
       .eq("user_id", user.id)
       .not("deleted_at", "is", null)
       .order("created_at", { ascending: false });
