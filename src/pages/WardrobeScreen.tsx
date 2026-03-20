@@ -592,9 +592,8 @@ const WardrobeScreen = () => {
             for (let attempt = 0; attempt < 3; attempt++) {
               try {
                 const path = `${user.id}/${Date.now()}-${i}-${attempt}.jpg`;
-                const { error: uploadErr } = await supabase.storage.from("wardrobe").upload(path, compressedBlob, { contentType: "image/jpeg" });
+                const { publicUrl, error: uploadErr } = await r2.upload(path, compressedBlob, { contentType: "image/jpeg" });
                 if (uploadErr) throw uploadErr;
-                const { data: { publicUrl } } = supabase.storage.from("wardrobe").getPublicUrl(path);
                 imageUrl = publicUrl;
                 uploadSuccess = true;
                 break;
