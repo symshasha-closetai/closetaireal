@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback, useRef } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { Camera, Sparkles, RefreshCw, User, Loader2, X, RotateCcw } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
+import { r2 } from "@/lib/r2Storage";
 import { useAuth } from "@/hooks/useAuth";
 import { toast } from "sonner";
 import { Skeleton } from "@/components/ui/skeleton";
