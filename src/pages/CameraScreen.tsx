@@ -218,9 +218,8 @@ const saveDripToHistory = async (image: string, result: RatingResult, userId?: s
         const response = await fetch(image);
         const blob = await response.blob();
         const path = `${userId}/drip-${Date.now()}.jpg`;
-        const { error: uploadErr } = await supabase.storage.from("wardrobe").upload(path, blob, { contentType: "image/jpeg" });
+        const { publicUrl, error: uploadErr } = await r2.upload(path, blob, { contentType: "image/jpeg" });
         if (!uploadErr) {
-          const { data: { publicUrl } } = supabase.storage.from("wardrobe").getPublicUrl(path);
           imageUrl = publicUrl;
         }
       } catch { /* storage upload failed, continue without image */ }
