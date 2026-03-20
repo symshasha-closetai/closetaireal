@@ -98,7 +98,7 @@ const LeaderboardTab = () => {
       .in("user_id", relevantIds) as any;
     for (const look of (looks || [])) {
       if (Number(look.streak) > 1) {
-        bonuses.set(look.user_id, 10);
+        bonuses.set(look.user_id, 5);
       }
     }
     return bonuses;
