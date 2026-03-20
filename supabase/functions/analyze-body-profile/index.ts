@@ -10,8 +10,8 @@ serve(async (req) => {
 
   try {
     const { faceImageBase64, bodyImageBase64, gender } = await req.json();
-    const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
-    if (!LOVABLE_API_KEY) throw new Error("LOVABLE_API_KEY is not configured");
+    const GEMINI_API_KEY = Deno.env.get("GOOGLE_AI_API_KEY");
+    if (!GEMINI_API_KEY) throw new Error("GOOGLE_AI_API_KEY is not configured");
 
     const genderContext = gender ? `The person identifies as ${gender}. Use ${gender}-appropriate body composition analysis and fashion terminology.` : "";
 
