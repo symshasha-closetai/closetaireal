@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback, useRef } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { Camera, Sparkles, RefreshCw, User, Loader2, X, RotateCcw } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
+import { r2 } from "@/lib/r2Storage";
 import { useAuth } from "@/hooks/useAuth";
 import { toast } from "sonner";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -291,18 +292,16 @@ export const useStyleProfileActions = () => {
         const { blob, base64 } = await compressImage(faceFile);
         faceB64 = base64;
         const path = `${user.id}/face.jpg`;
-        await supabase.storage.from("wardrobe").upload(path, blob, { upsert: true, contentType: "image/jpeg" });
-        const { data } = supabase.storage.from("wardrobe").getPublicUrl(path);
-        faceUrl = `${data.publicUrl}?t=${Date.now()}`;
+        const { publicUrl } = await r2.upload(path, blob, { contentType: "image/jpeg" });
+        faceUrl = `${publicUrl}?t=${Date.now()}`;
       }
 
       if (bodyFile) {
         const { blob, base64 } = await compressImage(bodyFile);
         bodyB64 = base64;
         const path = `${user.id}/body.jpg`;
-        await supabase.storage.from("wardrobe").upload(path, blob, { upsert: true, contentType: "image/jpeg" });
-        const { data } = supabase.storage.from("wardrobe").getPublicUrl(path);
-        bodyUrl = `${data.publicUrl}?t=${Date.now()}`;
+        const { publicUrl } = await r2.upload(path, blob, { contentType: "image/jpeg" });
+        bodyUrl = `${publicUrl}?t=${Date.now()}`;
       }
 
       const { data, error } = await supabase.functions.invoke("analyze-body-profile", {

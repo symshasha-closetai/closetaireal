@@ -1,5 +1,5 @@
 import { serve } from "https://deno.land/std@0.177.0/http/server.ts";
-import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { r2Upload, r2PublicUrl } from "../_shared/r2.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -36,7 +36,6 @@ serve(async (req) => {
 
     const isEyewear = ["glasses", "eyewear", "sunglasses", "shades"].some(k => combined.includes(k));
     const isJewelry = ["jewelry", "jewellery", "necklace", "bracelet", "ring", "watch", "earring", "chain", "pendant", "anklet"].some(k => combined.includes(k));
-    const genderWord = gender === "female" ? "female" : gender === "male" ? "male" : "";
 
     const isWatch = ["watch", "wristwatch"].some(k => combined.includes(k));
     const isBracelet = ["bracelet", "anklet", "bangle"].some(k => combined.includes(k));
@@ -93,26 +92,13 @@ serve(async (req) => {
       return new Response(JSON.stringify({ imageUrl }), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
     }
 
-    // Upload to storage
-    const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
-    const supabaseKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
-    const supabase = createClient(supabaseUrl, supabaseKey);
-
+    // Upload to R2
     const imgRes = await fetch(imageUrl);
     const imgBytes = new Uint8Array(await imgRes.arrayBuffer());
     const path = `${userId}/clothing-${Date.now()}-${Math.random().toString(36).slice(2, 6)}.png`;
+    const publicUrl = await r2Upload(path, imgBytes, "image/png");
 
-    const { error: uploadError } = await supabase.storage
-      .from("wardrobe")
-      .upload(path, imgBytes, { contentType: "image/png", upsert: true });
-
-    if (uploadError) {
-      console.error("Upload error:", uploadError);
-      return new Response(JSON.stringify({ imageUrl }), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
-    }
-
-    const { data: urlData } = supabase.storage.from("wardrobe").getPublicUrl(path);
-    return new Response(JSON.stringify({ imageUrl: urlData.publicUrl }), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
+    return new Response(JSON.stringify({ imageUrl: publicUrl }), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
   } catch (e) {
     console.error("generate-clothing-image error:", e);
     return new Response(JSON.stringify({ error: e instanceof Error ? e.message : "Unknown error" }), { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } });

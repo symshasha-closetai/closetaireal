@@ -1,8 +1,6 @@
 import { supabase } from "@/integrations/supabase/client";
 
-// R2 public URL from env — will be set once we know the public bucket URL
-// For now we get it from the edge function, or construct from env
-const R2_PUBLIC_URL = import.meta.env.VITE_R2_PUBLIC_URL || "";
+const R2_PUBLIC_URL = "https://pub-6946b34d456541bfb993b14cc2eaa2a7.r2.dev";
 
 export const r2 = {
   /**

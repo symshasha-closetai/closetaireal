@@ -1,5 +1,5 @@
 import { serve } from "https://deno.land/std@0.177.0/http/server.ts";
-import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { r2Upload, r2PublicUrl, r2Download, r2Head } from "../_shared/r2.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -63,17 +63,12 @@ serve(async (req) => {
     const replicateKey = Deno.env.get("REPLICATE_API_KEY");
     if (!replicateKey) throw new Error("REPLICATE_API_KEY not configured");
 
-    const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
-    const supabaseKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
-    const supabase = createClient(supabaseUrl, supabaseKey);
-
     const cachePath = `option-images/${category}/${label.toLowerCase().replace(/\s+/g, "-")}${gender ? `-${gender}` : ""}.png`;
 
-    // Check cache
-    const { data: existingFile } = await supabase.storage.from("wardrobe").download(cachePath);
-    if (existingFile && existingFile.size > 0) {
-      const { data: urlData } = supabase.storage.from("wardrobe").getPublicUrl(cachePath);
-      return new Response(JSON.stringify({ imageUrl: urlData.publicUrl }), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
+    // Check cache in R2
+    const exists = await r2Head(cachePath);
+    if (exists) {
+      return new Response(JSON.stringify({ imageUrl: r2PublicUrl(cachePath) }), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
     }
 
     let prompt = prompts[category]?.[label] || `A professional fashion reference image for ${category}: ${label}, studio photography on clean white background`;
@@ -110,13 +105,12 @@ serve(async (req) => {
     const imageUrl = Array.isArray(result.output) ? result.output[0] : result.output;
     if (!imageUrl) throw new Error("No image generated");
 
-    // Download and cache to storage
+    // Download and cache to R2
     const imgRes = await fetch(imageUrl);
     const imgBytes = new Uint8Array(await imgRes.arrayBuffer());
-    await supabase.storage.from("wardrobe").upload(cachePath, imgBytes, { contentType: "image/png", upsert: true });
-    const { data: publicUrlData } = supabase.storage.from("wardrobe").getPublicUrl(cachePath);
+    const publicUrl = await r2Upload(cachePath, imgBytes, "image/png");
 
-    return new Response(JSON.stringify({ imageUrl: publicUrlData.publicUrl }), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
+    return new Response(JSON.stringify({ imageUrl: publicUrl }), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
   } catch (e) {
     console.error("generate-option-images error:", e);
     return new Response(JSON.stringify({ error: e instanceof Error ? e.message : "Unknown error" }), { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } });

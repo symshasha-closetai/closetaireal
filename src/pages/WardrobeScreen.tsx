@@ -2,6 +2,7 @@ import React, { useState, useRef, useEffect, useCallback, useMemo } from "react"
 import { motion, AnimatePresence } from "framer-motion";
 import { Plus, Trash2, X, Loader2, Camera, Upload, Sparkles, Pencil, Save, Share2, CheckSquare, Square, SlidersHorizontal, RefreshCw, Pin, GripVertical, RotateCcw, Eye, Send } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
+import { r2 } from "@/lib/r2Storage";
 import { useAuth } from "@/hooks/useAuth";
 import { toast } from "sonner";
 import AppHeader from "../components/AppHeader";
@@ -570,9 +571,8 @@ const WardrobeScreen = () => {
         let originalImageUrl: string | null = null;
         try {
           const origPath = `${user.id}/original-${Date.now()}.jpg`;
-          const { error: origUpErr } = await supabase.storage.from("wardrobe").upload(origPath, compressedBlob, { contentType: "image/jpeg" });
+          const { publicUrl, error: origUpErr } = await r2.upload(origPath, compressedBlob, { contentType: "image/jpeg" });
           if (!origUpErr) {
-            const { data: { publicUrl } } = supabase.storage.from("wardrobe").getPublicUrl(origPath);
             originalImageUrl = publicUrl;
           }
         } catch {}
@@ -592,9 +592,8 @@ const WardrobeScreen = () => {
             for (let attempt = 0; attempt < 3; attempt++) {
               try {
                 const path = `${user.id}/${Date.now()}-${i}-${attempt}.jpg`;
-                const { error: uploadErr } = await supabase.storage.from("wardrobe").upload(path, compressedBlob, { contentType: "image/jpeg" });
+                const { publicUrl, error: uploadErr } = await r2.upload(path, compressedBlob, { contentType: "image/jpeg" });
                 if (uploadErr) throw uploadErr;
-                const { data: { publicUrl } } = supabase.storage.from("wardrobe").getPublicUrl(path);
                 imageUrl = publicUrl;
                 uploadSuccess = true;
                 break;
@@ -666,9 +665,8 @@ const WardrobeScreen = () => {
     try {
       const { blob: compressedBlob } = await compressImage(uploadedFile);
       const path = `${user.id}/${Date.now()}.jpg`;
-      const { error: uploadError } = await supabase.storage.from("wardrobe").upload(path, compressedBlob, { contentType: "image/jpeg" });
+      const { publicUrl, error: uploadError } = await r2.upload(path, compressedBlob, { contentType: "image/jpeg" });
       if (uploadError) throw uploadError;
-      const { data: { publicUrl } } = supabase.storage.from("wardrobe").getPublicUrl(path);
       const { data, error } = await supabase.from("wardrobe").insert({ user_id: user.id, image_url: publicUrl, original_image_url: publicUrl, type: newType, name: "New Item" } as any)
         .select("id, image_url, original_image_url, type, color, material, name, brand, quality, season, style, custom_category").single();
       if (error) throw error;

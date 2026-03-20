@@ -6,6 +6,7 @@ import AppHeader from "../components/AppHeader";
 import { useAuth } from "../hooks/useAuth";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
+import { r2 } from "@/lib/r2Storage";
 import { toast } from "sonner";
 import ScoreRing from "../components/ScoreRing";
 import { Progress } from "@/components/ui/progress";
@@ -206,9 +207,8 @@ const HomeScreen = () => {
       const croppedFile = new File([blob], "cropped.jpg", { type: "image/jpeg" });
       const { blob: compressedBlob } = await compressImage(croppedFile);
       const path = `${user.id}/today-look-${Date.now()}.jpg`;
-      const { error: uploadError } = await supabase.storage.from("wardrobe").upload(path, compressedBlob, { upsert: true, contentType: "image/jpeg" });
+      const { publicUrl, error: uploadError } = await r2.upload(path, compressedBlob, { contentType: "image/jpeg" });
       if (uploadError) throw uploadError;
-      const { data: { publicUrl } } = supabase.storage.from("wardrobe").getPublicUrl(path);
 
       // Calculate streak from DB
       const yesterday = new Date(Date.now() - 86400000).toISOString().split("T")[0];

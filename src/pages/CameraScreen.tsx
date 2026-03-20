@@ -5,6 +5,7 @@ import LeaderboardTab from "../components/LeaderboardTab";
 import AppHeader from "../components/AppHeader";
 import OutfitRatingCard from "../components/OutfitRatingCard";
 import { supabase } from "@/integrations/supabase/client";
+import { r2 } from "@/lib/r2Storage";
 import { useAuth } from "@/hooks/useAuth";
 import { toast } from "sonner";
 import { compressImage } from "@/lib/imageCompression";
@@ -217,9 +218,8 @@ const saveDripToHistory = async (image: string, result: RatingResult, userId?: s
         const response = await fetch(image);
         const blob = await response.blob();
         const path = `${userId}/drip-${Date.now()}.jpg`;
-        const { error: uploadErr } = await supabase.storage.from("wardrobe").upload(path, blob, { contentType: "image/jpeg" });
+        const { publicUrl, error: uploadErr } = await r2.upload(path, blob, { contentType: "image/jpeg" });
         if (!uploadErr) {
-          const { data: { publicUrl } } = supabase.storage.from("wardrobe").getPublicUrl(path);
           imageUrl = publicUrl;
         }
       } catch { /* storage upload failed, continue without image */ }
@@ -306,10 +306,9 @@ const runAnalysis = async (file: File, userId: string | undefined, styleProfile:
     let uploadPromise: Promise<string | null> = Promise.resolve(null);
     if (userId) {
       const path = `${userId}/drip-${Date.now()}.jpg`;
-      uploadPromise = supabase.storage.from("wardrobe").upload(path, blob, { contentType: "image/jpeg" })
-        .then(({ error: uploadErr }) => {
+      uploadPromise = r2.upload(path, blob, { contentType: "image/jpeg" })
+        .then(({ publicUrl, error: uploadErr }) => {
           if (uploadErr) return null;
-          const { data: { publicUrl } } = supabase.storage.from("wardrobe").getPublicUrl(path);
           return publicUrl;
         })
         .catch(() => null);

@@ -2,6 +2,7 @@ import { useState, useRef, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { ChevronRight, ChevronLeft, Sparkles, Check, Camera, Upload, User, Loader2 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
+import { r2 } from "@/lib/r2Storage";
 import { useAuth } from "@/hooks/useAuth";
 import { useNavigate } from "react-router-dom";
 import { toast } from "sonner";
@@ -147,9 +148,9 @@ const OnboardingScreen = () => {
         setUploadingFace(true);
         const ext = faceFile.name.split(".").pop();
         const path = `${user.id}/face.${ext}`;
-        await supabase.storage.from("wardrobe").upload(path, faceFile, { upsert: true });
-        const { data } = supabase.storage.from("wardrobe").getPublicUrl(path);
-        faceUrl = `${data.publicUrl}?t=${Date.now()}`;
+        await r2.upload(path, faceFile, { contentType: faceFile.type });
+        const { publicUrl } = r2.getPublicUrl(path);
+        faceUrl = `${publicUrl}?t=${Date.now()}`;
         setUploadingFace(false);
       }
 
@@ -157,9 +158,9 @@ const OnboardingScreen = () => {
         setUploadingBody(true);
         const ext = bodyFile.name.split(".").pop();
         const path = `${user.id}/body.${ext}`;
-        await supabase.storage.from("wardrobe").upload(path, bodyFile, { upsert: true });
-        const { data } = supabase.storage.from("wardrobe").getPublicUrl(path);
-        bodyUrl = `${data.publicUrl}?t=${Date.now()}`;
+        await r2.upload(path, bodyFile, { contentType: bodyFile.type });
+        const { publicUrl } = r2.getPublicUrl(path);
+        bodyUrl = `${publicUrl}?t=${Date.now()}`;
         setUploadingBody(false);
       }
 

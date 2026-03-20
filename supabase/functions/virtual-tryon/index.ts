@@ -1,5 +1,5 @@
 import { serve } from "https://deno.land/std@0.177.0/http/server.ts";
-import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { r2Upload } from "../_shared/r2.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -33,7 +33,6 @@ serve(async (req) => {
 
     const prompt = `A photorealistic fashion photograph of this exact same person wearing: ${outfitDescription}. For a ${occasion || "casual"} occasion. Keep the person's face, body type, skin tone exactly the same. Only change their clothes. Full body visible, clean background, fashion editorial style, professional photography.`;
 
-    // Use FLUX img2img to edit the model image with new outfit
     const createRes = await fetch("https://api.replicate.com/v1/models/black-forest-labs/flux-dev/predictions", {
       method: "POST",
       headers: {
@@ -67,21 +66,14 @@ serve(async (req) => {
     if (!imageUrl) throw new Error("No image generated");
 
     if (userId) {
-      const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
-      const supabaseKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
-      const supabase = createClient(supabaseUrl, supabaseKey);
-
-      const imgRes = await fetch(imageUrl);
-      const imgBytes = new Uint8Array(await imgRes.arrayBuffer());
-      const path = `${userId}/tryon-${Date.now()}.png`;
-
-      const { error: uploadError } = await supabase.storage
-        .from("wardrobe")
-        .upload(path, imgBytes, { contentType: "image/png" });
-
-      if (!uploadError) {
-        const { data: urlData } = supabase.storage.from("wardrobe").getPublicUrl(path);
-        return new Response(JSON.stringify({ imageUrl: urlData.publicUrl }), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
+      try {
+        const imgRes = await fetch(imageUrl);
+        const imgBytes = new Uint8Array(await imgRes.arrayBuffer());
+        const path = `${userId}/tryon-${Date.now()}.png`;
+        const publicUrl = await r2Upload(path, imgBytes, "image/png");
+        return new Response(JSON.stringify({ imageUrl: publicUrl }), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
+      } catch (uploadErr) {
+        console.error("R2 upload error:", uploadErr);
       }
     }
 

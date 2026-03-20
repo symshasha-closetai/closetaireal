@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from "react";
-import { supabase } from "@/integrations/supabase/client";
+import { r2 } from "@/lib/r2Storage";
 
 const CACHE_TTL = 7 * 24 * 60 * 60 * 1000; // 7 days
 
@@ -25,14 +25,14 @@ export const useOptionImage = (category: string, label: string, gender?: string 
       } catch {}
 
       const cachePath = `option-images/${category}/${label.toLowerCase().replace(/\s+/g, "-")}${genderSuffix}.png`;
-      const { data: urlData } = supabase.storage.from("wardrobe").getPublicUrl(cachePath);
+      const { publicUrl } = r2.getPublicUrl(cachePath);
 
       try {
-        const res = await fetch(urlData.publicUrl, { method: "HEAD" });
+        const res = await fetch(publicUrl, { method: "HEAD" });
         if (res.ok) {
           if (!cancelled) {
-            setImageUrl(urlData.publicUrl);
-            localStorage.setItem(cacheKey, JSON.stringify({ url: urlData.publicUrl, ts: Date.now() }));
+            setImageUrl(publicUrl);
+            localStorage.setItem(cacheKey, JSON.stringify({ url: publicUrl, ts: Date.now() }));
           }
           return;
         }
@@ -50,6 +50,8 @@ export const useOptionImage = (category: string, label: string, gender?: string 
     const genderSuffix = gender ? `-${gender}` : "";
     const cacheKey = `option-img-${category}-${label}${genderSuffix}`;
     try {
+      // Still uses the edge function which now uploads to R2
+      const { supabase } = await import("@/integrations/supabase/client");
       const { data, error } = await supabase.functions.invoke("generate-option-images", {
         body: { category, label, gender: gender || null },
       });
