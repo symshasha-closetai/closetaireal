@@ -1,5 +1,6 @@
 import { serve } from "https://deno.land/std@0.177.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { r2Upload, r2PublicUrl } from "../_shared/r2.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -99,33 +100,28 @@ serve(async (req) => {
         }
       } catch (swapErr) {
         console.error("Face-swap failed, using original model:", swapErr);
-        // Fall back to the non-swapped model image
       }
     }
 
-    // Step 3: Upload to storage and update profile
+    // Step 3: Upload to R2 and update profile
     if (userId) {
-      const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
-      const supabaseServiceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
-      const supabase = createClient(supabaseUrl, supabaseServiceKey);
-
       const imgRes = await fetch(imageUrl);
       const imgBytes = new Uint8Array(await imgRes.arrayBuffer());
       const path = `${userId}/model-avatar-${Date.now()}.png`;
 
-      const { error: uploadError } = await supabase.storage
-        .from("wardrobe")
-        .upload(path, imgBytes, { contentType: "image/png", upsert: true });
+      try {
+        const publicUrl = await r2Upload(path, imgBytes, "image/png");
 
-      if (uploadError) {
-        console.error("Upload error:", uploadError);
+        const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
+        const supabaseServiceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
+        const supabase = createClient(supabaseUrl, supabaseServiceKey);
+        await supabase.from("style_profiles").update({ model_image_url: publicUrl }).eq("user_id", userId);
+
+        return new Response(JSON.stringify({ imageUrl: publicUrl }), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
+      } catch (uploadErr) {
+        console.error("R2 upload error:", uploadErr);
         return new Response(JSON.stringify({ imageUrl }), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
       }
-
-      const { data: urlData } = supabase.storage.from("wardrobe").getPublicUrl(path);
-      await supabase.from("style_profiles").update({ model_image_url: urlData.publicUrl }).eq("user_id", userId);
-
-      return new Response(JSON.stringify({ imageUrl: urlData.publicUrl }), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
     }
 
     return new Response(JSON.stringify({ imageUrl }), { headers: { ...corsHeaders, "Content-Type": "application/json" } });

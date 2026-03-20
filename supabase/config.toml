@@ -32,3 +32,6 @@ verify_jwt = false
 
 [functions.generate-suggestions]
 verify_jwt = false
+
+[functions.r2-storage]
+verify_jwt = false
