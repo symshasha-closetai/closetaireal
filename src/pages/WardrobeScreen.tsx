@@ -2,6 +2,7 @@ import React, { useState, useRef, useEffect, useCallback, useMemo } from "react"
 import { motion, AnimatePresence } from "framer-motion";
 import { Plus, Trash2, X, Loader2, Camera, Upload, Sparkles, Pencil, Save, Share2, CheckSquare, Square, SlidersHorizontal, RefreshCw, Pin, GripVertical, RotateCcw, Eye, Send } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
+import { r2 } from "@/lib/r2Storage";
 import { useAuth } from "@/hooks/useAuth";
 import { toast } from "sonner";
 import AppHeader from "../components/AppHeader";
