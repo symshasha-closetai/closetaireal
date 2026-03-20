@@ -306,10 +306,9 @@ const runAnalysis = async (file: File, userId: string | undefined, styleProfile:
     let uploadPromise: Promise<string | null> = Promise.resolve(null);
     if (userId) {
       const path = `${userId}/drip-${Date.now()}.jpg`;
-      uploadPromise = supabase.storage.from("wardrobe").upload(path, blob, { contentType: "image/jpeg" })
-        .then(({ error: uploadErr }) => {
+      uploadPromise = r2.upload(path, blob, { contentType: "image/jpeg" })
+        .then(({ publicUrl, error: uploadErr }) => {
           if (uploadErr) return null;
-          const { data: { publicUrl } } = supabase.storage.from("wardrobe").getPublicUrl(path);
           return publicUrl;
         })
         .catch(() => null);
