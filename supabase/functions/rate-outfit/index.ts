@@ -98,14 +98,22 @@ Analyze this outfit. Return JSON only.`;
 
     const data = await response.json();
     const content = data.choices?.[0]?.message?.content || "{}";
+    console.log("AI response length:", content.length);
 
     let result = null;
     try {
       const cleaned = content.replace(/```json\n?/g, "").replace(/```\n?/g, "").trim();
       result = JSON.parse(cleaned);
     } catch {
-      console.error("Failed to parse AI response:", content);
-      throw new Error("Failed to parse AI response");
+      // Fallback: try to extract JSON object from content
+      const jsonMatch = content.match(/\{[\s\S]*\}/);
+      if (jsonMatch) {
+        try { result = JSON.parse(jsonMatch[0]); } catch { /* ignore */ }
+      }
+      if (!result) {
+        console.error("Failed to parse AI response:", content.substring(0, 500));
+        throw new Error("Failed to parse AI response");
+      }
     }
 
     return new Response(JSON.stringify({ result }), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
