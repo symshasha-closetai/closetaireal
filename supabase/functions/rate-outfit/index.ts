@@ -29,8 +29,8 @@ serve(async (req) => {
     if (!imageBase64) return new Response(JSON.stringify({ error: "No image provided" }), { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } });
 
     const gender = styleProfile?.gender || null;
-    const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
-    if (!LOVABLE_API_KEY) throw new Error("LOVABLE_API_KEY is not configured");
+    const GEMINI_API_KEY = Deno.env.get("GOOGLE_AI_API_KEY");
+    if (!GEMINI_API_KEY) throw new Error("GOOGLE_AI_API_KEY is not configured");
 
     let profileContext = "";
     if (styleProfile) {
