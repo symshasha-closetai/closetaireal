@@ -10,8 +10,8 @@ serve(async (req) => {
 
   try {
     const { wardrobeItems, occasion, timeOfDay, weather, styleProfile, surpriseMe, gender } = await req.json();
-    const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
-    if (!LOVABLE_API_KEY) throw new Error("LOVABLE_API_KEY is not configured");
+    const GEMINI_API_KEY = Deno.env.get("GOOGLE_AI_API_KEY");
+    if (!GEMINI_API_KEY) throw new Error("GOOGLE_AI_API_KEY is not configured");
 
     const wardrobeDesc = wardrobeItems.map((i: any) =>
       `ID:${i.id} - ${i.name || i.type} (${i.type}, color: ${i.color || "unknown"}, material: ${i.material || "unknown"})`
@@ -93,14 +93,14 @@ Return ONLY valid JSON (no markdown) with this structure:
     const outfitCount = surpriseMe ? "1" : "3-5";
     const userPrompt = `Wardrobe items:\n${wardrobeDesc}\n\nOccasion: ${occasion}\nTime of day: ${timeOfDay}${weatherInfo}\nProfile: ${profileDesc}${bodyAnalysis}${faceAnalysis}\n\nSuggest ${outfitCount} outfit${surpriseMe ? "" : "s"}. Return JSON only.`;
 
-    const response = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
+    const response = await fetch("https://generativelanguage.googleapis.com/v1beta/openai/chat/completions", {
       method: "POST",
       headers: {
-        Authorization: `Bearer ${LOVABLE_API_KEY}`,
+        Authorization: `Bearer ${GEMINI_API_KEY}`,
         "Content-Type": "application/json",
       },
       body: JSON.stringify({
-        model: "google/gemini-2.5-flash",
+        model: "gemini-2.5-flash",
         messages: [
           { role: "system", content: systemPrompt },
           { role: "user", content: userPrompt },
