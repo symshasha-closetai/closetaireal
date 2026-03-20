@@ -265,11 +265,11 @@ const LeaderboardTab = () => {
         const baseScore = (userDays.get(day) || 0) * 10;
         if (baseScore === 0) continue;
         const fBonus = (weekFriends || []).filter((f: any) =>
-          f.user_id === uid && f.created_at.startsWith(day)
-        ).length * 20;
+          (f.user_id === uid || f.friend_id === uid) && f.created_at.startsWith(day)
+        ).length * 10;
         const sBonus = (weekLooks || []).some((l: any) =>
           l.user_id === uid && l.look_date === day && Number(l.streak) > 1
-        ) ? 10 : 0;
+        ) ? 5 : 0;
         totals.push(baseScore + fBonus + sBonus);
       }
       if (totals.length > 0) userDailyTotals.set(uid, totals);
