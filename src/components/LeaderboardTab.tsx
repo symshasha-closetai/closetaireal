@@ -71,14 +71,20 @@ const LeaderboardTab = () => {
   const fetchFriendBonuses = async (relevantIds: string[], dateStr: string) => {
     const bonuses = new Map<string, number>();
     relevantIds.forEach(id => bonuses.set(id, 0));
+    const ids = relevantIds.join(",");
     const { data: friendsToday } = await supabase
       .from("friends" as any)
-      .select("user_id, created_at")
+      .select("user_id, friend_id, created_at")
       .gte("created_at", `${dateStr}T00:00:00`)
       .lt("created_at", `${dateStr}T23:59:59.999999`)
-      .in("user_id", relevantIds) as any;
+      .or(`user_id.in.(${ids}),friend_id.in.(${ids})`) as any;
     for (const f of (friendsToday || [])) {
-      bonuses.set(f.user_id, (bonuses.get(f.user_id) || 0) + 20);
+      if (relevantIds.includes(f.user_id)) {
+        bonuses.set(f.user_id, (bonuses.get(f.user_id) || 0) + 10);
+      }
+      if (relevantIds.includes(f.friend_id)) {
+        bonuses.set(f.friend_id, (bonuses.get(f.friend_id) || 0) + 10);
+      }
     }
     return bonuses;
   };
