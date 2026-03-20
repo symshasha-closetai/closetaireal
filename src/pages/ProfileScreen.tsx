@@ -4,6 +4,7 @@ import { ArrowLeft, Camera, LogOut, User, Save, Trash2, AlertTriangle, Loader2, 
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "../hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
+import { r2 } from "@/lib/r2Storage";
 import { toast } from "sonner";
 import { compressImage } from "@/lib/imageCompression";
 import AppHeader from "../components/AppHeader";
