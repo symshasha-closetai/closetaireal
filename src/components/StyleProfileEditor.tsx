@@ -292,9 +292,8 @@ export const useStyleProfileActions = () => {
         const { blob, base64 } = await compressImage(faceFile);
         faceB64 = base64;
         const path = `${user.id}/face.jpg`;
-        await supabase.storage.from("wardrobe").upload(path, blob, { upsert: true, contentType: "image/jpeg" });
-        const { data } = supabase.storage.from("wardrobe").getPublicUrl(path);
-        faceUrl = `${data.publicUrl}?t=${Date.now()}`;
+        const { publicUrl } = await r2.upload(path, blob, { contentType: "image/jpeg" });
+        faceUrl = `${publicUrl}?t=${Date.now()}`;
       }
 
       if (bodyFile) {
