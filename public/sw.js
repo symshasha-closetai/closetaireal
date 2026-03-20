@@ -37,9 +37,10 @@ self.addEventListener('fetch', (event) => {
   // Skip non-GET requests
   if (event.request.method !== 'GET') return;
 
-  // Image requests (Supabase storage, option images, generated images)
+  // Image requests (R2 storage, Supabase storage legacy, option images, generated images)
   if (
     url.pathname.match(/\.(png|jpg|jpeg|webp|gif|svg|ico)$/i) ||
+    url.hostname.includes('r2.dev') ||
     url.hostname.includes('supabase') && url.pathname.includes('/storage/') ||
     url.pathname.includes('/option-images/') ||
     url.pathname.includes('/wardrobe/')
