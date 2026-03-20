@@ -148,9 +148,9 @@ const OnboardingScreen = () => {
         setUploadingFace(true);
         const ext = faceFile.name.split(".").pop();
         const path = `${user.id}/face.${ext}`;
-        await supabase.storage.from("wardrobe").upload(path, faceFile, { upsert: true });
-        const { data } = supabase.storage.from("wardrobe").getPublicUrl(path);
-        faceUrl = `${data.publicUrl}?t=${Date.now()}`;
+        await r2.upload(path, faceFile, { contentType: faceFile.type });
+        const { publicUrl } = r2.getPublicUrl(path);
+        faceUrl = `${publicUrl}?t=${Date.now()}`;
         setUploadingFace(false);
       }
 
