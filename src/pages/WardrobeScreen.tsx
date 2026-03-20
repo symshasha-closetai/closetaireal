@@ -665,9 +665,8 @@ const WardrobeScreen = () => {
     try {
       const { blob: compressedBlob } = await compressImage(uploadedFile);
       const path = `${user.id}/${Date.now()}.jpg`;
-      const { error: uploadError } = await supabase.storage.from("wardrobe").upload(path, compressedBlob, { contentType: "image/jpeg" });
+      const { publicUrl, error: uploadError } = await r2.upload(path, compressedBlob, { contentType: "image/jpeg" });
       if (uploadError) throw uploadError;
-      const { data: { publicUrl } } = supabase.storage.from("wardrobe").getPublicUrl(path);
       const { data, error } = await supabase.from("wardrobe").insert({ user_id: user.id, image_url: publicUrl, original_image_url: publicUrl, type: newType, name: "New Item" } as any)
         .select("id, image_url, original_image_url, type, color, material, name, brand, quality, season, style, custom_category").single();
       if (error) throw error;
