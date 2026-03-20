@@ -239,12 +239,13 @@ const LeaderboardTab = () => {
       weekDays.push(d.toISOString().split("T")[0]);
     }
 
+    const wIds = relevantIds.join(",");
     const { data: weekFriends } = await supabase
       .from("friends" as any)
-      .select("user_id, created_at")
+      .select("user_id, friend_id, created_at")
       .gte("created_at", `${startStr}T00:00:00`)
       .lte("created_at", `${endStr}T23:59:59.999999`)
-      .in("user_id", relevantIds) as any;
+      .or(`user_id.in.(${wIds}),friend_id.in.(${wIds})`) as any;
 
     const { data: weekLooks } = await supabase
       .from("daily_looks")
