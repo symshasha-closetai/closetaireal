@@ -415,8 +415,8 @@ const LeaderboardTab = () => {
             <PopoverContent className="w-56 p-3" side="bottom" align="end">
               <p className="text-xs font-semibold text-foreground mb-2">Boost Your Score</p>
               <div className="space-y-1.5 text-[11px] text-muted-foreground">
-                <p>🤝 <span className="font-medium text-foreground">+20 pts</span> — Add a new friend</p>
-                <p>🔥 <span className="font-medium text-foreground">+10 pts</span> — Daily check-in streak</p>
+                <p>🤝 <span className="font-medium text-foreground">+10 pts</span> — Add a new friend</p>
+                <p>🔥 <span className="font-medium text-foreground">+5 pts</span> — Daily check-in streak</p>
                 <p className="pt-1 text-[10px] text-muted-foreground/70">Base score = Drip score × 10 (out of 100)</p>
               </div>
             </PopoverContent>
