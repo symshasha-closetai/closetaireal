@@ -158,9 +158,9 @@ const OnboardingScreen = () => {
         setUploadingBody(true);
         const ext = bodyFile.name.split(".").pop();
         const path = `${user.id}/body.${ext}`;
-        await supabase.storage.from("wardrobe").upload(path, bodyFile, { upsert: true });
-        const { data } = supabase.storage.from("wardrobe").getPublicUrl(path);
-        bodyUrl = `${data.publicUrl}?t=${Date.now()}`;
+        await r2.upload(path, bodyFile, { contentType: bodyFile.type });
+        const { publicUrl } = r2.getPublicUrl(path);
+        bodyUrl = `${publicUrl}?t=${Date.now()}`;
         setUploadingBody(false);
       }
 

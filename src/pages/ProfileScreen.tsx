@@ -289,11 +289,8 @@ const ProfileScreen = () => {
     try {
       const { blob: compressedBlob } = await compressImage(file);
       const path = `${user.id}/avatar.jpg`;
-      const { error: uploadError } = await supabase.storage
-        .from("wardrobe")
-        .upload(path, compressedBlob, { upsert: true, contentType: "image/jpeg" });
+      const { publicUrl, error: uploadError } = await r2.upload(path, compressedBlob, { contentType: "image/jpeg" });
       if (uploadError) { toast.error("Failed to upload avatar"); setUploading(false); return; }
-      const { data: { publicUrl } } = supabase.storage.from("wardrobe").getPublicUrl(path);
       const { error: updateError } = await supabase.from("profiles").update({ avatar_url: publicUrl }).eq("user_id", user.id);
       if (updateError) { toast.error("Failed to save avatar"); }
       else { setAvatarPreview(publicUrl); await refreshProfile(); toast.success("Avatar updated!"); }
