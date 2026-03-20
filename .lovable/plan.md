@@ -1,13 +1,45 @@
 
 
-## Plan: Migrate All Storage to Cloudflare R2 — COMPLETED
+# Switch AI Gateway to Direct Google Gemini API
 
-All image storage has been migrated from Supabase Storage to Cloudflare R2.
+## Summary
+Replace the Lovable AI Gateway (`ai.gateway.lovable.dev`) with direct Google Gemini API calls using your own API key across all 5 edge functions.
 
-### What was done:
-1. Created `supabase/functions/_shared/r2.ts` — shared S3-compatible R2 helper using aws4fetch
-2. Created `supabase/functions/r2-storage/index.ts` — upload/delete/list proxy edge function
-3. Created `src/lib/r2Storage.ts` — client-side R2 utility (drop-in replacement)
-4. Updated 6 client files to use `r2.upload()` and `r2.getPublicUrl()`
-5. Updated 5 edge functions to use direct R2 S3 API calls
-6. Updated service worker to cache R2 URLs
+## Prerequisites
+- You'll need a Google Gemini API key from [Google AI Studio](https://aistudio.google.com/apikeys)
+- I'll securely store it as a backend secret called `GEMINI_API_KEY`
+
+## Changes
+
+### 1. Add GEMINI_API_KEY secret
+Request you to input your Google Gemini API key via the secure secrets tool.
+
+### 2. Update 5 edge functions
+Each function's AI fetch call changes from:
+
+```text
+URL:  https://ai.gateway.lovable.dev/v1/chat/completions
+Auth: Bearer $LOVABLE_API_KEY
+Model: google/gemini-2.5-flash
+```
+
+To:
+
+```text
+URL:  https://generativelanguage.googleapis.com/v1beta/openai/chat/completions
+Auth: Bearer $GEMINI_API_KEY
+Model: gemini-2.5-flash
+```
+
+**Files modified:**
+- `supabase/functions/rate-outfit/index.ts`
+- `supabase/functions/analyze-clothing/index.ts`
+- `supabase/functions/analyze-body-profile/index.ts`
+- `supabase/functions/generate-suggestions/index.ts`
+- `supabase/functions/style-me/index.ts`
+
+Each file gets 3 line changes: swap `LOVABLE_API_KEY` → `GEMINI_API_KEY`, update the fetch URL, and update the model name (drop the `google/` prefix).
+
+### 3. No frontend changes needed
+All AI calls go through edge functions; the client code stays the same.
+
