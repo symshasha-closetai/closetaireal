@@ -71,14 +71,20 @@ const LeaderboardTab = () => {
   const fetchFriendBonuses = async (relevantIds: string[], dateStr: string) => {
     const bonuses = new Map<string, number>();
     relevantIds.forEach(id => bonuses.set(id, 0));
+    const ids = relevantIds.join(",");
     const { data: friendsToday } = await supabase
       .from("friends" as any)
-      .select("user_id, created_at")
+      .select("user_id, friend_id, created_at")
       .gte("created_at", `${dateStr}T00:00:00`)
       .lt("created_at", `${dateStr}T23:59:59.999999`)
-      .in("user_id", relevantIds) as any;
+      .or(`user_id.in.(${ids}),friend_id.in.(${ids})`) as any;
     for (const f of (friendsToday || [])) {
-      bonuses.set(f.user_id, (bonuses.get(f.user_id) || 0) + 20);
+      if (relevantIds.includes(f.user_id)) {
+        bonuses.set(f.user_id, (bonuses.get(f.user_id) || 0) + 10);
+      }
+      if (relevantIds.includes(f.friend_id)) {
+        bonuses.set(f.friend_id, (bonuses.get(f.friend_id) || 0) + 10);
+      }
     }
     return bonuses;
   };
@@ -92,7 +98,7 @@ const LeaderboardTab = () => {
       .in("user_id", relevantIds) as any;
     for (const look of (looks || [])) {
       if (Number(look.streak) > 1) {
-        bonuses.set(look.user_id, 10);
+        bonuses.set(look.user_id, 5);
       }
     }
     return bonuses;
@@ -233,12 +239,13 @@ const LeaderboardTab = () => {
       weekDays.push(d.toISOString().split("T")[0]);
     }
 
+    const wIds = relevantIds.join(",");
     const { data: weekFriends } = await supabase
       .from("friends" as any)
-      .select("user_id, created_at")
+      .select("user_id, friend_id, created_at")
       .gte("created_at", `${startStr}T00:00:00`)
       .lte("created_at", `${endStr}T23:59:59.999999`)
-      .in("user_id", relevantIds) as any;
+      .or(`user_id.in.(${wIds}),friend_id.in.(${wIds})`) as any;
 
     const { data: weekLooks } = await supabase
       .from("daily_looks")
@@ -258,11 +265,11 @@ const LeaderboardTab = () => {
         const baseScore = (userDays.get(day) || 0) * 10;
         if (baseScore === 0) continue;
         const fBonus = (weekFriends || []).filter((f: any) =>
-          f.user_id === uid && f.created_at.startsWith(day)
-        ).length * 20;
+          (f.user_id === uid || f.friend_id === uid) && f.created_at.startsWith(day)
+        ).length * 10;
         const sBonus = (weekLooks || []).some((l: any) =>
           l.user_id === uid && l.look_date === day && Number(l.streak) > 1
-        ) ? 10 : 0;
+        ) ? 5 : 0;
         totals.push(baseScore + fBonus + sBonus);
       }
       if (totals.length > 0) userDailyTotals.set(uid, totals);
@@ -408,8 +415,8 @@ const LeaderboardTab = () => {
             <PopoverContent className="w-56 p-3" side="bottom" align="end">
               <p className="text-xs font-semibold text-foreground mb-2">Boost Your Score</p>
               <div className="space-y-1.5 text-[11px] text-muted-foreground">
-                <p>🤝 <span className="font-medium text-foreground">+20 pts</span> — Add a new friend</p>
-                <p>🔥 <span className="font-medium text-foreground">+10 pts</span> — Daily check-in streak</p>
+                <p>🤝 <span className="font-medium text-foreground">+10 pts</span> — Add a new friend</p>
+                <p>🔥 <span className="font-medium text-foreground">+5 pts</span> — Daily check-in streak</p>
                 <p className="pt-1 text-[10px] text-muted-foreground/70">Base score = Drip score × 10 (out of 100)</p>
               </div>
             </PopoverContent>

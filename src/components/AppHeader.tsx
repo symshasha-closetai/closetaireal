@@ -19,6 +19,7 @@ const AppHeader = () => {
   const { user } = useAuth();
   const { theme, setTheme } = useTheme();
   const [pendingCount, setPendingCount] = useState(0);
+  const [unreadMsgCount, setUnreadMsgCount] = useState(0);
   const [showAddFriend, setShowAddFriend] = useState(false);
   const [showRequests, setShowRequests] = useState(false);
   const [showFriendsList, setShowFriendsList] = useState(false);
@@ -44,8 +45,47 @@ const AppHeader = () => {
         f.user_id === user.id ? f.friend_id : f.user_id
       ));
     };
+    const fetchUnreadMessages = async () => {
+      // Get user's conversations
+      const { data: participations } = await supabase
+        .from("conversation_participants")
+        .select("conversation_id")
+        .eq("user_id", user.id);
+      if (!participations || participations.length === 0) {
+        setUnreadMsgCount(0);
+        return;
+      }
+      const convIds = participations.map(p => p.conversation_id);
+      // Count messages from others in the last 24h
+      const since = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString();
+      const { count } = await supabase
+        .from("messages")
+        .select("*", { count: "exact", head: true })
+        .in("conversation_id", convIds)
+        .neq("sender_id", user.id)
+        .gte("created_at", since);
+      setUnreadMsgCount(count || 0);
+    };
+
     fetchPending();
     fetchFriends();
+    fetchUnreadMessages();
+
+    // Realtime subscription for new messages
+    const channel = supabase
+      .channel("header-unread-msgs")
+      .on("postgres_changes", {
+        event: "INSERT",
+        schema: "public",
+        table: "messages",
+      }, (payload: any) => {
+        if (payload.new?.sender_id !== user.id) {
+          setUnreadMsgCount(prev => prev + 1);
+        }
+      })
+      .subscribe();
+
+    return () => { supabase.removeChannel(channel); };
   }, [user?.id]);
 
   const refreshCounts = () => {
@@ -83,24 +123,29 @@ const AppHeader = () => {
             <MessageCircle size={16} className="text-muted-foreground" />
           </button>
 
-          {/* Notifications / Pending Requests */}
+          {/* Bell — unread messages count */}
           <button
-            onClick={() => setShowRequests(true)}
+            onClick={() => navigate("/messages")}
             className="relative w-9 h-9 rounded-full bg-secondary border border-border flex items-center justify-center active:scale-95 transition-transform"
           >
             <Bell size={16} className="text-muted-foreground" />
-            {pendingCount > 0 && (
+            {unreadMsgCount > 0 && (
               <span className="absolute -top-0.5 -right-0.5 min-w-[16px] h-4 rounded-full bg-destructive text-destructive-foreground text-[9px] font-bold flex items-center justify-center px-1">
-                {pendingCount}
+                {unreadMsgCount > 99 ? "99+" : unreadMsgCount}
               </span>
             )}
           </button>
 
-          {/* Plus menu */}
+          {/* Plus menu — friend requests here */}
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
-              <button className="w-9 h-9 rounded-full bg-secondary border border-border flex items-center justify-center active:scale-95 transition-transform">
+              <button className="relative w-9 h-9 rounded-full bg-secondary border border-border flex items-center justify-center active:scale-95 transition-transform">
                 <Plus size={16} className="text-muted-foreground" />
+                {pendingCount > 0 && (
+                  <span className="absolute -top-0.5 -right-0.5 min-w-[16px] h-4 rounded-full bg-destructive text-destructive-foreground text-[9px] font-bold flex items-center justify-center px-1">
+                    {pendingCount}
+                  </span>
+                )}
               </button>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end" className="w-48">
