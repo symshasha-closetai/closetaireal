@@ -571,9 +571,8 @@ const WardrobeScreen = () => {
         let originalImageUrl: string | null = null;
         try {
           const origPath = `${user.id}/original-${Date.now()}.jpg`;
-          const { error: origUpErr } = await supabase.storage.from("wardrobe").upload(origPath, compressedBlob, { contentType: "image/jpeg" });
+          const { publicUrl, error: origUpErr } = await r2.upload(origPath, compressedBlob, { contentType: "image/jpeg" });
           if (!origUpErr) {
-            const { data: { publicUrl } } = supabase.storage.from("wardrobe").getPublicUrl(origPath);
             originalImageUrl = publicUrl;
           }
         } catch {}
