@@ -519,7 +519,7 @@ const HomeScreen = () => {
   const isProcessing = styling || surprising;
 
   return (
-    <div className="min-h-screen pb-24 px-5 pt-8">
+    <div className="min-h-screen pb-24 px-5 pt-4">
       <input type="file" accept="image/*" capture="user" ref={photoFileRef} className="hidden" onChange={handleTodayPhotoUpload} />
       {pendingCropImage && (
         <ImageCropper

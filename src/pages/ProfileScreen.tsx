@@ -287,7 +287,7 @@ const ProfileScreen = () => {
     if (!file || !user) return;
     setUploading(true);
     try {
-      const { blob: compressedBlob } = await compressImage(file);
+      const { blob: compressedBlob } = await compressImage(file, 800, 800, 0.65, 200);
       const path = `${user.id}/avatar.jpg`;
       const { publicUrl, error: uploadError } = await r2.upload(path, compressedBlob, { contentType: "image/jpeg" });
       if (uploadError) { toast.error("Failed to upload avatar"); setUploading(false); return; }
