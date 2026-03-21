@@ -217,9 +217,13 @@ const ProfileScreen = () => {
 
   const fetchDeletedItems = async () => {
     if (!user) return;
+    // Auto-delete items older than 7 days
+    const sevenDaysAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString();
+    await supabase.from("wardrobe").delete().eq("user_id", user.id).not("deleted_at", "is", null).lt("deleted_at", sevenDaysAgo);
+    
     const { data } = await supabase
       .from("wardrobe")
-      .select("id, image_url, type, color, material, name, brand, quality, season, style, pinned, pin_order")
+      .select("id, image_url, type, color, material, name, brand, quality, season, style, pinned, pin_order, deleted_at")
       .eq("user_id", user.id)
       .not("deleted_at", "is", null)
       .order("created_at", { ascending: false });
