@@ -354,9 +354,9 @@ const OutfitRatingCard = ({ image, imageBase64, result, wardrobeItems = [],
     try {
       const blob = await captureCard();
       if (!blob) throw new Error("Failed to create image");
-      const file = new File([blob], "closetai-result.png", { type: "image/png" });
+      const file = new File([blob], "dripd-result.png", { type: "image/png" });
       if (navigator.share && navigator.canShare?.({ files: [file] })) {
-        await navigator.share({ title: "My Style Analysis — ClosetAI", files: [file] });
+        await navigator.share({ title: "My Style Analysis — Dripd", files: [file] });
       } else {
         const url = URL.createObjectURL(blob);
         const a = document.createElement("a");
