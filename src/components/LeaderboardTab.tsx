@@ -1,12 +1,28 @@
 import { useState, useEffect, useCallback } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { Share2, Trophy, Crown, Loader2, Lightbulb, X } from "lucide-react";
+import { Share2, Trophy, Crown, Loader2, Lightbulb, X, MoreVertical, EyeOff, RotateCcw } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { toast } from "sonner";
 import html2canvas from "html2canvas";
 import dripdLogo from "@/assets/closetai-logo.webp";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 
 const RANK_TAGS: Record<number, string> = {
   1: "Drip God 👑",
