@@ -244,7 +244,7 @@ const OutfitRatingCard = ({ image, imageBase64, result, wardrobeItems = [],
     ctx.fillStyle = "rgba(255,255,255,0.9)";
     ctx.font = "500 10px Inter, sans-serif";
     ctx.letterSpacing = "5px";
-    ctx.fillText("ClosetAI", 18, H_IMG - 90);
+    ctx.fillText("Dripd", 18, H_IMG - 90);
 
     // Drip score
     ctx.fillStyle = "#C9A96E";
@@ -341,7 +341,7 @@ const OutfitRatingCard = ({ image, imageBase64, result, wardrobeItems = [],
     // CTA
     ctx.fillStyle = "rgba(255,255,255,0.55)";
     ctx.font = "500 10px Inter, sans-serif";
-    const cta = "CLOSETAIREAL.LOVABLE.APP";
+    const cta = "DRIPD.APP";
     const ctaW = ctx.measureText(cta).width;
     ctx.fillText(cta, (W - ctaW) / 2, H_IMG + H_BOTTOM - 10);
 
@@ -354,14 +354,14 @@ const OutfitRatingCard = ({ image, imageBase64, result, wardrobeItems = [],
     try {
       const blob = await captureCard();
       if (!blob) throw new Error("Failed to create image");
-      const file = new File([blob], "closetai-result.png", { type: "image/png" });
+      const file = new File([blob], "dripd-result.png", { type: "image/png" });
       if (navigator.share && navigator.canShare?.({ files: [file] })) {
-        await navigator.share({ title: "My Style Analysis — ClosetAI", files: [file] });
+        await navigator.share({ title: "My Style Analysis — Dripd", files: [file] });
       } else {
         const url = URL.createObjectURL(blob);
         const a = document.createElement("a");
         a.href = url;
-        a.download = "closetai-result.png";
+        a.download = "dripd-result.png";
         document.body.appendChild(a);
         a.click();
         document.body.removeChild(a);
@@ -384,7 +384,7 @@ const OutfitRatingCard = ({ image, imageBase64, result, wardrobeItems = [],
       const url = URL.createObjectURL(blob);
       const a = document.createElement("a");
       a.href = url;
-      a.download = "closetai-result.png";
+      a.download = "dripd-result.png";
       document.body.appendChild(a);
       a.click();
       document.body.removeChild(a);
@@ -457,10 +457,10 @@ const OutfitRatingCard = ({ image, imageBase64, result, wardrobeItems = [],
       <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="rounded-2xl overflow-hidden shadow-lg relative">
         <img src={image} alt="Outfit" className="w-full aspect-[3/4] object-cover" />
         
-        {/* ClosetAI branding */}
+        {/* Dripd branding */}
         <div className="absolute top-4 left-4 z-10">
           <span className="text-[10px] tracking-[0.2em] font-medium text-white/90" style={{ textShadow: "-1px -1px 0 #000, 1px -1px 0 #000, -1px 1px 0 #000, 1px 1px 0 #000" }}>
-            ClosetAI
+            Dripd
           </span>
         </div>
 

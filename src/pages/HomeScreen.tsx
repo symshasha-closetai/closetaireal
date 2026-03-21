@@ -329,22 +329,22 @@ const HomeScreen = () => {
       ctx.fillStyle = "rgba(255,255,255,0.75)";
       ctx.fillText(new Date().toLocaleDateString("en-US", { weekday: "long", month: "long", day: "numeric" }), 24, H - 28);
 
-      // ClosetAI watermark
+      // Dripd watermark
       ctx.shadowBlur = 0;
       ctx.font = "bold 14px system-ui, sans-serif";
       ctx.fillStyle = "rgba(255,255,255,0.4)";
       ctx.textAlign = "right";
-      ctx.fillText("ClosetAI", W - 20, H - 16);
+      ctx.fillText("Dripd", W - 20, H - 16);
       ctx.textAlign = "left";
 
       canvas.toBlob(async (blob) => {
         if (!blob) { setSharingLook(false); return; }
-        const file = new File([blob], "closetai-today-look.png", { type: "image/png" });
+        const file = new File([blob], "dripd-today-look.png", { type: "image/png" });
         if (navigator.share && navigator.canShare?.({ files: [file] })) {
-          await navigator.share({ title: "My Today's Look — ClosetAI", files: [file] });
+          await navigator.share({ title: "My Today's Look — Dripd", files: [file] });
         } else {
           const url = URL.createObjectURL(blob);
-          const a = document.createElement("a"); a.href = url; a.download = "closetai-today-look.png";
+          const a = document.createElement("a"); a.href = url; a.download = "dripd-today-look.png";
           document.body.appendChild(a); a.click(); document.body.removeChild(a);
           URL.revokeObjectURL(url);
           toast.success("Image saved!");
@@ -417,7 +417,7 @@ const HomeScreen = () => {
   useEffect(() => {
     if (user) {
       const cacheKey = `wardrobe_cache_${user.id}`;
-      const cached = getCached<WardrobeItem[]>(cacheKey, 5 * 60 * 1000);
+      const cached = getCached<WardrobeItem[]>(cacheKey, 48 * 60 * 60 * 1000);
       if (cached) {
         setAllWardrobeItems(cached);
         setWardrobeItems(cached.slice(0, 6));
@@ -509,7 +509,7 @@ const HomeScreen = () => {
   const fetchStyleProfile = useCallback(async () => {
     if (!user) return null;
     const cacheKey = `style_profile_cache_${user.id}`;
-    const cached = getCached<any>(cacheKey, 10 * 60 * 1000);
+    const cached = getCached<any>(cacheKey, 48 * 60 * 60 * 1000);
     if (cached) return cached;
     const { data } = await supabase.from("style_profiles").select("*").eq("user_id", user.id).maybeSingle();
     if (data) setCache(cacheKey, data);

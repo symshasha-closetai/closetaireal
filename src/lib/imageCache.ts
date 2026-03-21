@@ -1,4 +1,4 @@
-const IMAGE_CACHE_NAME = 'closetai-images-v1';
+const IMAGE_CACHE_NAME = 'dripd-images-v1';
 
 /**
  * Cache an image URL in the browser Cache API for offline/fast access.

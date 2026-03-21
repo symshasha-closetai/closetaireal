@@ -1,12 +1,28 @@
 import { useState, useEffect, useCallback } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { Share2, Trophy, Crown, Loader2, Lightbulb, X } from "lucide-react";
+import { Share2, Trophy, Crown, Loader2, Lightbulb, X, MoreVertical, EyeOff, RotateCcw } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { toast } from "sonner";
 import html2canvas from "html2canvas";
-import closetaiLogo from "@/assets/closetai-logo.webp";
+import dripdLogo from "@/assets/closetai-logo.webp";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 
 const RANK_TAGS: Record<number, string> = {
   1: "Drip God 👑",
@@ -36,7 +52,7 @@ type ViewMode = "daily" | "weekly";
 
 let dailyCache: { entries: LeaderboardEntry[]; friendIds: string[]; ts: number } | null = null;
 let weeklyCache: { entries: LeaderboardEntry[]; friendIds: string[]; ts: number } | null = null;
-const CACHE_TTL = 2 * 60 * 1000;
+const CACHE_TTL = 48 * 60 * 60 * 1000;
 
 function getMonday(d: Date) {
   const day = d.getDay();
@@ -53,6 +69,78 @@ const LeaderboardTab = () => {
   const [myRank, setMyRank] = useState<number | null>(null);
   const [sharingId, setSharingId] = useState<string | null>(null);
   const [selectedEntry, setSelectedEntry] = useState<{ entry: LeaderboardEntry; rank: number } | null>(null);
+  const [confirmAction, setConfirmAction] = useState<"sit_out" | "revert" | null>(null);
+  const [optOutLoading, setOptOutLoading] = useState(false);
+
+  const handleSitOut = async () => {
+    if (!user) return;
+    setOptOutLoading(true);
+    try {
+      const today = new Date().toISOString().split("T")[0];
+      await supabase
+        .from("drip_history")
+        .delete()
+        .eq("user_id", user.id)
+        .gte("created_at", `${today}T00:00:00`)
+        .lt("created_at", `${today}T23:59:59.999`);
+      dailyCache = null;
+      weeklyCache = null;
+      await fetchDaily(true);
+      toast.success("Gracefully withdrawn from today's ranking");
+    } catch {
+      toast.error("Something went wrong");
+    } finally {
+      setOptOutLoading(false);
+      setConfirmAction(null);
+    }
+  };
+
+  const handleRevert = async () => {
+    if (!user) return;
+    setOptOutLoading(true);
+    try {
+      const today = new Date().toISOString().split("T")[0];
+      // Delete today's entries
+      await supabase
+        .from("drip_history")
+        .delete()
+        .eq("user_id", user.id)
+        .gte("created_at", `${today}T00:00:00`)
+        .lt("created_at", `${today}T23:59:59.999`);
+      // Find most recent previous entry
+      const { data: prev } = await supabase
+        .from("drip_history")
+        .select("*")
+        .eq("user_id", user.id)
+        .lt("created_at", `${today}T00:00:00`)
+        .order("created_at", { ascending: false })
+        .limit(1)
+        .maybeSingle();
+      if (prev) {
+        await supabase.from("drip_history").insert({
+          user_id: user.id,
+          score: prev.score,
+          image_url: prev.image_url,
+          killer_tag: prev.killer_tag,
+          praise_line: prev.praise_line,
+          confidence_score: prev.confidence_score,
+          full_result: prev.full_result,
+          image_hash: prev.image_hash,
+        });
+        toast.success("Previous evaluation restored for today");
+      } else {
+        toast.info("No prior evaluation found to restore");
+      }
+      dailyCache = null;
+      weeklyCache = null;
+      await fetchDaily(true);
+    } catch {
+      toast.error("Something went wrong");
+    } finally {
+      setOptOutLoading(false);
+      setConfirmAction(null);
+    }
+  };
 
   const fetchFriends = async () => {
     if (!user) return [];
@@ -334,13 +422,13 @@ const LeaderboardTab = () => {
       const blob = await new Promise<Blob>((resolve) =>
         canvas.toBlob((b) => resolve(b!), "image/png")
       );
-      const file = new File([blob], "closetai-drip.png", { type: "image/png" });
+      const file = new File([blob], "dripd-drip.png", { type: "image/png" });
       if (navigator.share && navigator.canShare?.({ files: [file] })) {
-        await navigator.share({ title: "My Drip Score — ClosetAI", files: [file] });
+        await navigator.share({ title: "My Drip Score — Dripd", files: [file] });
       } else {
         const url = URL.createObjectURL(blob);
         const a = document.createElement("a");
-        a.href = url; a.download = "closetai-drip.png";
+        a.href = url; a.download = "dripd-drip.png";
         document.body.appendChild(a); a.click(); document.body.removeChild(a);
         URL.revokeObjectURL(url);
         toast.success("Image saved!");
@@ -377,8 +465,8 @@ const LeaderboardTab = () => {
     <div className="fixed -left-[9999px] top-0" id={`share-card-${entry.user_id}`}>
       <div className="w-[360px] bg-gradient-to-br from-gray-900 to-gray-800 rounded-2xl overflow-hidden p-5 text-white">
         <div className="flex items-center gap-2 mb-4">
-          <img src={closetaiLogo} alt="" className="w-8 h-8 rounded-lg" crossOrigin="anonymous" />
-          <span className="font-bold text-sm">ClosetAI</span>
+          <img src={dripdLogo} alt="" className="w-8 h-8 rounded-lg" crossOrigin="anonymous" />
+          <span className="font-bold text-sm">Dripd</span>
         </div>
         {entry.image_url && (
           <img src={entry.image_url} alt="" className="w-full aspect-[3/4] object-cover rounded-xl mb-4" crossOrigin="anonymous" />
@@ -434,7 +522,56 @@ const LeaderboardTab = () => {
             </div>
           </PopoverContent>
         </Popover>
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <button className="w-8 h-8 rounded-full bg-secondary flex items-center justify-center flex-shrink-0">
+              <MoreVertical size={14} className="text-muted-foreground" />
+            </button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="end" className="w-56">
+            <DropdownMenuItem onClick={() => setConfirmAction("sit_out")} className="gap-2">
+              <EyeOff size={14} />
+              <div>
+                <p className="text-xs font-medium">Sit This One Out</p>
+                <p className="text-[10px] text-muted-foreground">Step away from today's spotlight</p>
+              </div>
+            </DropdownMenuItem>
+            <DropdownMenuItem onClick={() => setConfirmAction("revert")} className="gap-2">
+              <RotateCcw size={14} />
+              <div>
+                <p className="text-xs font-medium">Revert to Previous Look</p>
+                <p className="text-[10px] text-muted-foreground">Restore your last recorded evaluation</p>
+              </div>
+            </DropdownMenuItem>
+          </DropdownMenuContent>
+        </DropdownMenu>
       </div>
+
+      <AlertDialog open={confirmAction !== null} onOpenChange={(open) => !open && setConfirmAction(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>
+              {confirmAction === "sit_out" ? "Withdraw from Today's Ranking?" : "Restore Previous Evaluation?"}
+            </AlertDialogTitle>
+            <AlertDialogDescription>
+              {confirmAction === "sit_out"
+                ? "Your current analysis will be removed and you won't appear on today's leaderboard. This cannot be undone."
+                : "Today's analysis will be replaced with your most recent previous evaluation. This cannot be undone."}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={optOutLoading}>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              disabled={optOutLoading}
+              onClick={confirmAction === "sit_out" ? handleSitOut : handleRevert}
+            >
+              {optOutLoading ? <Loader2 size={14} className="animate-spin mr-1" /> : null}
+              {confirmAction === "sit_out" ? "Withdraw" : "Restore"}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
 
       {entries.length === 0 ? (
         <div className="text-center py-12 space-y-3">

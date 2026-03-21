@@ -4,7 +4,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { lovable } from "@/integrations/lovable/index";
 import { Mail, Lock, User, Eye, EyeOff } from "lucide-react";
 import { toast } from "sonner";
-const logo = "/closetai-logo-192.webp";
+const logo = "/dripd-logo-192.webp";
 
 const AuthScreen = () => {
   const [isLogin, setIsLogin] = useState(true);
@@ -67,14 +67,14 @@ const AuthScreen = () => {
         <div className="text-center space-y-2">
           <motion.img
             src={logo}
-            alt="ClosetAI"
+            alt="Dripd"
             className="w-16 h-16 rounded-2xl mx-auto shadow-elevated object-contain"
             initial={{ scale: 0.8 }}
             animate={{ scale: 1 }}
             transition={{ delay: 0.2, type: "spring", stiffness: 200 }}
           />
           <h1 className="font-display text-3xl font-semibold text-foreground">
-            ClosetAI
+            Dripd
           </h1>
           <p className="text-sm text-muted-foreground">Your AI-powered style companion</p>
         </div>

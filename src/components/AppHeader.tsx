@@ -112,7 +112,7 @@ const AppHeader = () => {
           )}
         </button>
 
-        <h1 className="font-display text-lg font-semibold text-foreground">ClosetAI</h1>
+        <h1 className="font-display text-lg font-semibold text-foreground">Dripd</h1>
 
         <div className="flex items-center gap-1.5">
           {/* Messages */}

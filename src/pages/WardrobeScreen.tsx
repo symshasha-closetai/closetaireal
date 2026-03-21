@@ -58,7 +58,7 @@ function normalizeCategory(s: string): string {
   return s.toLowerCase().replace(/ies$/, 'y').replace(/es$/, 'e').replace(/s$/, '');
 }
 
-const HIDDEN_DEFAULTS_KEY = "closetai-hidden-defaults";
+const HIDDEN_DEFAULTS_KEY = "dripd-hidden-defaults";
 
 // Sortable category row for reordering in manage modal
 const SortableCategoryRow = ({ id, children }: { id: string; children: React.ReactNode }) => {
@@ -75,7 +75,7 @@ const SortableCategoryRow = ({ id, children }: { id: string; children: React.Rea
 };
 
 // --- AI Analysis Cache helpers ---
-const ANALYSIS_CACHE_KEY = "closetai-analysis-cache";
+const ANALYSIS_CACHE_KEY = "dripd-analysis-cache";
 
 function computeAnalysisCacheKey(file: File): string {
   return `${file.name}-${file.size}-${file.lastModified}`;
@@ -236,9 +236,9 @@ const WardrobeScreen = () => {
   const [hiddenDefaults, setHiddenDefaults] = useState<string[]>(() => {
     try { return JSON.parse(localStorage.getItem(HIDDEN_DEFAULTS_KEY) || "[]"); } catch { return []; }
   });
-  const CATEGORY_ORDER_KEY = "closetai-category-order";
+  const CATEGORY_ORDER_KEY = "dripd-category-order";
   const [categoryOrder, setCategoryOrder] = useState<string[]>(() => {
-    try { return JSON.parse(localStorage.getItem("closetai-category-order") || "[]"); } catch { return []; }
+    try { return JSON.parse(localStorage.getItem("dripd-category-order") || "[]"); } catch { return []; }
   });
 
   // Filters
@@ -759,12 +759,12 @@ const WardrobeScreen = () => {
       const canvas = await html2canvas(shareCardRef.current, { useCORS: true, allowTaint: true, backgroundColor: null, scale: 2 });
       const blob = await new Promise<Blob | null>(resolve => canvas.toBlob(resolve, "image/png", 1));
       if (!blob) throw new Error("Failed");
-      const file = new File([blob], "closetai-wardrobe.png", { type: "image/png" });
+      const file = new File([blob], "dripd-wardrobe.png", { type: "image/png" });
       if (navigator.share && navigator.canShare?.({ files: [file] })) {
-        await navigator.share({ title: `${item.name} — ClosetAI`, files: [file] });
+        await navigator.share({ title: `${item.name} — Dripd`, files: [file] });
       } else {
         const url = URL.createObjectURL(blob);
-        const a = document.createElement("a"); a.href = url; a.download = "closetai-wardrobe.png";
+        const a = document.createElement("a"); a.href = url; a.download = "dripd-wardrobe.png";
         document.body.appendChild(a); a.click(); document.body.removeChild(a);
         URL.revokeObjectURL(url); toast.success("Image saved!");
       }
@@ -784,12 +784,12 @@ const WardrobeScreen = () => {
       const canvas = await html2canvas(shareCardRef.current, { useCORS: true, allowTaint: true, backgroundColor: null, scale: 2 });
       const blob = await new Promise<Blob | null>(resolve => canvas.toBlob(resolve, "image/png", 1));
       if (!blob) throw new Error("Failed");
-      const file = new File([blob], "closetai-collection.png", { type: "image/png" });
+      const file = new File([blob], "dripd-collection.png", { type: "image/png" });
       if (navigator.share && navigator.canShare?.({ files: [file] })) {
-        await navigator.share({ title: "My Collection — ClosetAI", files: [file] });
+        await navigator.share({ title: "My Collection — Dripd", files: [file] });
       } else {
         const url = URL.createObjectURL(blob);
-        const a = document.createElement("a"); a.href = url; a.download = "closetai-collection.png";
+        const a = document.createElement("a"); a.href = url; a.download = "dripd-collection.png";
         document.body.appendChild(a); a.click(); document.body.removeChild(a);
         URL.revokeObjectURL(url); toast.success("Image saved!");
       }
@@ -1225,7 +1225,7 @@ const WardrobeScreen = () => {
                   if (oldIdx === -1 || newIdx === -1) return;
                   const reordered = arrayMove(catList, oldIdx, newIdx);
                   setCategoryOrder(reordered);
-                  localStorage.setItem("closetai-category-order", JSON.stringify(reordered));
+                  localStorage.setItem("dripd-category-order", JSON.stringify(reordered));
                 }}>
                   <SortableContext items={allCategories.filter(c => c !== "All")} strategy={rectSortingStrategy}>
                     <div className="space-y-2">
@@ -1378,7 +1378,7 @@ const WardrobeScreen = () => {
             background: "#1a1a1a", borderRadius: 24, overflow: "hidden", fontFamily: "'Inter', sans-serif",
           }}>
             <div style={{ padding: "16px 20px 8px", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-              <span style={{ fontSize: 10, letterSpacing: 5, color: "rgba(255,255,255,0.6)", fontWeight: 300 }}>ClosetAI</span>
+              <span style={{ fontSize: 10, letterSpacing: 5, color: "rgba(255,255,255,0.6)", fontWeight: 300 }}>Dripd</span>
               <span style={{ fontSize: 9, color: "rgba(255,255,255,0.3)", letterSpacing: 2, textTransform: "uppercase" }}>My Collection</span>
             </div>
             <div style={{ padding: "8px 16px 16px", display: "grid", gridTemplateColumns: shareCardItems.length === 1 ? "1fr" : "1fr 1fr", gap: 8 }}>
@@ -1397,7 +1397,7 @@ const WardrobeScreen = () => {
               ))}
             </div>
             <div style={{ padding: "4px 20px 16px", textAlign: "center" }}>
-              <p style={{ fontSize: 9, color: "rgba(255,255,255,0.25)", letterSpacing: 4, textTransform: "uppercase" }}>closetaireal.lovable.app</p>
+              <p style={{ fontSize: 9, color: "rgba(255,255,255,0.25)", letterSpacing: 4, textTransform: "uppercase" }}>dripd.app</p>
             </div>
           </div>
         )}
