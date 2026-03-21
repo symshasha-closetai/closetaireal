@@ -736,6 +736,74 @@ const HomeScreen = () => {
             )}
           </div>
 
+          {/* What to Wear — Calendar Section */}
+          <div className="glass-card-elevated p-4">
+            <div className="flex items-center justify-between mb-3">
+              <div className="flex items-center gap-2">
+                <CalendarDays size={18} className="text-primary" />
+                <h2 className="text-base font-semibold text-foreground">What to Wear</h2>
+                {calendarOutfits.length > 0 && (
+                  <span className="px-2 py-0.5 rounded-full bg-primary/10 text-xs font-bold text-foreground">{calendarOutfits.length} days</span>
+                )}
+              </div>
+              <div className="flex items-center gap-2">
+                <button onClick={generateCalendarOutfits} disabled={generatingCalendar || allWardrobeItems.length < 2} className="w-7 h-7 rounded-full bg-secondary flex items-center justify-center disabled:opacity-40">
+                  <RefreshCw size={13} className={`text-muted-foreground ${generatingCalendar ? "animate-spin" : ""}`} />
+                </button>
+                {calendarOutfits.length > 0 && (
+                  <button onClick={() => setShowCalendarAll(true)} className="flex items-center gap-0.5 text-xs font-medium text-primary">
+                    View all <ChevronRight size={14} />
+                  </button>
+                )}
+              </div>
+            </div>
+
+            {generatingCalendar ? (
+              <div className="flex flex-col items-center py-8 gap-3">
+                <Loader2 size={24} className="text-primary animate-spin" />
+                <p className="text-xs text-muted-foreground">Planning your week...</p>
+              </div>
+            ) : calendarOutfits.length > 0 ? (
+              <div className="flex gap-3 overflow-x-auto pb-2 no-scrollbar">
+                {calendarOutfits.map((co) => {
+                  const od = co.outfit_data;
+                  const itemImages = (od.items || []).map((id: string) => allWardrobeItems.find(w => w.id === id)).filter(Boolean);
+                  return (
+                    <motion.div
+                      key={co.outfit_date}
+                      initial={{ opacity: 0, scale: 0.95 }}
+                      animate={{ opacity: 1, scale: 1 }}
+                      className="flex-shrink-0 w-44 rounded-2xl bg-secondary overflow-hidden cursor-pointer active:scale-[0.97] transition-transform"
+                      onClick={() => setSelectedCalendarOutfit(co)}
+                    >
+                      <div className="grid grid-cols-3 gap-0.5 p-1.5">
+                        {itemImages.slice(0, 3).map((wi: any) => (
+                          <div key={wi.id} className="aspect-square rounded-lg overflow-hidden bg-muted">
+                            <img src={wi.image_url} alt={wi.name || wi.type} className="w-full h-full object-cover" loading="lazy" />
+                          </div>
+                        ))}
+                        {itemImages.length < 3 && Array.from({ length: 3 - itemImages.length }).map((_, i) => (
+                          <div key={`empty-${i}`} className="aspect-square rounded-lg bg-muted" />
+                        ))}
+                      </div>
+                      <div className="px-3 py-2">
+                        <p className="text-[10px] font-semibold text-primary">{getCalendarDayLabel(co.outfit_date)}</p>
+                        <p className="text-xs font-medium text-foreground truncate">{od.name}</p>
+                        <p className="text-[10px] text-muted-foreground truncate">{od.occasion}</p>
+                      </div>
+                    </motion.div>
+                  );
+                })}
+              </div>
+            ) : allWardrobeItems.length < 2 ? (
+              <p className="text-xs text-muted-foreground text-center py-4">Add at least 2 wardrobe items to get daily outfit plans</p>
+            ) : (
+              <button onClick={generateCalendarOutfits} className="w-full py-6 rounded-xl bg-secondary text-sm text-muted-foreground flex items-center justify-center gap-2">
+                <CalendarDays size={16} /> Generate Week Plan
+              </button>
+            )}
+          </div>
+
           {/* Occasion Selector */}
           <div className="glass-card p-4">
             <h2 className="text-base font-semibold text-foreground mb-3">Pick an Occasion</h2>
