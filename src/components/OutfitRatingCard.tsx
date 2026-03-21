@@ -6,7 +6,6 @@ import ScoreRing from "./ScoreRing";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
-import html2canvas from "html2canvas";
 import type { RatingResult } from "@/pages/CameraScreen";
 
 export type Suggestion = {
