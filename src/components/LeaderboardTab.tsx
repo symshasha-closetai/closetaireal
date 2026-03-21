@@ -334,9 +334,9 @@ const LeaderboardTab = () => {
       const blob = await new Promise<Blob>((resolve) =>
         canvas.toBlob((b) => resolve(b!), "image/png")
       );
-      const file = new File([blob], "closetai-drip.png", { type: "image/png" });
+      const file = new File([blob], "dripd-drip.png", { type: "image/png" });
       if (navigator.share && navigator.canShare?.({ files: [file] })) {
-        await navigator.share({ title: "My Drip Score — ClosetAI", files: [file] });
+        await navigator.share({ title: "My Drip Score — Dripd", files: [file] });
       } else {
         const url = URL.createObjectURL(blob);
         const a = document.createElement("a");
