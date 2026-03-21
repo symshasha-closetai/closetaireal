@@ -58,7 +58,7 @@ function normalizeCategory(s: string): string {
   return s.toLowerCase().replace(/ies$/, 'y').replace(/es$/, 'e').replace(/s$/, '');
 }
 
-const HIDDEN_DEFAULTS_KEY = "closetai-hidden-defaults";
+const HIDDEN_DEFAULTS_KEY = "dripd-hidden-defaults";
 
 // Sortable category row for reordering in manage modal
 const SortableCategoryRow = ({ id, children }: { id: string; children: React.ReactNode }) => {
