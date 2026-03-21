@@ -38,3 +38,6 @@ verify_jwt = false
 
 [functions.analyze-style-personality]
 verify_jwt = false
+
+[functions.generate-outfit-calendar]
+verify_jwt = false
