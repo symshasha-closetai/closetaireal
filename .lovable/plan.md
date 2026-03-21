@@ -1,33 +1,61 @@
 
 
-# Calendar View: Show Outfits in Calendar Grid, Fix Image Visibility
+# Plan: Rebrand to Dripd, 48hr Caching, Leaderboard Opt-Out
 
-## Problem
-1. The 3rd item image in calendar outfit cards gets cut off/not visible
-2. The "View All" overlay shows outfits as a list below the calendar grid — user wants outfits embedded directly in the calendar cells
+## 1. Rebrand "ClosetAI" → "Dripd" everywhere
 
-## Changes
+**Waiting on logo upload** — once you upload the Dripd logo, I'll replace all logo files and references.
 
-### 1. Redesign calendar grid cells to show outfit previews inline
+**Text replacements across all files** (~12 files):
+- `index.html`: title, meta tags, descriptions
+- `src/components/SplashScreen.tsx`: logo path, alt text, heading
+- `src/pages/AuthScreen.tsx`: logo path
+- `src/hooks/useAuth.tsx`: welcome toast
+- `src/pages/HomeScreen.tsx`: watermark text, share titles, file names
+- `src/pages/WardrobeScreen.tsx`: share titles, branding text, file names
+- `src/pages/ProfileScreen.tsx`: share titles, file names
+- `src/components/LeaderboardTab.tsx`: logo import, branding text
+- `src/components/OutfitRatingCard.tsx`: any brand mentions
+- `public/sw.js`: cache names (`closetai-*` → `dripd-*`)
+- `src/lib/imageCache.ts`: cache name
+- localStorage keys containing "closetai" in WardrobeScreen
 
-**File:** `src/pages/HomeScreen.tsx` (lines 946-967 — the calendar grid)
+Logo files to replace:
+- `public/closetai-logo-192.webp` → `public/dripd-logo-192.webp`
+- `src/assets/closetai-logo.webp` → `src/assets/dripd-logo.webp`
+- `src/assets/closetai-logo.png` → `src/assets/dripd-logo.png`
 
-Replace the small dot indicator with actual item thumbnail previews inside each calendar cell. Make cells taller (not square aspect ratio) to fit:
-- Day number at top
-- 2-3 tiny item thumbnails (stacked or in a row) below the number
-- Tapping a cell with an outfit opens the detail overlay
+## 2. Increase all cache TTLs to 48 hours
 
-Remove the separate list of outfit cards below the grid (lines 968-988) since the outfits are now shown in the calendar itself.
+| Location | Current TTL | New TTL |
+|----------|------------|---------|
+| `HomeScreen` wardrobe cache | 5 min | 48 hr |
+| `HomeScreen` style profile cache | 10 min | 48 hr |
+| `LeaderboardTab` daily/weekly cache | 2 min | 48 hr |
+| `useOptionImage` | 7 days | keep as-is |
+| `OutfitRatingCard` suggestion images | 7 days | keep as-is |
+| `public/sw.js` service worker image cache | indefinite | keep as-is |
 
-### 2. Fix image visibility in inline scroll cards
+The 48hr constant: `48 * 60 * 60 * 1000` (172,800,000ms)
 
-**File:** `src/pages/HomeScreen.tsx` (lines 779-787)
+## 3. Leaderboard: option to remove today's entry
 
-The 3rd image gets clipped because the card is `w-44` with `grid-cols-3` and `gap-0.5`. Increase card width slightly to `w-52` and ensure images have proper sizing. Also show all matched items (not just `slice(0, 3)`) or ensure the grid accommodates them properly.
+Add a settings/options button (e.g., three-dot menu or a subtle icon) to the leaderboard that shows two choices when tapped:
+
+**Option 1:** "Sit This One Out" — Deletes the user's drip_history entry for today so they don't appear on today's leaderboard. Sophisticated description: "Step away from today's spotlight — your ranking won't be visible."
+
+**Option 2:** "Revert to Previous Look" — Deletes today's drip_history and re-uses the most recent previous analysis instead. Description: "Restore your last recorded look as today's appearance."
+
+Both options use a confirmation dialog. Implementation:
+- Add a dropdown menu or bottom sheet in `LeaderboardTab.tsx` with these two options
+- "Sit This One Out": `DELETE FROM drip_history WHERE user_id = X AND created_at::date = today`, then refresh leaderboard
+- "Revert to Previous Look": Delete today's entry, find the most recent previous entry, insert a copy with today's date, refresh
+
+**File:** `src/components/LeaderboardTab.tsx`
 
 ## Technical Details
 
-- Calendar cells: Change from `aspect-square` to a taller ratio (~`h-20`), show day number + 2-3 micro thumbnails (16x16 or 20x20 rounded) stacked horizontally
-- Remove the `space-y-3 pt-2` list section entirely from the "View All" overlay
-- Inline scroll cards: bump width from `w-44` to `w-52`, keep `grid-cols-3`
+- Branding: pure find-and-replace across ~12 files, plus logo file swap
+- Cache: change 4 TTL constants/values to `48 * 60 * 60 * 1000`
+- Leaderboard opt-out: Add `DropdownMenu` with two items, each triggers a Supabase delete + optional re-insert, then forces a cache-busted refetch
 
