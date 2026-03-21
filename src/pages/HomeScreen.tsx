@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback, useRef } from "react";
 import ImageCropper from "../components/ImageCropper";
 import { motion, AnimatePresence } from "framer-motion";
-import { Sparkles, Camera, ChevronRight, X, Heart, GraduationCap, PartyPopper, Shirt, Palette, Briefcase, Sun, Moon, Sunset, CloudRain, Thermometer, CloudSun, Snowflake, Shuffle, Leaf, Smile, Droplet, User, Loader2, Bookmark, BookmarkCheck, ImagePlus, Share2, Flame, Pin, Download, Crop, Music, Flag } from "lucide-react";
+import { Sparkles, Camera, ChevronRight, ChevronLeft, X, Heart, GraduationCap, PartyPopper, Shirt, Palette, Briefcase, Sun, Moon, Sunset, CloudRain, Thermometer, CloudSun, Snowflake, Shuffle, Leaf, Smile, Droplet, User, Loader2, Bookmark, BookmarkCheck, ImagePlus, Share2, Flame, Pin, Download, Crop, Music, Flag, CalendarDays, RefreshCw } from "lucide-react";
 import AppHeader from "../components/AppHeader";
 import { useAuth } from "../hooks/useAuth";
 import { useNavigate } from "react-router-dom";
@@ -117,6 +117,15 @@ const HomeScreen = () => {
   const [showResults, setShowResults] = useState(false);
   const [selectedOutfitIdx, setSelectedOutfitIdx] = useState<number | null>(null);
   const [savedOutfitIds, setSavedOutfitIds] = useState<Set<number>>(new Set());
+
+  // Calendar outfit planner
+  type CalendarOutfit = { id?: string; outfit_date: string; outfit_data: { name: string; items: string[]; occasion: string; explanation: string } };
+  const [calendarOutfits, setCalendarOutfits] = useState<CalendarOutfit[]>([]);
+  const [generatingCalendar, setGeneratingCalendar] = useState(false);
+  const [showCalendarAll, setShowCalendarAll] = useState(false);
+  const [calendarMonth, setCalendarMonth] = useState(new Date());
+  const [selectedCalendarOutfit, setSelectedCalendarOutfit] = useState<CalendarOutfit | null>(null);
+  const [monthOutfits, setMonthOutfits] = useState<CalendarOutfit[]>([]);
 
   // Today's Look photo
   const [todayPhoto, setTodayPhoto] = useState<string | null>(null);
@@ -432,6 +441,66 @@ const HomeScreen = () => {
     }
   }, [user]);
 
+  // Calendar outfit planner — fetch and auto-generate
+  const generateCalendarOutfits = useCallback(async () => {
+    if (!user || allWardrobeItems.length < 2) return;
+    setGeneratingCalendar(true);
+    try {
+      const sp = await supabase.from("style_profiles").select("body_type, skin_tone, gender, style_type").eq("user_id", user.id).maybeSingle();
+      const today = new Date().toISOString().split("T")[0];
+      const { data, error } = await supabase.functions.invoke("generate-outfit-calendar", {
+        body: { wardrobeItems: allWardrobeItems, styleProfile: sp?.data, startDate: today },
+      });
+      if (error || !data?.outfits) { toast.error("Failed to generate weekly plan"); return; }
+      const rows = data.outfits.map((o: any) => {
+        const d = new Date();
+        d.setDate(d.getDate() + (o.day_offset || 0));
+        return { user_id: user.id, outfit_date: d.toISOString().split("T")[0], outfit_data: { name: o.name, items: o.items, occasion: o.occasion, explanation: o.explanation } };
+      });
+      for (const row of rows) {
+        await supabase.from("outfit_calendar" as any).upsert(row as any, { onConflict: "user_id,outfit_date" });
+      }
+      setCalendarOutfits(rows);
+      toast.success("Weekly outfit plan generated! 📅");
+    } catch (e) { console.error(e); toast.error("Failed to plan outfits"); }
+    setGeneratingCalendar(false);
+  }, [user, allWardrobeItems]);
+
+  useEffect(() => {
+    if (!user) return;
+    const fetchCalendar = async () => {
+      const today = new Date().toISOString().split("T")[0];
+      const end = new Date(); end.setDate(end.getDate() + 7);
+      const endStr = end.toISOString().split("T")[0];
+      const { data } = await supabase.from("outfit_calendar" as any).select("*").eq("user_id", user.id).gte("outfit_date", today).lte("outfit_date", endStr).order("outfit_date", { ascending: true });
+      const items = (data || []) as unknown as CalendarOutfit[];
+      setCalendarOutfits(items);
+      if (items.length < 3 && allWardrobeItems.length >= 2) {
+        generateCalendarOutfits();
+      }
+    };
+    if (allWardrobeItems.length > 0) fetchCalendar();
+  }, [user, allWardrobeItems, generateCalendarOutfits]);
+
+  useEffect(() => {
+    if (!user || !showCalendarAll) return;
+    const year = calendarMonth.getFullYear();
+    const month = calendarMonth.getMonth();
+    const start = new Date(year, month, 1).toISOString().split("T")[0];
+    const end = new Date(year, month + 1, 0).toISOString().split("T")[0];
+    supabase.from("outfit_calendar" as any).select("*").eq("user_id", user.id).gte("outfit_date", start).lte("outfit_date", end).order("outfit_date", { ascending: true })
+      .then(({ data }) => setMonthOutfits((data || []) as unknown as CalendarOutfit[]));
+  }, [user, showCalendarAll, calendarMonth]);
+
+  const getCalendarDayLabel = (dateStr: string) => {
+    const d = new Date(dateStr + "T00:00:00");
+    const today = new Date(); today.setHours(0,0,0,0);
+    const tomorrow = new Date(today); tomorrow.setDate(tomorrow.getDate() + 1);
+    if (d.getTime() === today.getTime()) return "Today";
+    if (d.getTime() === tomorrow.getTime()) return "Tomorrow";
+    return d.toLocaleDateString("en-US", { weekday: "short", month: "short", day: "numeric" });
+  };
+
   const categoryCounts = allWardrobeItems.reduce((acc, it) => {
     acc[it.type] = (acc[it.type] || 0) + 1;
     return acc;
@@ -667,6 +736,74 @@ const HomeScreen = () => {
             )}
           </div>
 
+          {/* What to Wear — Calendar Section */}
+          <div className="glass-card-elevated p-4">
+            <div className="flex items-center justify-between mb-3">
+              <div className="flex items-center gap-2">
+                <CalendarDays size={18} className="text-primary" />
+                <h2 className="text-base font-semibold text-foreground">What to Wear</h2>
+                {calendarOutfits.length > 0 && (
+                  <span className="px-2 py-0.5 rounded-full bg-primary/10 text-xs font-bold text-foreground">{calendarOutfits.length} days</span>
+                )}
+              </div>
+              <div className="flex items-center gap-2">
+                <button onClick={generateCalendarOutfits} disabled={generatingCalendar || allWardrobeItems.length < 2} className="w-7 h-7 rounded-full bg-secondary flex items-center justify-center disabled:opacity-40">
+                  <RefreshCw size={13} className={`text-muted-foreground ${generatingCalendar ? "animate-spin" : ""}`} />
+                </button>
+                {calendarOutfits.length > 0 && (
+                  <button onClick={() => setShowCalendarAll(true)} className="flex items-center gap-0.5 text-xs font-medium text-primary">
+                    View all <ChevronRight size={14} />
+                  </button>
+                )}
+              </div>
+            </div>
+
+            {generatingCalendar ? (
+              <div className="flex flex-col items-center py-8 gap-3">
+                <Loader2 size={24} className="text-primary animate-spin" />
+                <p className="text-xs text-muted-foreground">Planning your week...</p>
+              </div>
+            ) : calendarOutfits.length > 0 ? (
+              <div className="flex gap-3 overflow-x-auto pb-2 no-scrollbar">
+                {calendarOutfits.map((co) => {
+                  const od = co.outfit_data;
+                  const itemImages = (od.items || []).map((id: string) => allWardrobeItems.find(w => w.id === id)).filter(Boolean);
+                  return (
+                    <motion.div
+                      key={co.outfit_date}
+                      initial={{ opacity: 0, scale: 0.95 }}
+                      animate={{ opacity: 1, scale: 1 }}
+                      className="flex-shrink-0 w-44 rounded-2xl bg-secondary overflow-hidden cursor-pointer active:scale-[0.97] transition-transform"
+                      onClick={() => setSelectedCalendarOutfit(co)}
+                    >
+                      <div className="grid grid-cols-3 gap-0.5 p-1.5">
+                        {itemImages.slice(0, 3).map((wi: any) => (
+                          <div key={wi.id} className="aspect-square rounded-lg overflow-hidden bg-muted">
+                            <img src={wi.image_url} alt={wi.name || wi.type} className="w-full h-full object-cover" loading="lazy" />
+                          </div>
+                        ))}
+                        {itemImages.length < 3 && Array.from({ length: 3 - itemImages.length }).map((_, i) => (
+                          <div key={`empty-${i}`} className="aspect-square rounded-lg bg-muted" />
+                        ))}
+                      </div>
+                      <div className="px-3 py-2">
+                        <p className="text-[10px] font-semibold text-primary">{getCalendarDayLabel(co.outfit_date)}</p>
+                        <p className="text-xs font-medium text-foreground truncate">{od.name}</p>
+                        <p className="text-[10px] text-muted-foreground truncate">{od.occasion}</p>
+                      </div>
+                    </motion.div>
+                  );
+                })}
+              </div>
+            ) : allWardrobeItems.length < 2 ? (
+              <p className="text-xs text-muted-foreground text-center py-4">Add at least 2 wardrobe items to get daily outfit plans</p>
+            ) : (
+              <button onClick={generateCalendarOutfits} className="w-full py-6 rounded-xl bg-secondary text-sm text-muted-foreground flex items-center justify-center gap-2">
+                <CalendarDays size={16} /> Generate Week Plan
+              </button>
+            )}
+          </div>
+
           {/* Occasion Selector */}
           <div className="glass-card p-4">
             <h2 className="text-base font-semibold text-foreground mb-3">Pick an Occasion</h2>
@@ -779,6 +916,139 @@ const HomeScreen = () => {
           </div>
         </div>
       </div>
+
+
+      {/* Calendar Month View Overlay */}
+      <AnimatePresence>
+        {showCalendarAll && (
+          <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="fixed inset-0 z-50 bg-background overflow-y-auto">
+            <div className="max-w-lg mx-auto px-5 py-6 space-y-5">
+              <div className="flex items-center justify-between">
+                <h2 className="font-display text-xl font-semibold text-foreground">Outfit Calendar</h2>
+                <button onClick={() => setShowCalendarAll(false)} className="w-9 h-9 rounded-full bg-secondary flex items-center justify-center">
+                  <X size={18} className="text-foreground" />
+                </button>
+              </div>
+              <div className="flex items-center justify-between">
+                <button onClick={() => { const d = new Date(calendarMonth); d.setMonth(d.getMonth() - 1); setCalendarMonth(d); }} className="w-8 h-8 rounded-full bg-secondary flex items-center justify-center">
+                  <ChevronLeft size={16} className="text-foreground" />
+                </button>
+                <span className="text-sm font-semibold text-foreground">{calendarMonth.toLocaleDateString("en-US", { month: "long", year: "numeric" })}</span>
+                <button onClick={() => { const d = new Date(calendarMonth); d.setMonth(d.getMonth() + 1); setCalendarMonth(d); }} className="w-8 h-8 rounded-full bg-secondary flex items-center justify-center">
+                  <ChevronRight size={16} className="text-foreground" />
+                </button>
+              </div>
+              <div className="grid grid-cols-7 gap-1 text-center">
+                {["Sun","Mon","Tue","Wed","Thu","Fri","Sat"].map(d => (
+                  <span key={d} className="text-[10px] font-medium text-muted-foreground">{d}</span>
+                ))}
+              </div>
+              <div className="grid grid-cols-7 gap-1">
+                {(() => {
+                  const year = calendarMonth.getFullYear();
+                  const month = calendarMonth.getMonth();
+                  const firstDay = new Date(year, month, 1).getDay();
+                  const daysInMonth = new Date(year, month + 1, 0).getDate();
+                  const cells: React.ReactNode[] = [];
+                  for (let i = 0; i < firstDay; i++) cells.push(<div key={`e-${i}`} />);
+                  for (let d = 1; d <= daysInMonth; d++) {
+                    const dateStr = `${year}-${String(month + 1).padStart(2, "0")}-${String(d).padStart(2, "0")}`;
+                    const outfit = monthOutfits.find(o => o.outfit_date === dateStr);
+                    const isToday = dateStr === new Date().toISOString().split("T")[0];
+                    cells.push(
+                      <button key={d} onClick={() => outfit && setSelectedCalendarOutfit(outfit)} className={`aspect-square rounded-xl flex flex-col items-center justify-center gap-0.5 text-xs transition-all ${isToday ? "ring-2 ring-primary bg-primary/10" : outfit ? "bg-secondary cursor-pointer active:scale-95" : "bg-transparent"}`}>
+                        <span className={`text-[11px] ${isToday ? "font-bold text-primary" : "text-foreground"}`}>{d}</span>
+                        {outfit && <div className="w-1.5 h-1.5 rounded-full bg-primary" />}
+                      </button>
+                    );
+                  }
+                  return cells;
+                })()}
+              </div>
+              <div className="space-y-3 pt-2">
+                {monthOutfits.map((co) => {
+                  const od = co.outfit_data;
+                  const itemImages = (od.items || []).map((id: string) => allWardrobeItems.find(w => w.id === id)).filter(Boolean);
+                  return (
+                    <div key={co.outfit_date} className="glass-card p-3 flex gap-3 cursor-pointer active:scale-[0.98] transition-transform" onClick={() => setSelectedCalendarOutfit(co)}>
+                      <div className="flex gap-1">
+                        {itemImages.slice(0, 3).map((wi: any) => (
+                          <div key={wi.id} className="w-12 h-12 rounded-lg overflow-hidden bg-muted">
+                            <img src={wi.image_url} alt="" className="w-full h-full object-cover" loading="lazy" />
+                          </div>
+                        ))}
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <p className="text-[10px] font-semibold text-primary">{getCalendarDayLabel(co.outfit_date)}</p>
+                        <p className="text-sm font-medium text-foreground truncate">{od.name}</p>
+                        <p className="text-[10px] text-muted-foreground truncate">{od.explanation}</p>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* Calendar Outfit Detail */}
+      <AnimatePresence>
+        {selectedCalendarOutfit && (() => {
+          const od = selectedCalendarOutfit.outfit_data;
+          const outfitItems = (od.items || []).map((id: string) => allWardrobeItems.find(w => w.id === id)).filter(Boolean) as WardrobeItem[];
+          return (
+            <motion.div key="cal-detail" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="fixed inset-0 z-[60] bg-background overflow-y-auto">
+              <div className="max-w-lg mx-auto px-5 py-6 space-y-5 pb-32">
+                <div className="flex items-center justify-between">
+                  <div className="flex gap-2">
+                    <span className="px-2.5 py-1 rounded-full bg-secondary text-[10px] font-medium text-foreground">{getCalendarDayLabel(selectedCalendarOutfit.outfit_date)}</span>
+                    <span className="px-2.5 py-1 rounded-full bg-primary/10 text-[10px] font-medium text-primary">{od.occasion}</span>
+                  </div>
+                  <button onClick={() => setSelectedCalendarOutfit(null)} className="w-9 h-9 rounded-full bg-secondary flex items-center justify-center">
+                    <X size={18} className="text-foreground" />
+                  </button>
+                </div>
+                <div className="text-center space-y-1">
+                  <h2 className="font-display text-xl font-semibold text-foreground">{od.name}</h2>
+                  <p className="text-xs text-muted-foreground">{selectedCalendarOutfit.outfit_date}</p>
+                </div>
+                <div className="flex justify-center items-end -space-x-4 py-4">
+                  {outfitItems.map((wi, i) => (
+                    <motion.div key={wi.id} initial={{ opacity: 0, y: 20, scale: 0.9 }} animate={{ opacity: 1, y: 0, scale: 1 }} transition={{ delay: i * 0.1 }} className="relative w-24 h-28 rounded-2xl overflow-hidden bg-secondary shadow-elevated border-2 border-background" style={{ zIndex: outfitItems.length - i }}>
+                      <img src={wi.image_url} alt={getItemLabel(wi)} className="w-full h-full object-cover" />
+                      <div className="absolute bottom-0 left-0 right-0 bg-foreground/50 backdrop-blur-sm px-1 py-0.5">
+                        <p className="text-[8px] text-primary-foreground truncate text-center font-medium">{getItemLabel(wi)}</p>
+                      </div>
+                    </motion.div>
+                  ))}
+                </div>
+                <div className="glass-card p-4 space-y-3">
+                  <h3 className="text-sm font-semibold text-foreground">Items in this outfit</h3>
+                  <div className="space-y-2">
+                    {outfitItems.map((wi) => (
+                      <div key={wi.id} className="flex items-center gap-3">
+                        <div className="w-14 h-14 rounded-xl overflow-hidden bg-secondary flex-shrink-0">
+                          <img src={wi.image_url} alt={getItemLabel(wi)} className="w-full h-full object-cover" />
+                        </div>
+                        <div>
+                          <p className="text-sm font-medium text-foreground">{getItemLabel(wi)}</p>
+                          <p className="text-[10px] text-muted-foreground">{wi.type}{wi.color ? ` · ${wi.color}` : ""}</p>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+                <div className="glass-card p-4 space-y-2">
+                  <h3 className="text-sm font-semibold text-foreground">Why This Works</h3>
+                  <p className="text-xs text-muted-foreground leading-relaxed">{od.explanation}</p>
+                </div>
+                <button onClick={() => setSelectedCalendarOutfit(null)} className="w-full text-center text-sm text-muted-foreground font-medium py-2">← Back</button>
+              </div>
+            </motion.div>
+          );
+        })()}
+      </AnimatePresence>
 
       {/* Style Me Results Sheet */}
       <AnimatePresence>
