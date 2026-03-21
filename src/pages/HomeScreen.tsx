@@ -118,6 +118,15 @@ const HomeScreen = () => {
   const [selectedOutfitIdx, setSelectedOutfitIdx] = useState<number | null>(null);
   const [savedOutfitIds, setSavedOutfitIds] = useState<Set<number>>(new Set());
 
+  // Calendar outfit planner
+  type CalendarOutfit = { id?: string; outfit_date: string; outfit_data: { name: string; items: string[]; occasion: string; explanation: string } };
+  const [calendarOutfits, setCalendarOutfits] = useState<CalendarOutfit[]>([]);
+  const [generatingCalendar, setGeneratingCalendar] = useState(false);
+  const [showCalendarAll, setShowCalendarAll] = useState(false);
+  const [calendarMonth, setCalendarMonth] = useState(new Date());
+  const [selectedCalendarOutfit, setSelectedCalendarOutfit] = useState<CalendarOutfit | null>(null);
+  const [monthOutfits, setMonthOutfits] = useState<CalendarOutfit[]>([]);
+
   // Today's Look photo
   const [todayPhoto, setTodayPhoto] = useState<string | null>(null);
   const [uploadingPhoto, setUploadingPhoto] = useState(false);
