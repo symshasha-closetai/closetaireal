@@ -145,27 +145,6 @@ const WardrobeCardContent = ({ item, selectMode, selectedItems, failedImages, re
             <Pin size={13} />
           </div>
         )}
-        {dragHandle}
-        <button onClick={(e) => { e.stopPropagation(); togglePin(item); }}
-          className={`absolute ${item.pinned ? 'top-11' : 'top-2'} left-2 w-7 h-7 rounded-full bg-foreground/50 text-primary-foreground flex items-center justify-center opacity-100 sm:opacity-0 sm:group-hover:opacity-100 transition-opacity backdrop-blur-sm`}>
-          <Pin size={13} className={item.pinned ? "fill-current" : ""} />
-        </button>
-        <button onClick={(e) => { e.stopPropagation(); retryImageGeneration(item); }} disabled={retryingImages.has(item.id)}
-          className={`absolute ${item.pinned ? 'top-20' : 'top-11'} left-2 w-7 h-7 rounded-full bg-foreground/50 text-primary-foreground flex items-center justify-center opacity-100 sm:opacity-0 sm:group-hover:opacity-100 transition-opacity backdrop-blur-sm disabled:opacity-50`}>
-          {retryingImages.has(item.id) ? <Loader2 size={13} className="animate-spin" /> : <RefreshCw size={13} />}
-        </button>
-        <button onClick={(e) => { e.stopPropagation(); openEdit(item); }}
-          className="absolute top-2 right-2 w-7 h-7 rounded-full bg-foreground/50 text-primary-foreground flex items-center justify-center opacity-100 sm:opacity-0 sm:group-hover:opacity-100 transition-opacity backdrop-blur-sm">
-          <Pencil size={13} />
-        </button>
-        <button onClick={(e) => { e.stopPropagation(); deleteItem(item.id); }}
-          className="absolute top-11 right-2 w-7 h-7 rounded-full bg-foreground/50 text-primary-foreground flex items-center justify-center opacity-100 sm:opacity-0 sm:group-hover:opacity-100 transition-opacity backdrop-blur-sm">
-          <Trash2 size={13} />
-        </button>
-        <button onClick={(e) => { e.stopPropagation(); sendToFriend(item); }}
-          className="absolute top-20 right-2 w-7 h-7 rounded-full bg-foreground/50 text-primary-foreground flex items-center justify-center opacity-100 sm:opacity-0 sm:group-hover:opacity-100 transition-opacity backdrop-blur-sm">
-          <Send size={13} />
-        </button>
       </>
     )}
     {selectMode && (
@@ -390,12 +369,29 @@ const WardrobeScreen = () => {
     }
   };
 
-  // Extract unique filter values
-  const uniqueColors = useMemo(() => [...new Set(items.map(i => i.color).filter(Boolean))] as string[], [items]);
-  const uniqueQualities = useMemo(() => [...new Set(items.map(i => i.quality).filter(Boolean))] as string[], [items]);
-  const uniqueMaterials = useMemo(() => [...new Set(items.map(i => i.material).filter(Boolean))] as string[], [items]);
-  const uniqueBrands = useMemo(() => [...new Set(items.map(i => i.brand).filter(Boolean))] as string[], [items]);
-  const uniqueSeasons = useMemo(() => [...new Set(items.map(i => i.season).filter(Boolean))] as string[], [items]);
+  // Normalize filter values: lowercase + synonym merging
+  const synonymMap: Record<string, string> = { grey: "gray" };
+  const normalizeFilterValue = (val: string) => {
+    const lower = val.toLowerCase().trim();
+    return synonymMap[lower] || lower;
+  };
+
+  // Extract unique filter values (normalized, deduplicated, display as capitalized)
+  const getUniqueNormalized = (vals: (string | null | undefined)[]) => {
+    const seen = new Map<string, string>();
+    for (const v of vals) {
+      if (!v) continue;
+      const norm = normalizeFilterValue(v);
+      if (!seen.has(norm)) seen.set(norm, v.charAt(0).toUpperCase() + norm.slice(1));
+    }
+    return [...seen.values()];
+  };
+
+  const uniqueColors = useMemo(() => getUniqueNormalized(items.map(i => i.color)), [items]);
+  const uniqueQualities = useMemo(() => getUniqueNormalized(items.map(i => i.quality)), [items]);
+  const uniqueMaterials = useMemo(() => getUniqueNormalized(items.map(i => i.material)), [items]);
+  const uniqueBrands = useMemo(() => getUniqueNormalized(items.map(i => i.brand)), [items]);
+  const uniqueSeasons = useMemo(() => getUniqueNormalized(items.map(i => i.season)), [items]);
 
   const filtered = useMemo(() => {
     let result = items;
@@ -411,7 +407,6 @@ const WardrobeScreen = () => {
     } else if (defaultCategories.includes(activeCategory)) {
       result = result.filter(i => i.type === activeCategory);
     } else {
-      // Custom category — match by custom_category tag, type name, or item name (with plural normalization)
       const norm = normalizeCategory(activeCategory);
       result = result.filter(i =>
         i.custom_category === activeCategory ||
@@ -419,11 +414,11 @@ const WardrobeScreen = () => {
         (i.name && normalizeCategory(i.name).includes(norm))
       );
     }
-    if (filterColor) result = result.filter(i => i.color?.toLowerCase() === filterColor.toLowerCase());
-    if (filterQuality) result = result.filter(i => i.quality?.toLowerCase() === filterQuality.toLowerCase());
-    if (filterMaterial) result = result.filter(i => i.material?.toLowerCase() === filterMaterial.toLowerCase());
-    if (filterBrand) result = result.filter(i => i.brand?.toLowerCase() === filterBrand.toLowerCase());
-    if (filterSeason) result = result.filter(i => i.season?.toLowerCase() === filterSeason.toLowerCase());
+    if (filterColor) result = result.filter(i => normalizeFilterValue(i.color || "") === normalizeFilterValue(filterColor));
+    if (filterQuality) result = result.filter(i => normalizeFilterValue(i.quality || "") === normalizeFilterValue(filterQuality));
+    if (filterMaterial) result = result.filter(i => normalizeFilterValue(i.material || "") === normalizeFilterValue(filterMaterial));
+    if (filterBrand) result = result.filter(i => normalizeFilterValue(i.brand || "") === normalizeFilterValue(filterBrand));
+    if (filterSeason) result = result.filter(i => normalizeFilterValue(i.season || "") === normalizeFilterValue(filterSeason));
     return result;
   }, [items, activeCategory, filterColor, filterQuality, filterMaterial, filterBrand, filterSeason]);
 

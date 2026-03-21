@@ -96,6 +96,7 @@ type OutfitSuggestion = {
   explanation: string;
   reasoning?: OutfitReasoning;
   score_breakdown?: ScoreBreakdown;
+  best_choice?: boolean;
 };
 
 const HomeScreen = () => {
@@ -792,17 +793,21 @@ const HomeScreen = () => {
               </div>
               <p className="text-xs text-muted-foreground">{selectedOccasion} · {selectedTime} · {selectedWeather}</p>
 
-              {outfitSuggestions.map((outfit, idx) => {
+              {[...outfitSuggestions].sort((a, b) => (b.best_choice ? 1 : 0) - (a.best_choice ? 1 : 0) || b.score - a.score).map((outfit, idx) => {
                 const top = getItemById(outfit.top_id);
                 const bottom = getItemById(outfit.bottom_id);
                 const shoes = getItemById(outfit.shoes_id);
                 const accessoryItems = (outfit.accessories || []).map(id => getItemById(id)).filter(Boolean);
+                const isBest = outfit.best_choice || idx === 0;
 
                 return (
-                  <motion.div key={idx} initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: idx * 0.1 }} className="glass-card overflow-hidden cursor-pointer active:scale-[0.98] transition-transform" onClick={() => setSelectedOutfitIdx(idx)}>
+                  <motion.div key={idx} initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: idx * 0.1 }} className={`glass-card overflow-hidden cursor-pointer active:scale-[0.98] transition-transform ${isBest ? "ring-2 ring-primary" : ""}`} onClick={() => setSelectedOutfitIdx(outfitSuggestions.indexOf(outfit))}>
                     <div className="p-4 space-y-3">
                       <div className="flex items-center justify-between">
-                        <h3 className="text-sm font-semibold text-foreground">{outfit.name}</h3>
+                        <div className="flex items-center gap-2">
+                          <h3 className="text-sm font-semibold text-foreground">{outfit.name}</h3>
+                          {isBest && <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-primary text-primary-foreground">Best Choice ✨</span>}
+                        </div>
                         <div className="flex items-center gap-1">
                           <Sparkles size={14} className="text-muted-foreground" />
                           <span className="text-sm font-semibold text-foreground">{outfit.score}/10</span>

@@ -30,7 +30,7 @@ serve(async (req) => {
       ? `\n\n## SURPRISE ME MODE:\nThe user wants you to pick the single BEST possible outfit without any occasion/time/weather constraints. Return EXACTLY 1 outfit — the most stylish, versatile, and flattering combination from their wardrobe. Pick an occasion that suits the outfit best and mention it. Be creative and bold!`
       : "";
 
-    const systemPrompt = `You are an expert fashion stylist AI with deep knowledge of color theory, fabric science, and seasonal dressing. Given the user's wardrobe items, occasion, time of day, weather, body profile, and face analysis, suggest 3-5 complete outfit combinations using ONLY items from their wardrobe.${surpriseInstruction}
+    const systemPrompt = `You are an expert fashion stylist AI with deep knowledge of color theory, fabric science, and seasonal dressing. Given the user's wardrobe items, occasion, time of day, weather, body profile, and face analysis, suggest exactly 2 complete outfit combinations using ONLY items from their wardrobe. Mark the highest-scoring outfit with "best_choice": true and the other with "best_choice": false.${surpriseInstruction}
 
 ## COLOR RULES (Critical — apply rigorously):
 - **Complementary**: Pair opposites on the color wheel (navy + burnt orange, burgundy + olive).
@@ -88,9 +88,9 @@ CRITICAL SCORING RULES:
 - A score of 10 means absolutely perfect match across ALL dimensions. 7-8 is a good match. 5-6 is average. Below 5 means poor match.
 
 Return ONLY valid JSON (no markdown) with this structure:
-{"outfits":[{"name":"string","top_id":"string or null","bottom_id":"string or null","shoes_id":"string or null","accessories":["string"],"score":"number between 1.0 and 10.0","explanation":"string","reasoning":{"season":"string","mood":"string","time_of_day":"string","color_combination":"string","body_type":"string","skin_tone":"string"},"score_breakdown":{"color":"number 1-10","occasion":"number 1-10","season":"number 1-10","body_type":"number 1-10","skin_tone":"number 1-10","fabric":"number 1-10"}}]}`;
+{"outfits":[{"name":"string","top_id":"string or null","bottom_id":"string or null","shoes_id":"string or null","accessories":["string"],"score":"number between 1.0 and 10.0","best_choice":true,"explanation":"string","reasoning":{"season":"string","mood":"string","time_of_day":"string","color_combination":"string","body_type":"string","skin_tone":"string"},"score_breakdown":{"color":"number 1-10","occasion":"number 1-10","season":"number 1-10","body_type":"number 1-10","skin_tone":"number 1-10","fabric":"number 1-10"}}]}`;
 
-    const outfitCount = surpriseMe ? "1" : "3-5";
+    const outfitCount = surpriseMe ? "1" : "2";
     const userPrompt = `Wardrobe items:\n${wardrobeDesc}\n\nOccasion: ${occasion}\nTime of day: ${timeOfDay}${weatherInfo}\nProfile: ${profileDesc}${bodyAnalysis}${faceAnalysis}\n\nSuggest ${outfitCount} outfit${surpriseMe ? "" : "s"}. Return JSON only.`;
 
     const response = await fetch("https://generativelanguage.googleapis.com/v1beta/openai/chat/completions", {
@@ -100,7 +100,7 @@ Return ONLY valid JSON (no markdown) with this structure:
         "Content-Type": "application/json",
       },
       body: JSON.stringify({
-        model: "gemini-2.5-flash",
+        model: "gemini-2.5-flash-lite",
         messages: [
           { role: "system", content: systemPrompt },
           { role: "user", content: userPrompt },
