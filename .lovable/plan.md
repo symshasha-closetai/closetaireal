@@ -1,43 +1,67 @@
 
 
-# Plan: Leaderboard UI Fix, Messages + Button, Chat Fix
+# Calendar Outfit Planner
 
-## 1. Remove duplicate "Leaderboard" header in LeaderboardTab
+## Overview
+Add a "What to Wear" calendar section below the wardrobe card on the home page. It shows daily outfit plans as scrollable cards, with a "View All" that opens a full month calendar view. Outfits are AI-generated from the user's wardrobe, considering season, skin tone, and body shape.
 
-The `LeaderboardTab` component renders its own "Leaderboard" header with logo (lines 402-425). Since the parent `CameraScreen` already has the "Drip Check / Leaderboard" tab switcher, this inner header is redundant.
+## 1. Database: `outfit_calendar` table
 
-**Change:** In `src/components/LeaderboardTab.tsx`, remove lines 402-425 (the header block with logo + "Leaderboard" text). Keep the Daily/Weekly toggle and the bulb popover, but move the bulb inline with or below the toggle.
+New table to store AI-generated daily outfit plans:
 
-## 2. Reposition bulb and Today/Last Week toggle
-
-With the inner header removed, the Today/Last Week toggle moves up naturally. Place the bulb icon to the right of the toggle row (inline) so it doesn't overlap with podium cards.
-
-**File:** `src/components/LeaderboardTab.tsx` — restructure lines 400-445 to have toggle + bulb in one row.
-
-## 3. Add + button in MessagesScreen to start new conversations
-
-Add a floating or header-inline "+" button that opens a friend picker dialog (reuse `SendToFriendPicker` pattern) to select a friend and create/navigate to a conversation.
-
-**File:** `src/pages/MessagesScreen.tsx`
-- Add a `+` button next to the "Messages" title
-- Add state for a new `NewConversationDialog` (or inline friend picker)
-- On friend selection: find or create conversation, then navigate to `/chat/${conversationId}`
-
-## 4. Fix conversation creation (batch insert RLS issue)
-
-The `SendToFriendPicker` inserts both participants in a single batch. RLS checks each row individually — the friend's row fails because `user_id != auth.uid()` and `is_conversation_participant` doesn't see the first row yet (same transaction).
-
-**Fix:** In `src/components/SendToFriendPicker.tsx`, split the batch insert into two sequential inserts:
-```
-await supabase.from("conversation_participants").insert({ conversation_id, user_id: user.id });
-await supabase.from("conversation_participants").insert({ conversation_id, user_id: friendId });
+```sql
+CREATE TABLE outfit_calendar (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  user_id UUID NOT NULL,
+  outfit_date DATE NOT NULL,
+  outfit_data JSONB NOT NULL DEFAULT '{}',
+  created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+  UNIQUE(user_id, outfit_date)
+);
+-- RLS: users can CRUD own rows
+-- outfit_data shape: { name, items: [{id, image_url, type, name}], occasion, explanation }
 ```
 
-Apply the same fix in the new MessagesScreen friend picker.
+## 2. Edge function: `generate-outfit-calendar`
+
+New function that generates 7 days of outfit plans at once:
+- Takes: wardrobe items, style profile (body type, skin tone, gender), current season
+- Prompt: "Plan 7 casual daily outfits for the next 7 days using ONLY these wardrobe items. Each day should be different. Consider season, skin tone, body shape. Return JSON array."
+- Returns: array of `{ date, name, items: [item_ids], occasion, explanation }`
+- Uses `gemini-2.5-flash-lite`
+
+## 3. HomeScreen: Calendar section (below wardrobe card)
+
+**Inline preview (scrollable cards):**
+- Header: "What to Wear" + item count badge + "View all >"
+- Horizontal scroll of big cards (next 7 days)
+- Each card shows: date label (Today/Tomorrow/Wed/Thu...), outfit name, 2-3 item thumbnails in a row, occasion tag
+- If no plans generated yet, show a "Generate Week Plan" button
+
+**Card click → full-screen detail overlay:**
+- Shows all wardrobe items in the outfit as large images
+- Outfit name, occasion, explanation text
+- Same pattern as the Style Me detail view
+
+**"View all" → month calendar overlay:**
+- Full-screen overlay with a month calendar grid
+- Days with planned outfits show a dot indicator
+- Tapping a day opens the outfit detail card for that date
+- Navigate between months with arrows
+
+## 4. Auto-generation logic
+
+On home page load:
+1. Fetch `outfit_calendar` rows for the next 7 days
+2. If fewer than 3 days have plans, auto-trigger the edge function to generate 7 days
+3. Cache results in the DB table
+4. User can manually regenerate with a refresh button
 
 ## Technical Details
 
-- **LeaderboardTab**: Remove ~23 lines of header JSX, merge bulb popover into the toggle row
-- **MessagesScreen**: Add `Plus` icon import, friend-fetching logic (same pattern as `SendToFriendPicker`), and a dialog with friend list that creates/finds a conversation then navigates
-- **SendToFriendPicker**: Change 1 batch insert to 2 sequential inserts to fix RLS
+- **Files to create:** `supabase/functions/generate-outfit-calendar/index.ts`
+- **Files to modify:** `src/pages/HomeScreen.tsx` (add calendar section after wardrobe card, ~150 lines of new JSX + state/effects)
+- **DB migration:** New `outfit_calendar` table with RLS policies
+- **Edge function prompt:** Instructs AI to vary outfits across 7 days, avoid repeating the same top/bottom combo, and consider weather progression
+- **Calendar month view:** Uses a simple CSS grid (7 columns for days), with the existing `Calendar` component pattern as reference but custom-built for outfit dots
 
