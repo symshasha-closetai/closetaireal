@@ -917,6 +917,139 @@ const HomeScreen = () => {
         </div>
       </div>
 
+
+      {/* Calendar Month View Overlay */}
+      <AnimatePresence>
+        {showCalendarAll && (
+          <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="fixed inset-0 z-50 bg-background overflow-y-auto">
+            <div className="max-w-lg mx-auto px-5 py-6 space-y-5">
+              <div className="flex items-center justify-between">
+                <h2 className="font-display text-xl font-semibold text-foreground">Outfit Calendar</h2>
+                <button onClick={() => setShowCalendarAll(false)} className="w-9 h-9 rounded-full bg-secondary flex items-center justify-center">
+                  <X size={18} className="text-foreground" />
+                </button>
+              </div>
+              <div className="flex items-center justify-between">
+                <button onClick={() => { const d = new Date(calendarMonth); d.setMonth(d.getMonth() - 1); setCalendarMonth(d); }} className="w-8 h-8 rounded-full bg-secondary flex items-center justify-center">
+                  <ChevronLeft size={16} className="text-foreground" />
+                </button>
+                <span className="text-sm font-semibold text-foreground">{calendarMonth.toLocaleDateString("en-US", { month: "long", year: "numeric" })}</span>
+                <button onClick={() => { const d = new Date(calendarMonth); d.setMonth(d.getMonth() + 1); setCalendarMonth(d); }} className="w-8 h-8 rounded-full bg-secondary flex items-center justify-center">
+                  <ChevronRight size={16} className="text-foreground" />
+                </button>
+              </div>
+              <div className="grid grid-cols-7 gap-1 text-center">
+                {["Sun","Mon","Tue","Wed","Thu","Fri","Sat"].map(d => (
+                  <span key={d} className="text-[10px] font-medium text-muted-foreground">{d}</span>
+                ))}
+              </div>
+              <div className="grid grid-cols-7 gap-1">
+                {(() => {
+                  const year = calendarMonth.getFullYear();
+                  const month = calendarMonth.getMonth();
+                  const firstDay = new Date(year, month, 1).getDay();
+                  const daysInMonth = new Date(year, month + 1, 0).getDate();
+                  const cells: React.ReactNode[] = [];
+                  for (let i = 0; i < firstDay; i++) cells.push(<div key={`e-${i}`} />);
+                  for (let d = 1; d <= daysInMonth; d++) {
+                    const dateStr = `${year}-${String(month + 1).padStart(2, "0")}-${String(d).padStart(2, "0")}`;
+                    const outfit = monthOutfits.find(o => o.outfit_date === dateStr);
+                    const isToday = dateStr === new Date().toISOString().split("T")[0];
+                    cells.push(
+                      <button key={d} onClick={() => outfit && setSelectedCalendarOutfit(outfit)} className={`aspect-square rounded-xl flex flex-col items-center justify-center gap-0.5 text-xs transition-all ${isToday ? "ring-2 ring-primary bg-primary/10" : outfit ? "bg-secondary cursor-pointer active:scale-95" : "bg-transparent"}`}>
+                        <span className={`text-[11px] ${isToday ? "font-bold text-primary" : "text-foreground"}`}>{d}</span>
+                        {outfit && <div className="w-1.5 h-1.5 rounded-full bg-primary" />}
+                      </button>
+                    );
+                  }
+                  return cells;
+                })()}
+              </div>
+              <div className="space-y-3 pt-2">
+                {monthOutfits.map((co) => {
+                  const od = co.outfit_data;
+                  const itemImages = (od.items || []).map((id: string) => allWardrobeItems.find(w => w.id === id)).filter(Boolean);
+                  return (
+                    <div key={co.outfit_date} className="glass-card p-3 flex gap-3 cursor-pointer active:scale-[0.98] transition-transform" onClick={() => setSelectedCalendarOutfit(co)}>
+                      <div className="flex gap-1">
+                        {itemImages.slice(0, 3).map((wi: any) => (
+                          <div key={wi.id} className="w-12 h-12 rounded-lg overflow-hidden bg-muted">
+                            <img src={wi.image_url} alt="" className="w-full h-full object-cover" loading="lazy" />
+                          </div>
+                        ))}
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <p className="text-[10px] font-semibold text-primary">{getCalendarDayLabel(co.outfit_date)}</p>
+                        <p className="text-sm font-medium text-foreground truncate">{od.name}</p>
+                        <p className="text-[10px] text-muted-foreground truncate">{od.explanation}</p>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* Calendar Outfit Detail */}
+      <AnimatePresence>
+        {selectedCalendarOutfit && (() => {
+          const od = selectedCalendarOutfit.outfit_data;
+          const outfitItems = (od.items || []).map((id: string) => allWardrobeItems.find(w => w.id === id)).filter(Boolean) as WardrobeItem[];
+          return (
+            <motion.div key="cal-detail" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="fixed inset-0 z-[60] bg-background overflow-y-auto">
+              <div className="max-w-lg mx-auto px-5 py-6 space-y-5 pb-32">
+                <div className="flex items-center justify-between">
+                  <div className="flex gap-2">
+                    <span className="px-2.5 py-1 rounded-full bg-secondary text-[10px] font-medium text-foreground">{getCalendarDayLabel(selectedCalendarOutfit.outfit_date)}</span>
+                    <span className="px-2.5 py-1 rounded-full bg-primary/10 text-[10px] font-medium text-primary">{od.occasion}</span>
+                  </div>
+                  <button onClick={() => setSelectedCalendarOutfit(null)} className="w-9 h-9 rounded-full bg-secondary flex items-center justify-center">
+                    <X size={18} className="text-foreground" />
+                  </button>
+                </div>
+                <div className="text-center space-y-1">
+                  <h2 className="font-display text-xl font-semibold text-foreground">{od.name}</h2>
+                  <p className="text-xs text-muted-foreground">{selectedCalendarOutfit.outfit_date}</p>
+                </div>
+                <div className="flex justify-center items-end -space-x-4 py-4">
+                  {outfitItems.map((wi, i) => (
+                    <motion.div key={wi.id} initial={{ opacity: 0, y: 20, scale: 0.9 }} animate={{ opacity: 1, y: 0, scale: 1 }} transition={{ delay: i * 0.1 }} className="relative w-24 h-28 rounded-2xl overflow-hidden bg-secondary shadow-elevated border-2 border-background" style={{ zIndex: outfitItems.length - i }}>
+                      <img src={wi.image_url} alt={getItemLabel(wi)} className="w-full h-full object-cover" />
+                      <div className="absolute bottom-0 left-0 right-0 bg-foreground/50 backdrop-blur-sm px-1 py-0.5">
+                        <p className="text-[8px] text-primary-foreground truncate text-center font-medium">{getItemLabel(wi)}</p>
+                      </div>
+                    </motion.div>
+                  ))}
+                </div>
+                <div className="glass-card p-4 space-y-3">
+                  <h3 className="text-sm font-semibold text-foreground">Items in this outfit</h3>
+                  <div className="space-y-2">
+                    {outfitItems.map((wi) => (
+                      <div key={wi.id} className="flex items-center gap-3">
+                        <div className="w-14 h-14 rounded-xl overflow-hidden bg-secondary flex-shrink-0">
+                          <img src={wi.image_url} alt={getItemLabel(wi)} className="w-full h-full object-cover" />
+                        </div>
+                        <div>
+                          <p className="text-sm font-medium text-foreground">{getItemLabel(wi)}</p>
+                          <p className="text-[10px] text-muted-foreground">{wi.type}{wi.color ? ` · ${wi.color}` : ""}</p>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+                <div className="glass-card p-4 space-y-2">
+                  <h3 className="text-sm font-semibold text-foreground">Why This Works</h3>
+                  <p className="text-xs text-muted-foreground leading-relaxed">{od.explanation}</p>
+                </div>
+                <button onClick={() => setSelectedCalendarOutfit(null)} className="w-full text-center text-sm text-muted-foreground font-medium py-2">← Back</button>
+              </div>
+            </motion.div>
+          );
+        })()}
+      </AnimatePresence>
+
       {/* Style Me Results Sheet */}
       <AnimatePresence>
         {showResults && (
