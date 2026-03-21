@@ -1,67 +1,33 @@
 
 
-# Calendar Outfit Planner
+# Calendar View: Show Outfits in Calendar Grid, Fix Image Visibility
 
-## Overview
-Add a "What to Wear" calendar section below the wardrobe card on the home page. It shows daily outfit plans as scrollable cards, with a "View All" that opens a full month calendar view. Outfits are AI-generated from the user's wardrobe, considering season, skin tone, and body shape.
+## Problem
+1. The 3rd item image in calendar outfit cards gets cut off/not visible
+2. The "View All" overlay shows outfits as a list below the calendar grid — user wants outfits embedded directly in the calendar cells
 
-## 1. Database: `outfit_calendar` table
+## Changes
 
-New table to store AI-generated daily outfit plans:
+### 1. Redesign calendar grid cells to show outfit previews inline
 
-```sql
-CREATE TABLE outfit_calendar (
-  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  user_id UUID NOT NULL,
-  outfit_date DATE NOT NULL,
-  outfit_data JSONB NOT NULL DEFAULT '{}',
-  created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
-  UNIQUE(user_id, outfit_date)
-);
--- RLS: users can CRUD own rows
--- outfit_data shape: { name, items: [{id, image_url, type, name}], occasion, explanation }
-```
+**File:** `src/pages/HomeScreen.tsx` (lines 946-967 — the calendar grid)
 
-## 2. Edge function: `generate-outfit-calendar`
+Replace the small dot indicator with actual item thumbnail previews inside each calendar cell. Make cells taller (not square aspect ratio) to fit:
+- Day number at top
+- 2-3 tiny item thumbnails (stacked or in a row) below the number
+- Tapping a cell with an outfit opens the detail overlay
 
-New function that generates 7 days of outfit plans at once:
-- Takes: wardrobe items, style profile (body type, skin tone, gender), current season
-- Prompt: "Plan 7 casual daily outfits for the next 7 days using ONLY these wardrobe items. Each day should be different. Consider season, skin tone, body shape. Return JSON array."
-- Returns: array of `{ date, name, items: [item_ids], occasion, explanation }`
-- Uses `gemini-2.5-flash-lite`
+Remove the separate list of outfit cards below the grid (lines 968-988) since the outfits are now shown in the calendar itself.
 
-## 3. HomeScreen: Calendar section (below wardrobe card)
+### 2. Fix image visibility in inline scroll cards
 
-**Inline preview (scrollable cards):**
-- Header: "What to Wear" + item count badge + "View all >"
-- Horizontal scroll of big cards (next 7 days)
-- Each card shows: date label (Today/Tomorrow/Wed/Thu...), outfit name, 2-3 item thumbnails in a row, occasion tag
-- If no plans generated yet, show a "Generate Week Plan" button
+**File:** `src/pages/HomeScreen.tsx` (lines 779-787)
 
-**Card click → full-screen detail overlay:**
-- Shows all wardrobe items in the outfit as large images
-- Outfit name, occasion, explanation text
-- Same pattern as the Style Me detail view
-
-**"View all" → month calendar overlay:**
-- Full-screen overlay with a month calendar grid
-- Days with planned outfits show a dot indicator
-- Tapping a day opens the outfit detail card for that date
-- Navigate between months with arrows
-
-## 4. Auto-generation logic
-
-On home page load:
-1. Fetch `outfit_calendar` rows for the next 7 days
-2. If fewer than 3 days have plans, auto-trigger the edge function to generate 7 days
-3. Cache results in the DB table
-4. User can manually regenerate with a refresh button
+The 3rd image gets clipped because the card is `w-44` with `grid-cols-3` and `gap-0.5`. Increase card width slightly to `w-52` and ensure images have proper sizing. Also show all matched items (not just `slice(0, 3)`) or ensure the grid accommodates them properly.
 
 ## Technical Details
 
-- **Files to create:** `supabase/functions/generate-outfit-calendar/index.ts`
-- **Files to modify:** `src/pages/HomeScreen.tsx` (add calendar section after wardrobe card, ~150 lines of new JSX + state/effects)
-- **DB migration:** New `outfit_calendar` table with RLS policies
-- **Edge function prompt:** Instructs AI to vary outfits across 7 days, avoid repeating the same top/bottom combo, and consider weather progression
-- **Calendar month view:** Uses a simple CSS grid (7 columns for days), with the existing `Calendar` component pattern as reference but custom-built for outfit dots
+- Calendar cells: Change from `aspect-square` to a taller ratio (~`h-20`), show day number + 2-3 micro thumbnails (16x16 or 20x20 rounded) stacked horizontally
+- Remove the `space-y-3 pt-2` list section entirely from the "View All" overlay
+- Inline scroll cards: bump width from `w-44` to `w-52`, keep `grid-cols-3`
 
