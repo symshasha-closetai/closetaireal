@@ -244,7 +244,7 @@ const OutfitRatingCard = ({ image, imageBase64, result, wardrobeItems = [],
     ctx.fillStyle = "rgba(255,255,255,0.9)";
     ctx.font = "500 10px Inter, sans-serif";
     ctx.letterSpacing = "5px";
-    ctx.fillText("ClosetAI", 18, H_IMG - 90);
+    ctx.fillText("Dripd", 18, H_IMG - 90);
 
     // Drip score
     ctx.fillStyle = "#C9A96E";
