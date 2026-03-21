@@ -1397,7 +1397,7 @@ const WardrobeScreen = () => {
               ))}
             </div>
             <div style={{ padding: "4px 20px 16px", textAlign: "center" }}>
-              <p style={{ fontSize: 9, color: "rgba(255,255,255,0.25)", letterSpacing: 4, textTransform: "uppercase" }}>closetaireal.lovable.app</p>
+              <p style={{ fontSize: 9, color: "rgba(255,255,255,0.25)", letterSpacing: 4, textTransform: "uppercase" }}>dripd.app</p>
             </div>
           </div>
         )}

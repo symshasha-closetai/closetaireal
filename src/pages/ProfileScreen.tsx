@@ -396,12 +396,12 @@ const ProfileScreen = () => {
     try {
       const response = await fetch(entry.image);
       const blob = await response.blob();
-      const file = new File([blob], "closetai-drip.png", { type: "image/png" });
+      const file = new File([blob], "dripd-drip.png", { type: "image/png" });
       if (navigator.share && navigator.canShare?.({ files: [file] })) {
-        await navigator.share({ title: "My Drip Check — ClosetAI", files: [file] });
+        await navigator.share({ title: "My Drip Check — Dripd", files: [file] });
       } else {
         const url = URL.createObjectURL(blob);
-        const a = document.createElement("a"); a.href = url; a.download = "closetai-drip.png";
+        const a = document.createElement("a"); a.href = url; a.download = "dripd-drip.png";
         document.body.appendChild(a); a.click(); document.body.removeChild(a);
         URL.revokeObjectURL(url);
         toast.success("Image saved!");

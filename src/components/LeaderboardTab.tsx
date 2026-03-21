@@ -377,8 +377,8 @@ const LeaderboardTab = () => {
     <div className="fixed -left-[9999px] top-0" id={`share-card-${entry.user_id}`}>
       <div className="w-[360px] bg-gradient-to-br from-gray-900 to-gray-800 rounded-2xl overflow-hidden p-5 text-white">
         <div className="flex items-center gap-2 mb-4">
-          <img src={closetaiLogo} alt="" className="w-8 h-8 rounded-lg" crossOrigin="anonymous" />
-          <span className="font-bold text-sm">ClosetAI</span>
+          <img src={dripdLogo} alt="" className="w-8 h-8 rounded-lg" crossOrigin="anonymous" />
+          <span className="font-bold text-sm">Dripd</span>
         </div>
         {entry.image_url && (
           <img src={entry.image_url} alt="" className="w-full aspect-[3/4] object-cover rounded-xl mb-4" crossOrigin="anonymous" />
