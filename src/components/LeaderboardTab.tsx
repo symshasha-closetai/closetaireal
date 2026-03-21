@@ -36,7 +36,7 @@ type ViewMode = "daily" | "weekly";
 
 let dailyCache: { entries: LeaderboardEntry[]; friendIds: string[]; ts: number } | null = null;
 let weeklyCache: { entries: LeaderboardEntry[]; friendIds: string[]; ts: number } | null = null;
-const CACHE_TTL = 2 * 60 * 1000;
+const CACHE_TTL = 48 * 60 * 60 * 1000;
 
 function getMonday(d: Date) {
   const day = d.getDay();
