@@ -4,7 +4,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { lovable } from "@/integrations/lovable/index";
 import { Mail, Lock, User, Eye, EyeOff } from "lucide-react";
 import { toast } from "sonner";
-const logo = "/closetai-logo-192.webp";
+const logo = "/dripd-logo-192.webp";
 
 const AuthScreen = () => {
   const [isLogin, setIsLogin] = useState(true);

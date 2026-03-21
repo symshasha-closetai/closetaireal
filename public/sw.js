@@ -1,11 +1,11 @@
-const CACHE_NAME = 'closetai-v1';
-const IMAGE_CACHE = 'closetai-images-v1';
-const DATA_CACHE = 'closetai-data-v1';
+const CACHE_NAME = 'dripd-v1';
+const IMAGE_CACHE = 'dripd-images-v1';
+const DATA_CACHE = 'dripd-data-v1';
 
 // Static assets to precache
 const PRECACHE_URLS = [
   '/',
-  '/closetai-logo-192.webp',
+  '/dripd-logo-192.webp',
 ];
 
 // Install: precache static assets

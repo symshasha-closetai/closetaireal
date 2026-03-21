@@ -1,6 +1,6 @@
 import { motion } from "framer-motion";
 
-const logo = "/closetai-logo-192.webp";
+const logo = "/dripd-logo-192.webp";
 
 const SplashScreen = () => {
   return (
@@ -13,7 +13,7 @@ const SplashScreen = () => {
       >
         <motion.img
           src={logo}
-          alt="ClosetAI"
+          alt="Dripd"
           fetchPriority="high"
           width={96}
           height={96}
@@ -28,7 +28,7 @@ const SplashScreen = () => {
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.4, duration: 0.5 }}
         >
-          ClosetAI
+          Dripd
         </motion.h1>
         <motion.p
           className="text-sm text-muted-foreground"
