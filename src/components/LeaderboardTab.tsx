@@ -522,7 +522,56 @@ const LeaderboardTab = () => {
             </div>
           </PopoverContent>
         </Popover>
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <button className="w-8 h-8 rounded-full bg-secondary flex items-center justify-center flex-shrink-0">
+              <MoreVertical size={14} className="text-muted-foreground" />
+            </button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="end" className="w-56">
+            <DropdownMenuItem onClick={() => setConfirmAction("sit_out")} className="gap-2">
+              <EyeOff size={14} />
+              <div>
+                <p className="text-xs font-medium">Sit This One Out</p>
+                <p className="text-[10px] text-muted-foreground">Step away from today's spotlight</p>
+              </div>
+            </DropdownMenuItem>
+            <DropdownMenuItem onClick={() => setConfirmAction("revert")} className="gap-2">
+              <RotateCcw size={14} />
+              <div>
+                <p className="text-xs font-medium">Revert to Previous Look</p>
+                <p className="text-[10px] text-muted-foreground">Restore your last recorded evaluation</p>
+              </div>
+            </DropdownMenuItem>
+          </DropdownMenuContent>
+        </DropdownMenu>
       </div>
+
+      <AlertDialog open={confirmAction !== null} onOpenChange={(open) => !open && setConfirmAction(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>
+              {confirmAction === "sit_out" ? "Withdraw from Today's Ranking?" : "Restore Previous Evaluation?"}
+            </AlertDialogTitle>
+            <AlertDialogDescription>
+              {confirmAction === "sit_out"
+                ? "Your current analysis will be removed and you won't appear on today's leaderboard. This cannot be undone."
+                : "Today's analysis will be replaced with your most recent previous evaluation. This cannot be undone."}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={optOutLoading}>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              disabled={optOutLoading}
+              onClick={confirmAction === "sit_out" ? handleSitOut : handleRevert}
+            >
+              {optOutLoading ? <Loader2 size={14} className="animate-spin mr-1" /> : null}
+              {confirmAction === "sit_out" ? "Withdraw" : "Restore"}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
 
       {entries.length === 0 ? (
         <div className="text-center py-12 space-y-3">
