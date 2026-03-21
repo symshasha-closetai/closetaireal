@@ -94,11 +94,9 @@ const SendToFriendPicker = ({ open, onOpenChange, contentType, content = "", met
       if (convoErr || !newConvo) { toast.error("Failed to create conversation"); setSending(null); return; }
       conversationId = newConvo.id;
 
-      // Add both participants
-      await supabase.from("conversation_participants" as any).insert([
-        { conversation_id: conversationId, user_id: user.id },
-        { conversation_id: conversationId, user_id: friendId },
-      ] as any);
+      // Add both participants sequentially (RLS requires current user first)
+      await supabase.from("conversation_participants" as any).insert({ conversation_id: conversationId, user_id: user.id } as any);
+      await supabase.from("conversation_participants" as any).insert({ conversation_id: conversationId, user_id: friendId } as any);
     }
 
     // Send message
