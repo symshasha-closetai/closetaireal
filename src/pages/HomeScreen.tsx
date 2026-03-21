@@ -489,7 +489,7 @@ const HomeScreen = () => {
     const start = new Date(year, month, 1).toISOString().split("T")[0];
     const end = new Date(year, month + 1, 0).toISOString().split("T")[0];
     supabase.from("outfit_calendar" as any).select("*").eq("user_id", user.id).gte("outfit_date", start).lte("outfit_date", end).order("outfit_date", { ascending: true })
-      .then(({ data }) => setMonthOutfits((data || []) as CalendarOutfit[]));
+      .then(({ data }) => setMonthOutfits((data || []) as unknown as CalendarOutfit[]));
   }, [user, showCalendarAll, calendarMonth]);
 
   const getCalendarDayLabel = (dateStr: string) => {
