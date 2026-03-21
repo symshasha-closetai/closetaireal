@@ -773,10 +773,10 @@ const HomeScreen = () => {
                       key={co.outfit_date}
                       initial={{ opacity: 0, scale: 0.95 }}
                       animate={{ opacity: 1, scale: 1 }}
-                      className="flex-shrink-0 w-44 rounded-2xl bg-secondary overflow-hidden cursor-pointer active:scale-[0.97] transition-transform"
+                      className="flex-shrink-0 w-52 rounded-2xl bg-secondary overflow-hidden cursor-pointer active:scale-[0.97] transition-transform"
                       onClick={() => setSelectedCalendarOutfit(co)}
                     >
-                      <div className="grid grid-cols-3 gap-0.5 p-1.5">
+                      <div className="grid grid-cols-3 gap-1 p-2">
                         {itemImages.slice(0, 3).map((wi: any) => (
                           <div key={wi.id} className="aspect-square rounded-lg overflow-hidden bg-muted">
                             <img src={wi.image_url} alt={wi.name || wi.type} className="w-full h-full object-cover" loading="lazy" />
@@ -955,37 +955,30 @@ const HomeScreen = () => {
                     const dateStr = `${year}-${String(month + 1).padStart(2, "0")}-${String(d).padStart(2, "0")}`;
                     const outfit = monthOutfits.find(o => o.outfit_date === dateStr);
                     const isToday = dateStr === new Date().toISOString().split("T")[0];
+                    const outfitItems = outfit ? ((outfit.outfit_data as any).items || []).map((id: string) => allWardrobeItems.find(w => w.id === id)).filter(Boolean) : [];
                     cells.push(
-                      <button key={d} onClick={() => outfit && setSelectedCalendarOutfit(outfit)} className={`aspect-square rounded-xl flex flex-col items-center justify-center gap-0.5 text-xs transition-all ${isToday ? "ring-2 ring-primary bg-primary/10" : outfit ? "bg-secondary cursor-pointer active:scale-95" : "bg-transparent"}`}>
-                        <span className={`text-[11px] ${isToday ? "font-bold text-primary" : "text-foreground"}`}>{d}</span>
-                        {outfit && <div className="w-1.5 h-1.5 rounded-full bg-primary" />}
+                      <button
+                        key={d}
+                        onClick={() => outfit && setSelectedCalendarOutfit(outfit)}
+                        className={`rounded-xl flex flex-col items-center gap-0.5 py-1.5 min-h-[5rem] transition-all ${isToday ? "ring-2 ring-primary bg-primary/10" : outfit ? "bg-secondary cursor-pointer active:scale-95" : "bg-transparent"}`}
+                      >
+                        <span className={`text-[10px] ${isToday ? "font-bold text-primary" : "text-foreground"}`}>{d}</span>
+                        {outfitItems.length > 0 ? (
+                          <div className="flex flex-wrap justify-center gap-[2px] px-0.5">
+                            {outfitItems.slice(0, 3).map((wi: any) => (
+                              <div key={wi.id} className="w-4 h-4 rounded-sm overflow-hidden bg-muted">
+                                <img src={wi.image_url} alt="" className="w-full h-full object-cover" loading="lazy" />
+                              </div>
+                            ))}
+                          </div>
+                        ) : outfit ? (
+                          <div className="w-1.5 h-1.5 rounded-full bg-primary" />
+                        ) : null}
                       </button>
                     );
                   }
                   return cells;
                 })()}
-              </div>
-              <div className="space-y-3 pt-2">
-                {monthOutfits.map((co) => {
-                  const od = co.outfit_data;
-                  const itemImages = (od.items || []).map((id: string) => allWardrobeItems.find(w => w.id === id)).filter(Boolean);
-                  return (
-                    <div key={co.outfit_date} className="glass-card p-3 flex gap-3 cursor-pointer active:scale-[0.98] transition-transform" onClick={() => setSelectedCalendarOutfit(co)}>
-                      <div className="flex gap-1">
-                        {itemImages.slice(0, 3).map((wi: any) => (
-                          <div key={wi.id} className="w-12 h-12 rounded-lg overflow-hidden bg-muted">
-                            <img src={wi.image_url} alt="" className="w-full h-full object-cover" loading="lazy" />
-                          </div>
-                        ))}
-                      </div>
-                      <div className="flex-1 min-w-0">
-                        <p className="text-[10px] font-semibold text-primary">{getCalendarDayLabel(co.outfit_date)}</p>
-                        <p className="text-sm font-medium text-foreground truncate">{od.name}</p>
-                        <p className="text-[10px] text-muted-foreground truncate">{od.explanation}</p>
-                      </div>
-                    </div>
-                  );
-                })}
               </div>
             </div>
           </motion.div>
