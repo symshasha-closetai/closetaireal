@@ -457,10 +457,10 @@ const OutfitRatingCard = ({ image, imageBase64, result, wardrobeItems = [],
       <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="rounded-2xl overflow-hidden shadow-lg relative">
         <img src={image} alt="Outfit" className="w-full aspect-[3/4] object-cover" />
         
-        {/* ClosetAI branding */}
+        {/* Dripd branding */}
         <div className="absolute top-4 left-4 z-10">
           <span className="text-[10px] tracking-[0.2em] font-medium text-white/90" style={{ textShadow: "-1px -1px 0 #000, 1px -1px 0 #000, -1px 1px 0 #000, 1px 1px 0 #000" }}>
-            ClosetAI
+            Dripd
           </span>
         </div>
 
