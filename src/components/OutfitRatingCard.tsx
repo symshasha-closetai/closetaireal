@@ -361,7 +361,7 @@ const OutfitRatingCard = ({ image, imageBase64, result, wardrobeItems = [],
         const url = URL.createObjectURL(blob);
         const a = document.createElement("a");
         a.href = url;
-        a.download = "closetai-result.png";
+        a.download = "dripd-result.png";
         document.body.appendChild(a);
         a.click();
         document.body.removeChild(a);
