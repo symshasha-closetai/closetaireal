@@ -1225,7 +1225,7 @@ const WardrobeScreen = () => {
                   if (oldIdx === -1 || newIdx === -1) return;
                   const reordered = arrayMove(catList, oldIdx, newIdx);
                   setCategoryOrder(reordered);
-                  localStorage.setItem("closetai-category-order", JSON.stringify(reordered));
+                  localStorage.setItem("dripd-category-order", JSON.stringify(reordered));
                 }}>
                   <SortableContext items={allCategories.filter(c => c !== "All")} strategy={rectSortingStrategy}>
                     <div className="space-y-2">
