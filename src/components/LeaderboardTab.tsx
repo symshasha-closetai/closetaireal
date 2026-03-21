@@ -399,49 +399,41 @@ const LeaderboardTab = () => {
 
   return (
     <div className="space-y-4">
-      {/* Header */}
-      <div className="flex items-center justify-between">
-        <div className="flex items-center gap-2">
-          <img src={closetaiLogo} alt="ClosetAI" className="w-6 h-6 rounded-md" />
-          <span className="font-display text-sm font-semibold text-foreground">Leaderboard</span>
+      {/* Daily / Weekly Toggle + Bulb */}
+      <div className="flex items-center gap-2">
+        <div className="flex flex-1 bg-secondary rounded-xl p-1 gap-1">
+          <button
+            onClick={() => setViewMode("daily")}
+            className={`flex-1 py-1.5 text-xs font-medium rounded-lg transition-all ${
+              viewMode === "daily" ? "bg-card text-foreground shadow-sm" : "text-muted-foreground"
+            }`}
+          >
+            Today
+          </button>
+          <button
+            onClick={() => setViewMode("weekly")}
+            className={`flex-1 py-1.5 text-xs font-medium rounded-lg transition-all ${
+              viewMode === "weekly" ? "bg-card text-foreground shadow-sm" : "text-muted-foreground"
+            }`}
+          >
+            Last Week
+          </button>
         </div>
-        <div className="flex items-center gap-2">
-          <Popover>
-            <PopoverTrigger asChild>
-              <button className="w-7 h-7 rounded-full bg-secondary flex items-center justify-center">
-                <Lightbulb size={14} className="text-muted-foreground" />
-              </button>
-            </PopoverTrigger>
-            <PopoverContent className="w-56 p-3" side="bottom" align="end">
-              <p className="text-xs font-semibold text-foreground mb-2">Boost Your Score</p>
-              <div className="space-y-1.5 text-[11px] text-muted-foreground">
-                <p>🤝 <span className="font-medium text-foreground">+10 pts</span> — Add a new friend</p>
-                <p>🔥 <span className="font-medium text-foreground">+5 pts</span> — Daily check-in streak</p>
-                <p className="pt-1 text-[10px] text-muted-foreground/70">Base score = Drip score × 10 (out of 100)</p>
-              </div>
-            </PopoverContent>
-          </Popover>
-        </div>
-      </div>
-
-      {/* Daily / Weekly Toggle */}
-      <div className="flex bg-secondary rounded-xl p-1 gap-1">
-        <button
-          onClick={() => setViewMode("daily")}
-          className={`flex-1 py-1.5 text-xs font-medium rounded-lg transition-all ${
-            viewMode === "daily" ? "bg-card text-foreground shadow-sm" : "text-muted-foreground"
-          }`}
-        >
-          Today
-        </button>
-        <button
-          onClick={() => setViewMode("weekly")}
-          className={`flex-1 py-1.5 text-xs font-medium rounded-lg transition-all ${
-            viewMode === "weekly" ? "bg-card text-foreground shadow-sm" : "text-muted-foreground"
-          }`}
-        >
-          Last Week
-        </button>
+        <Popover>
+          <PopoverTrigger asChild>
+            <button className="w-8 h-8 rounded-full bg-secondary flex items-center justify-center flex-shrink-0">
+              <Lightbulb size={14} className="text-muted-foreground" />
+            </button>
+          </PopoverTrigger>
+          <PopoverContent className="w-56 p-3" side="bottom" align="end">
+            <p className="text-xs font-semibold text-foreground mb-2">Boost Your Score</p>
+            <div className="space-y-1.5 text-[11px] text-muted-foreground">
+              <p>🤝 <span className="font-medium text-foreground">+10 pts</span> — Add a new friend</p>
+              <p>🔥 <span className="font-medium text-foreground">+5 pts</span> — Daily check-in streak</p>
+              <p className="pt-1 text-[10px] text-muted-foreground/70">Base score = Drip score × 10 (out of 100)</p>
+            </div>
+          </PopoverContent>
+        </Popover>
       </div>
 
       {entries.length === 0 ? (
