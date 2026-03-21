@@ -86,6 +86,7 @@ const ProfileScreen = () => {
   // Style profile actions
   const styleActions = useStyleProfileActions();
   const [previewImage, setPreviewImage] = useState<string | null>(null);
+  const [activeTooltipKey, setActiveTooltipKey] = useState<string | null>(null);
 
   // History
   const [dripHistory, setDripHistory] = useState<DripHistoryEntry[]>([]);
