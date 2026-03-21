@@ -1,10 +1,11 @@
 import { useState, useEffect } from "react";
 import { motion } from "framer-motion";
 import { useNavigate } from "react-router-dom";
-import { MessageCircle, Loader2, ArrowLeft } from "lucide-react";
+import { MessageCircle, Loader2, ArrowLeft, Plus, Send } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
-import AppHeader from "@/components/AppHeader";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { toast } from "sonner";
 
 type ConversationPreview = {
   id: string;
@@ -17,17 +18,27 @@ type ConversationPreview = {
   unreadCount: number;
 };
 
+type Friend = {
+  user_id: string;
+  name: string | null;
+  username: string | null;
+  avatar_url: string | null;
+};
+
 const MessagesScreen = () => {
   const { user } = useAuth();
   const navigate = useNavigate();
   const [conversations, setConversations] = useState<ConversationPreview[]>([]);
   const [loading, setLoading] = useState(true);
+  const [showNewChat, setShowNewChat] = useState(false);
+  const [friends, setFriends] = useState<Friend[]>([]);
+  const [friendsLoading, setFriendsLoading] = useState(false);
+  const [creating, setCreating] = useState<string | null>(null);
 
   const fetchConversations = async () => {
     if (!user) return;
     setLoading(true);
 
-    // Get my conversation IDs
     const { data: myParticipations } = await supabase
       .from("conversation_participants" as any)
       .select("conversation_id")
@@ -41,7 +52,6 @@ const MessagesScreen = () => {
 
     const convoIds = myParticipations.map((p: any) => p.conversation_id);
 
-    // Get other participants
     const { data: allParticipants } = await supabase
       .from("conversation_participants" as any)
       .select("conversation_id, user_id")
@@ -51,7 +61,6 @@ const MessagesScreen = () => {
     const otherByConvo = new Map<string, string>();
     (allParticipants || []).forEach((p: any) => otherByConvo.set(p.conversation_id, p.user_id));
 
-    // Get profiles
     const otherIds = Array.from(new Set(otherByConvo.values()));
     const { data: profiles } = await supabase
       .from("profiles")
@@ -61,7 +70,6 @@ const MessagesScreen = () => {
     const profileMap = new Map<string, any>();
     (profiles || []).forEach((p: any) => profileMap.set(p.user_id, p));
 
-    // Get latest message per conversation (non-expired)
     const previews: ConversationPreview[] = [];
     for (const convoId of convoIds) {
       const otherId = otherByConvo.get(convoId);
@@ -97,7 +105,6 @@ const MessagesScreen = () => {
 
   useEffect(() => { fetchConversations(); }, [user?.id]);
 
-  // Subscribe to new messages for realtime
   useEffect(() => {
     if (!user) return;
     const channel = supabase
@@ -108,6 +115,83 @@ const MessagesScreen = () => {
       .subscribe();
     return () => { supabase.removeChannel(channel); };
   }, [user?.id]);
+
+  // Fetch friends when new chat dialog opens
+  useEffect(() => {
+    if (!showNewChat || !user) return;
+    const fetchFriends = async () => {
+      setFriendsLoading(true);
+      const { data: friendRows } = await supabase
+        .from("friends" as any)
+        .select("user_id, friend_id")
+        .or(`user_id.eq.${user.id},friend_id.eq.${user.id}`)
+        .eq("status", "accepted") as any;
+
+      const ids = (friendRows || []).map((f: any) =>
+        f.user_id === user.id ? f.friend_id : f.user_id
+      );
+      if (ids.length === 0) { setFriends([]); setFriendsLoading(false); return; }
+
+      const { data: profiles } = await supabase
+        .from("profiles")
+        .select("user_id, name, username, avatar_url")
+        .in("user_id", ids) as any;
+
+      setFriends((profiles || []).filter((p: any) => p.username || p.name));
+      setFriendsLoading(false);
+    };
+    fetchFriends();
+  }, [showNewChat, user?.id]);
+
+  const handleStartChat = async (friendId: string) => {
+    if (!user) return;
+    setCreating(friendId);
+
+    // Find existing 1:1 conversation
+    const { data: existingConvos } = await supabase
+      .from("conversation_participants" as any)
+      .select("conversation_id")
+      .eq("user_id", user.id) as any;
+
+    let conversationId: string | null = null;
+
+    if (existingConvos && existingConvos.length > 0) {
+      const convoIds = existingConvos.map((c: any) => c.conversation_id);
+      const { data: friendInConvo } = await supabase
+        .from("conversation_participants" as any)
+        .select("conversation_id")
+        .eq("user_id", friendId)
+        .in("conversation_id", convoIds) as any;
+
+      if (friendInConvo && friendInConvo.length > 0) {
+        for (const fc of friendInConvo) {
+          const { count } = await supabase
+            .from("conversation_participants" as any)
+            .select("*", { count: "exact", head: true })
+            .eq("conversation_id", fc.conversation_id) as any;
+          if (count === 2) { conversationId = fc.conversation_id; break; }
+        }
+      }
+    }
+
+    if (!conversationId) {
+      const { data: newConvo, error: convoErr } = await supabase
+        .from("conversations" as any)
+        .insert({} as any)
+        .select("id")
+        .single() as any;
+      if (convoErr || !newConvo) { toast.error("Failed to create conversation"); setCreating(null); return; }
+      conversationId = newConvo.id;
+
+      // Sequential inserts to satisfy RLS
+      await supabase.from("conversation_participants" as any).insert({ conversation_id: conversationId, user_id: user.id } as any);
+      await supabase.from("conversation_participants" as any).insert({ conversation_id: conversationId, user_id: friendId } as any);
+    }
+
+    setCreating(null);
+    setShowNewChat(false);
+    navigate(`/chat/${conversationId}`);
+  };
 
   const formatTime = (dateStr: string) => {
     if (!dateStr) return "";
@@ -127,7 +211,13 @@ const MessagesScreen = () => {
           <button onClick={() => navigate(-1)} className="w-9 h-9 rounded-full bg-secondary flex items-center justify-center">
             <ArrowLeft size={16} className="text-foreground" />
           </button>
-          <h1 className="font-display text-xl font-semibold text-foreground">Messages</h1>
+          <h1 className="font-display text-xl font-semibold text-foreground flex-1">Messages</h1>
+          <button
+            onClick={() => setShowNewChat(true)}
+            className="w-9 h-9 rounded-full bg-primary flex items-center justify-center"
+          >
+            <Plus size={18} className="text-primary-foreground" />
+          </button>
         </div>
 
         {loading ? (
@@ -138,7 +228,7 @@ const MessagesScreen = () => {
           <div className="text-center py-16 space-y-3">
             <MessageCircle size={40} className="mx-auto text-muted-foreground/40" />
             <p className="text-sm text-muted-foreground">No conversations yet</p>
-            <p className="text-xs text-muted-foreground/60">Add friends and start chatting!</p>
+            <p className="text-xs text-muted-foreground/60">Tap + to start chatting with friends!</p>
           </div>
         ) : (
           <div className="space-y-1">
@@ -169,6 +259,48 @@ const MessagesScreen = () => {
           </div>
         )}
       </div>
+
+      {/* New Chat Friend Picker */}
+      <Dialog open={showNewChat} onOpenChange={setShowNewChat}>
+        <DialogContent className="max-w-sm mx-auto rounded-2xl">
+          <DialogHeader>
+            <DialogTitle className="font-display text-lg">New Conversation</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-2 max-h-60 overflow-y-auto">
+            {friendsLoading ? (
+              <div className="flex justify-center py-8"><Loader2 size={20} className="animate-spin text-muted-foreground" /></div>
+            ) : friends.length === 0 ? (
+              <p className="text-xs text-muted-foreground text-center py-8">No friends yet. Add friends first!</p>
+            ) : (
+              friends.map((f) => (
+                <button
+                  key={f.user_id}
+                  onClick={() => handleStartChat(f.user_id)}
+                  disabled={creating === f.user_id}
+                  className="w-full flex items-center gap-3 p-3 rounded-xl bg-secondary/50 hover:bg-secondary transition-colors"
+                >
+                  <div className="w-9 h-9 rounded-full bg-muted flex items-center justify-center overflow-hidden">
+                    {f.avatar_url ? (
+                      <img src={f.avatar_url} alt="" className="w-full h-full object-cover" />
+                    ) : (
+                      <span className="text-xs font-medium text-muted-foreground">{(f.name || f.username || "?")?.[0]?.toUpperCase()}</span>
+                    )}
+                  </div>
+                  <div className="flex-1 min-w-0 text-left">
+                    <p className="text-sm font-medium text-foreground truncate">{f.name || f.username}</p>
+                    {f.username && <p className="text-[10px] text-muted-foreground">@{f.username}</p>}
+                  </div>
+                  {creating === f.user_id ? (
+                    <Loader2 size={16} className="animate-spin text-muted-foreground" />
+                  ) : (
+                    <Send size={14} className="text-muted-foreground" />
+                  )}
+                </button>
+              ))
+            )}
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };
