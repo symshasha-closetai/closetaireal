@@ -658,7 +658,7 @@ const WardrobeScreen = () => {
     if (!user || !uploadedFile) return;
     setUploading(true);
     try {
-      const { blob: compressedBlob } = await compressImage(uploadedFile);
+      const { blob: compressedBlob } = await compressImage(uploadedFile, 800, 800, 0.65, 200);
       const path = `${user.id}/${Date.now()}.jpg`;
       const { publicUrl, error: uploadError } = await r2.upload(path, compressedBlob, { contentType: "image/jpeg" });
       if (uploadError) throw uploadError;
