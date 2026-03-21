@@ -1378,7 +1378,7 @@ const WardrobeScreen = () => {
             background: "#1a1a1a", borderRadius: 24, overflow: "hidden", fontFamily: "'Inter', sans-serif",
           }}>
             <div style={{ padding: "16px 20px 8px", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-              <span style={{ fontSize: 10, letterSpacing: 5, color: "rgba(255,255,255,0.6)", fontWeight: 300 }}>ClosetAI</span>
+              <span style={{ fontSize: 10, letterSpacing: 5, color: "rgba(255,255,255,0.6)", fontWeight: 300 }}>Dripd</span>
               <span style={{ fontSize: 9, color: "rgba(255,255,255,0.3)", letterSpacing: 2, textTransform: "uppercase" }}>My Collection</span>
             </div>
             <div style={{ padding: "8px 16px 16px", display: "grid", gridTemplateColumns: shareCardItems.length === 1 ? "1fr" : "1fr 1fr", gap: 8 }}>
