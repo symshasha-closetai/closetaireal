@@ -1,45 +1,65 @@
 # Multi-Feature Update Plan
 
-## 1. Switch all edge functions to `gemini-2.5-flash-lite`
+## 1. Optimize image storage size (~200KB)
 
-Update the `model` field in all 5 edge functions from `gemini-2.5-flash` to `gemini-2.5-flash-lite` for faster responses and lower cost.
+Update `compressImage` defaults across the app to target 200KB consistently. The function already supports this but callers use different params.
 
-**Files:** `rate-outfit`, `analyze-clothing`, `analyze-body-profile`, `generate-suggestions`, `style-me` (all under `supabase/functions/`)
+**Changes:**
 
-## 2. Wardrobe cards: remove all action buttons except Pinned
+- `CameraScreen.tsx`: already uses `compressImage(file, 512, 512)` — add explicit `quality=0.65, targetSizeKB=200`
+- `HomeScreen.tsx` (today's look upload): already compresses, verify 200KB target
+- `WardrobeScreen.tsx`: ensure wardrobe uploads use same compression
+- `OnboardingScreen.tsx`: avatar/body photo uploads
 
-Strip Edit, Pin, Refresh, Delete, Send, and Drag buttons from `WardrobeCardContent`. Keep only the Pinned button on each card. All other actions (edit, pin, delete, share, refresh, send) remain available in the existing full-screen detail view when the user taps the card image.
+## 2. Fix share button speed (html2canvas is slow)
 
-**File:** `src/pages/WardrobeScreen.tsx` — lines ~141-168 in `WardrobeCardContent`
+The share button uses `html2canvas` which is inherently slow — it renders DOM to canvas, waits 500ms for mount, then captures at 2x scale. Replace with the manual Canvas API approach (same as `handleShareTodayLook` in HomeScreen). 
 
-## 3. Fix filter case/synonym insensitivity
+**File:** `src/components/OutfitRatingCard.tsx`
 
-Two changes:
+- Remove `html2canvas` import and the hidden share card DOM (lines 649-752)
+- Replace `captureCard()` with a manual Canvas API function that draws the image, gradient overlay, scores, killer tag, and branding directly — no DOM rendering needed
+- This eliminates the 500ms wait + html2canvas render time
 
-**a) Normalize filter values at display and match time.** When building `uniqueColors`, `uniqueMaterials`, etc., normalize to lowercase and merge synonyms (grey→gray, etc.). Apply the same normalization when filtering items.
+## 3. Match home page padding to other pages
 
-**b) Create a synonym map** for common color/material variants:
+HomeScreen uses `pt-8`, other pages use `pt-4`. Change HomeScreen's `pt-8` to `pt-4`.
 
-```text
-grey → gray, grey → gray (already lowercase)
-```
+**File:** `src/pages/HomeScreen.tsx` line 522: `px-5 pt-8` → `px-5 pt-4`
 
-Apply this in a `normalizeFilterValue()` helper used in both the unique value extraction and the filter comparison logic.
+## 4. Add delete button to deleted items in history + 7-day auto-delete
 
-**File:** `src/pages/WardrobeScreen.tsx` — filter-related code (~lines 393-427)
+**a) UI:** Add a delete button on each deleted item card in the inline scroll (lines 1089-1104) and the "View All" overlay already has it (lines 873-881, already exists).
 
-## 4. Style Me: return only 2 outfits, tag best one
+**b) Auto-delete text:** Add "Auto-deleted after 7 days" note below the Deleted Items header.
 
-**a) Edge function change:** Update `style-me/index.ts` prompt to request exactly 2 outfits instead of 3-5. Add instruction: "Return exactly 2 outfits. Mark the highest-scoring one with `\"best_choice\": true`."
+**c) Auto-delete logic:** Create a DB migration with a scheduled function or add client-side cleanup: on profile load, permanently delete wardrobe items where `deleted_at < NOW() - 7 days`.
 
-**b) Frontend change:** In `HomeScreen.tsx`, show a "Best Choice ✨" badge on the outfit card that has the highest score (or `best_choice: true`). Sort results so the best one appears first.
+**File:** `src/pages/ProfileScreen.tsx`
 
-**Files:** `supabase/functions/style-me/index.ts`, `src/pages/HomeScreen.tsx` (~lines 795-823)
+## 5. Make Style Personality static — AI-analyzed every 30 days
+
+Currently recomputes on every render from a hash-based algorithm that's inconsistent. Replace with:
+
+**a) New DB column:** Add `style_personality` and `style_personality_updated_at` to `style_profiles` table.
+
+**b) Logic:** On profile load, check if `style_personality_updated_at` is null or > 30 days ago. If so, use AI (Gemini) to analyze based on wardrobe items (20%) and drip check photos (80%), save result to DB. Otherwise, display the stored value.
+
+**c) Edge function:** Create `analyze-style-personality` that takes wardrobe summary + recent drip history and returns a personality tag.
+
+ And when clicked on that give reason, once generated then cached for 30 days 
+
+**Files:**
+
+- DB migration: add columns to `style_profiles`
+- New edge function: `supabase/functions/analyze-style-personality/index.ts`
+- `src/pages/ProfileScreen.tsx`: replace hash-based computation with DB-stored value + 30-day refresh
+  &nbsp;
 
 ## Technical Details
 
-- **Model swap**: Simple string replacement `gemini-2.5-flash` → `gemini-2.5-flash-lite` in 5 files
-- **Card cleanup**: Remove ~25 lines of button JSX from `WardrobeCardContent`, keep only the edit button
-- **Filter normalization**: Add a `normalizeFilterValue(val: string)` function with a synonym map; apply it in `useMemo` for unique values and in filter comparisons
-- **Style Me prompt**: Change `outfitCount` from `"3-5"` to `"2"` and add `best_choice` field to JSON schema in the system prompt
-- **Best Choice badge**: Conditional rendering of a small gradient badge on the top outfit card
+- **Image compression**: No new functions needed, just standardize params across all callers
+- **Share speed**: Manual Canvas API draws image + text overlays in ~50ms vs html2canvas's ~1-2s. Pre-load the outfit image as `ImageBitmap` for instant drawing
+- **Padding**: Single class change `pt-8` → `pt-4`
+- **Auto-delete**: Client-side cleanup query on profile mount: `DELETE FROM wardrobe WHERE deleted_at < NOW() - INTERVAL '7 days'`
+- **Style personality AI prompt**: "Based on 80% outfit photos and 20% wardrobe composition, determine the user's style personality from: Dark Academia, Cottagecore, Y2K Nostalgia, Techwear, Preppy, Grunge, Quiet Luxury, Streetcore, Classic Sophisticate, Elegant Minimalist, Boho Spirit, Athleisure Icon, Vintage Rebel, Smart Casual, Eclectic Mix"
