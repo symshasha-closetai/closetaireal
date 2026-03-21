@@ -370,7 +370,7 @@ const WardrobeScreen = () => {
   };
 
   // Normalize filter values: lowercase + synonym merging
-  const synonymMap: Record<string, string> = { grey: "gray", "grey": "gray" };
+  const synonymMap: Record<string, string> = { grey: "gray" };
   const normalizeFilterValue = (val: string) => {
     const lower = val.toLowerCase().trim();
     return synonymMap[lower] || lower;
