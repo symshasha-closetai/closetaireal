@@ -222,6 +222,30 @@ export type Database = {
           },
         ]
       }
+      outfit_calendar: {
+        Row: {
+          created_at: string
+          id: string
+          outfit_data: Json
+          outfit_date: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          outfit_data?: Json
+          outfit_date: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          outfit_data?: Json
+          outfit_date?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       outfits: {
         Row: {
           ai_explanation: string | null
