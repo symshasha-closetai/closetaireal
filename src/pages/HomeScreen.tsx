@@ -96,6 +96,7 @@ type OutfitSuggestion = {
   explanation: string;
   reasoning?: OutfitReasoning;
   score_breakdown?: ScoreBreakdown;
+  best_choice?: boolean;
 };
 
 const HomeScreen = () => {
