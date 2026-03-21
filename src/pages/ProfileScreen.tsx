@@ -655,11 +655,25 @@ const ProfileScreen = () => {
           </div>
           <input type="file" ref={fileRef} accept="image/*" className="hidden" onChange={handleAvatarUpload} />
           {uploading && <p className="text-[10px] text-muted-foreground">Uploading...</p>}
-          {stylePersonality && (
-            <span className="text-[11px] tracking-wider text-primary/70 bg-primary/5 border border-primary/10 rounded-full px-3 py-1">
-              My Style Personality: <span className="font-semibold text-primary">{stylePersonality}</span>
+          {analyzingPersonality ? (
+            <span className="text-[11px] tracking-wider text-muted-foreground bg-secondary border border-border rounded-full px-3 py-1 flex items-center gap-1.5">
+              <Loader2 size={10} className="animate-spin" /> Analyzing your style...
             </span>
-          )}
+          ) : stylePersonality ? (
+            <button onClick={() => setActiveTooltipKey(prev => prev === "personality" ? null : "personality")}
+              className="text-[11px] tracking-wider text-primary/70 bg-primary/5 border border-primary/10 rounded-full px-3 py-1 active:scale-95 transition-transform">
+              My Style Personality: <span className="font-semibold text-primary">{stylePersonality}</span>
+            </button>
+          ) : null}
+          <AnimatePresence>
+            {activeTooltipKey === "personality" && stylePersonalityReason && (
+              <motion.div initial={{ opacity: 0, y: -5 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -5 }}
+                className="bg-card border border-border rounded-xl p-3 shadow-lg max-w-xs">
+                <p className="text-xs text-muted-foreground">{stylePersonalityReason}</p>
+                <p className="text-[9px] text-muted-foreground/50 mt-1">Updated every 30 days</p>
+              </motion.div>
+            )}
+          </AnimatePresence>
         </motion.div>
 
         {/* Tabs */}
