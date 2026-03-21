@@ -236,9 +236,9 @@ const WardrobeScreen = () => {
   const [hiddenDefaults, setHiddenDefaults] = useState<string[]>(() => {
     try { return JSON.parse(localStorage.getItem(HIDDEN_DEFAULTS_KEY) || "[]"); } catch { return []; }
   });
-  const CATEGORY_ORDER_KEY = "closetai-category-order";
+  const CATEGORY_ORDER_KEY = "dripd-category-order";
   const [categoryOrder, setCategoryOrder] = useState<string[]>(() => {
-    try { return JSON.parse(localStorage.getItem("closetai-category-order") || "[]"); } catch { return []; }
+    try { return JSON.parse(localStorage.getItem("dripd-category-order") || "[]"); } catch { return []; }
   });
 
   // Filters
