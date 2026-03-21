@@ -784,9 +784,9 @@ const WardrobeScreen = () => {
       const canvas = await html2canvas(shareCardRef.current, { useCORS: true, allowTaint: true, backgroundColor: null, scale: 2 });
       const blob = await new Promise<Blob | null>(resolve => canvas.toBlob(resolve, "image/png", 1));
       if (!blob) throw new Error("Failed");
-      const file = new File([blob], "closetai-collection.png", { type: "image/png" });
+      const file = new File([blob], "dripd-collection.png", { type: "image/png" });
       if (navigator.share && navigator.canShare?.({ files: [file] })) {
-        await navigator.share({ title: "My Collection — ClosetAI", files: [file] });
+        await navigator.share({ title: "My Collection — Dripd", files: [file] });
       } else {
         const url = URL.createObjectURL(blob);
         const a = document.createElement("a"); a.href = url; a.download = "closetai-collection.png";
