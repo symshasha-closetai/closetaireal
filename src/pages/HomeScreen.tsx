@@ -441,6 +441,66 @@ const HomeScreen = () => {
     }
   }, [user]);
 
+  // Calendar outfit planner — fetch and auto-generate
+  const generateCalendarOutfits = useCallback(async () => {
+    if (!user || allWardrobeItems.length < 2) return;
+    setGeneratingCalendar(true);
+    try {
+      const sp = await supabase.from("style_profiles").select("body_type, skin_tone, gender, style_type").eq("user_id", user.id).maybeSingle();
+      const today = new Date().toISOString().split("T")[0];
+      const { data, error } = await supabase.functions.invoke("generate-outfit-calendar", {
+        body: { wardrobeItems: allWardrobeItems, styleProfile: sp?.data, startDate: today },
+      });
+      if (error || !data?.outfits) { toast.error("Failed to generate weekly plan"); return; }
+      const rows = data.outfits.map((o: any) => {
+        const d = new Date();
+        d.setDate(d.getDate() + (o.day_offset || 0));
+        return { user_id: user.id, outfit_date: d.toISOString().split("T")[0], outfit_data: { name: o.name, items: o.items, occasion: o.occasion, explanation: o.explanation } };
+      });
+      for (const row of rows) {
+        await supabase.from("outfit_calendar" as any).upsert(row as any, { onConflict: "user_id,outfit_date" });
+      }
+      setCalendarOutfits(rows);
+      toast.success("Weekly outfit plan generated! 📅");
+    } catch (e) { console.error(e); toast.error("Failed to plan outfits"); }
+    setGeneratingCalendar(false);
+  }, [user, allWardrobeItems]);
+
+  useEffect(() => {
+    if (!user) return;
+    const fetchCalendar = async () => {
+      const today = new Date().toISOString().split("T")[0];
+      const end = new Date(); end.setDate(end.getDate() + 7);
+      const endStr = end.toISOString().split("T")[0];
+      const { data } = await supabase.from("outfit_calendar" as any).select("*").eq("user_id", user.id).gte("outfit_date", today).lte("outfit_date", endStr).order("outfit_date", { ascending: true });
+      const items = (data || []) as CalendarOutfit[];
+      setCalendarOutfits(items);
+      if (items.length < 3 && allWardrobeItems.length >= 2) {
+        generateCalendarOutfits();
+      }
+    };
+    if (allWardrobeItems.length > 0) fetchCalendar();
+  }, [user, allWardrobeItems, generateCalendarOutfits]);
+
+  useEffect(() => {
+    if (!user || !showCalendarAll) return;
+    const year = calendarMonth.getFullYear();
+    const month = calendarMonth.getMonth();
+    const start = new Date(year, month, 1).toISOString().split("T")[0];
+    const end = new Date(year, month + 1, 0).toISOString().split("T")[0];
+    supabase.from("outfit_calendar" as any).select("*").eq("user_id", user.id).gte("outfit_date", start).lte("outfit_date", end).order("outfit_date", { ascending: true })
+      .then(({ data }) => setMonthOutfits((data || []) as CalendarOutfit[]));
+  }, [user, showCalendarAll, calendarMonth]);
+
+  const getCalendarDayLabel = (dateStr: string) => {
+    const d = new Date(dateStr + "T00:00:00");
+    const today = new Date(); today.setHours(0,0,0,0);
+    const tomorrow = new Date(today); tomorrow.setDate(tomorrow.getDate() + 1);
+    if (d.getTime() === today.getTime()) return "Today";
+    if (d.getTime() === tomorrow.getTime()) return "Tomorrow";
+    return d.toLocaleDateString("en-US", { weekday: "short", month: "short", day: "numeric" });
+  };
+
   const categoryCounts = allWardrobeItems.reduce((acc, it) => {
     acc[it.type] = (acc[it.type] || 0) + 1;
     return acc;
