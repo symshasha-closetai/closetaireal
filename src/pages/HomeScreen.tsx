@@ -473,7 +473,7 @@ const HomeScreen = () => {
       const end = new Date(); end.setDate(end.getDate() + 7);
       const endStr = end.toISOString().split("T")[0];
       const { data } = await supabase.from("outfit_calendar" as any).select("*").eq("user_id", user.id).gte("outfit_date", today).lte("outfit_date", endStr).order("outfit_date", { ascending: true });
-      const items = (data || []) as CalendarOutfit[];
+      const items = (data || []) as unknown as CalendarOutfit[];
       setCalendarOutfits(items);
       if (items.length < 3 && allWardrobeItems.length >= 2) {
         generateCalendarOutfits();
