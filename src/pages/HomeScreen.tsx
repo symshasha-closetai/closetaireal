@@ -417,7 +417,7 @@ const HomeScreen = () => {
   useEffect(() => {
     if (user) {
       const cacheKey = `wardrobe_cache_${user.id}`;
-      const cached = getCached<WardrobeItem[]>(cacheKey, 5 * 60 * 1000);
+      const cached = getCached<WardrobeItem[]>(cacheKey, 48 * 60 * 60 * 1000);
       if (cached) {
         setAllWardrobeItems(cached);
         setWardrobeItems(cached.slice(0, 6));
