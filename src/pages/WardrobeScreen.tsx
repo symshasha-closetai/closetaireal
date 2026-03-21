@@ -789,7 +789,7 @@ const WardrobeScreen = () => {
         await navigator.share({ title: "My Collection — Dripd", files: [file] });
       } else {
         const url = URL.createObjectURL(blob);
-        const a = document.createElement("a"); a.href = url; a.download = "closetai-collection.png";
+        const a = document.createElement("a"); a.href = url; a.download = "dripd-collection.png";
         document.body.appendChild(a); a.click(); document.body.removeChild(a);
         URL.revokeObjectURL(url); toast.success("Image saved!");
       }
