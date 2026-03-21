@@ -561,7 +561,7 @@ const WardrobeScreen = () => {
     while (bgQueueRef.current.length > 0) {
       const job = bgQueueRef.current[0];
       try {
-        const { base64, blob: compressedBlob } = await compressImage(job.file);
+        const { base64, blob: compressedBlob } = await compressImage(job.file, 800, 800, 0.65, 200);
         // Upload original photo once per job
         let originalImageUrl: string | null = null;
         try {
