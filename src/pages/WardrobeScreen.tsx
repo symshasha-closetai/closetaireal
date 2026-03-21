@@ -75,7 +75,7 @@ const SortableCategoryRow = ({ id, children }: { id: string; children: React.Rea
 };
 
 // --- AI Analysis Cache helpers ---
-const ANALYSIS_CACHE_KEY = "closetai-analysis-cache";
+const ANALYSIS_CACHE_KEY = "dripd-analysis-cache";
 
 function computeAnalysisCacheKey(file: File): string {
   return `${file.name}-${file.size}-${file.lastModified}`;
