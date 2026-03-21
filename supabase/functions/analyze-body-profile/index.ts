@@ -57,7 +57,7 @@ You MUST respond with a JSON object (no markdown) containing:
         "Content-Type": "application/json",
       },
       body: JSON.stringify({
-        model: "gemini-2.5-flash",
+        model: "gemini-2.5-flash-lite",
         messages: [{ role: "user", content: contentParts }],
       }),
     });
