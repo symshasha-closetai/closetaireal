@@ -341,7 +341,7 @@ const OutfitRatingCard = ({ image, imageBase64, result, wardrobeItems = [],
     // CTA
     ctx.fillStyle = "rgba(255,255,255,0.55)";
     ctx.font = "500 10px Inter, sans-serif";
-    const cta = "CLOSETAIREAL.LOVABLE.APP";
+    const cta = "DRIPD.APP";
     const ctaW = ctx.measureText(cta).width;
     ctx.fillText(cta, (W - ctaW) / 2, H_IMG + H_BOTTOM - 10);
 
