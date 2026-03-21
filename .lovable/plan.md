@@ -1,45 +1,45 @@
+# Multi-Feature Update Plan
 
+## 1. Switch all edge functions to `gemini-2.5-flash-lite`
 
-# Switch AI Gateway to Direct Google Gemini API
+Update the `model` field in all 5 edge functions from `gemini-2.5-flash` to `gemini-2.5-flash-lite` for faster responses and lower cost.
 
-## Summary
-Replace the Lovable AI Gateway (`ai.gateway.lovable.dev`) with direct Google Gemini API calls using your own API key across all 5 edge functions.
+**Files:** `rate-outfit`, `analyze-clothing`, `analyze-body-profile`, `generate-suggestions`, `style-me` (all under `supabase/functions/`)
 
-## Prerequisites
-- You'll need a Google Gemini API key from [Google AI Studio](https://aistudio.google.com/apikeys)
-- I'll securely store it as a backend secret called `GEMINI_API_KEY`
+## 2. Wardrobe cards: remove all action buttons except Pinned
 
-## Changes
+Strip Edit, Pin, Refresh, Delete, Send, and Drag buttons from `WardrobeCardContent`. Keep only the Pinned button on each card. All other actions (edit, pin, delete, share, refresh, send) remain available in the existing full-screen detail view when the user taps the card image.
 
-### 1. Add GEMINI_API_KEY secret
-Request you to input your Google Gemini API key via the secure secrets tool.
+**File:** `src/pages/WardrobeScreen.tsx` — lines ~141-168 in `WardrobeCardContent`
 
-### 2. Update 5 edge functions
-Each function's AI fetch call changes from:
+## 3. Fix filter case/synonym insensitivity
 
-```text
-URL:  https://ai.gateway.lovable.dev/v1/chat/completions
-Auth: Bearer $LOVABLE_API_KEY
-Model: google/gemini-2.5-flash
-```
+Two changes:
 
-To:
+**a) Normalize filter values at display and match time.** When building `uniqueColors`, `uniqueMaterials`, etc., normalize to lowercase and merge synonyms (grey→gray, etc.). Apply the same normalization when filtering items.
+
+**b) Create a synonym map** for common color/material variants:
 
 ```text
-URL:  https://generativelanguage.googleapis.com/v1beta/openai/chat/completions
-Auth: Bearer $GEMINI_API_KEY
-Model: gemini-2.5-flash
+grey → gray, grey → gray (already lowercase)
 ```
 
-**Files modified:**
-- `supabase/functions/rate-outfit/index.ts`
-- `supabase/functions/analyze-clothing/index.ts`
-- `supabase/functions/analyze-body-profile/index.ts`
-- `supabase/functions/generate-suggestions/index.ts`
-- `supabase/functions/style-me/index.ts`
+Apply this in a `normalizeFilterValue()` helper used in both the unique value extraction and the filter comparison logic.
 
-Each file gets 3 line changes: swap `LOVABLE_API_KEY` → `GEMINI_API_KEY`, update the fetch URL, and update the model name (drop the `google/` prefix).
+**File:** `src/pages/WardrobeScreen.tsx` — filter-related code (~lines 393-427)
 
-### 3. No frontend changes needed
-All AI calls go through edge functions; the client code stays the same.
+## 4. Style Me: return only 2 outfits, tag best one
 
+**a) Edge function change:** Update `style-me/index.ts` prompt to request exactly 2 outfits instead of 3-5. Add instruction: "Return exactly 2 outfits. Mark the highest-scoring one with `\"best_choice\": true`."
+
+**b) Frontend change:** In `HomeScreen.tsx`, show a "Best Choice ✨" badge on the outfit card that has the highest score (or `best_choice: true`). Sort results so the best one appears first.
+
+**Files:** `supabase/functions/style-me/index.ts`, `src/pages/HomeScreen.tsx` (~lines 795-823)
+
+## Technical Details
+
+- **Model swap**: Simple string replacement `gemini-2.5-flash` → `gemini-2.5-flash-lite` in 5 files
+- **Card cleanup**: Remove ~25 lines of button JSX from `WardrobeCardContent`, keep only the edit button
+- **Filter normalization**: Add a `normalizeFilterValue(val: string)` function with a synonym map; apply it in `useMemo` for unique values and in filter comparisons
+- **Style Me prompt**: Change `outfitCount` from `"3-5"` to `"2"` and add `best_choice` field to JSON schema in the system prompt
+- **Best Choice badge**: Conditional rendering of a small gradient badge on the top outfit card
