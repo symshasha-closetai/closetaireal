@@ -514,7 +514,7 @@ const WardrobeScreen = () => {
     try {
       let detected: DetectedItem[] = [];
       try {
-        const { base64 } = await compressImage(file);
+        const { base64 } = await compressImage(file, 800, 800, 0.65, 200);
         detected = await tryAnalyze(base64);
       } catch (err1: any) {
         const msg1 = err1?.message || "";
