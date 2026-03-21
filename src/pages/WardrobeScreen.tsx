@@ -514,7 +514,7 @@ const WardrobeScreen = () => {
     try {
       let detected: DetectedItem[] = [];
       try {
-        const { base64 } = await compressImage(file);
+        const { base64 } = await compressImage(file, 800, 800, 0.65, 200);
         detected = await tryAnalyze(base64);
       } catch (err1: any) {
         const msg1 = err1?.message || "";
@@ -561,7 +561,7 @@ const WardrobeScreen = () => {
     while (bgQueueRef.current.length > 0) {
       const job = bgQueueRef.current[0];
       try {
-        const { base64, blob: compressedBlob } = await compressImage(job.file);
+        const { base64, blob: compressedBlob } = await compressImage(job.file, 800, 800, 0.65, 200);
         // Upload original photo once per job
         let originalImageUrl: string | null = null;
         try {
@@ -658,7 +658,7 @@ const WardrobeScreen = () => {
     if (!user || !uploadedFile) return;
     setUploading(true);
     try {
-      const { blob: compressedBlob } = await compressImage(uploadedFile);
+      const { blob: compressedBlob } = await compressImage(uploadedFile, 800, 800, 0.65, 200);
       const path = `${user.id}/${Date.now()}.jpg`;
       const { publicUrl, error: uploadError } = await r2.upload(path, compressedBlob, { contentType: "image/jpeg" });
       if (uploadError) throw uploadError;

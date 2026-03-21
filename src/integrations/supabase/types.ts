@@ -405,6 +405,9 @@ export type Database = {
           id: string
           model_image_url: string | null
           skin_tone: string | null
+          style_personality: string | null
+          style_personality_reason: string | null
+          style_personality_updated_at: string | null
           style_type: string | null
           updated_at: string
           user_id: string
@@ -422,6 +425,9 @@ export type Database = {
           id?: string
           model_image_url?: string | null
           skin_tone?: string | null
+          style_personality?: string | null
+          style_personality_reason?: string | null
+          style_personality_updated_at?: string | null
           style_type?: string | null
           updated_at?: string
           user_id: string
@@ -439,6 +445,9 @@ export type Database = {
           id?: string
           model_image_url?: string | null
           skin_tone?: string | null
+          style_personality?: string | null
+          style_personality_reason?: string | null
+          style_personality_updated_at?: string | null
           style_type?: string | null
           updated_at?: string
           user_id?: string

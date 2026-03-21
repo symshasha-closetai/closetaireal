@@ -295,7 +295,7 @@ const runAnalysis = async (file: File, userId: string | undefined, styleProfile:
   updateGlobal({ analyzing: true, progress: 5, stage: "Compressing image...", analysisSteps: [] });
 
   try {
-    const { blob, base64: imageBase64 } = await compressImage(file, 512, 512);
+    const { blob, base64: imageBase64 } = await compressImage(file, 512, 512, 0.65, 200);
 
     if (activeAbort?.signal.aborted) return;
 

@@ -86,6 +86,7 @@ const ProfileScreen = () => {
   // Style profile actions
   const styleActions = useStyleProfileActions();
   const [previewImage, setPreviewImage] = useState<string | null>(null);
+  const [activeTooltipKey, setActiveTooltipKey] = useState<string | null>(null);
 
   // History
   const [dripHistory, setDripHistory] = useState<DripHistoryEntry[]>([]);
@@ -120,72 +121,94 @@ const ProfileScreen = () => {
 
   const avatarUrl = avatarPreview || profile?.avatar_url || null;
 
-  // Style personality computation
+  // Style personality from DB
   const [stylePersonality, setStylePersonality] = useState<string | null>(null);
+  const [stylePersonalityReason, setStylePersonalityReason] = useState<string | null>(null);
+  const [analyzingPersonality, setAnalyzingPersonality] = useState(false);
 
   useEffect(() => {
-    const computeStylePersonality = async () => {
+    const loadStylePersonality = async () => {
       if (!user) return;
-      const { data: wardrobeItems } = await supabase.from("wardrobe").select("type, style, material, color, brand").eq("user_id", user.id);
-      const styles = styleActions.selectedStyles;
-      const items = wardrobeItems || [];
+      
+      // Load from DB first
+      const { data: sp } = await supabase
+        .from("style_profiles")
+        .select("style_personality, style_personality_reason, style_personality_updated_at")
+        .eq("user_id", user.id)
+        .maybeSingle();
 
-      const sortedItems = [...items].sort((a, b) => JSON.stringify(a).localeCompare(JSON.stringify(b)));
-      const currentHash = JSON.stringify({ items: sortedItems.map(i => ({ t: i.type, s: i.style, m: i.material, c: i.color, b: i.brand })), styles: [...styles].sort() });
-
-      const cached = localStorage.getItem("style-personality");
-      if (cached) {
-        try {
-          const { tag, hash } = JSON.parse(cached);
-          if (hash === currentHash) { setStylePersonality(tag); return; }
-        } catch { /* ignore */ }
+      if (sp?.style_personality && sp?.style_personality_updated_at) {
+        const updatedAt = new Date(sp.style_personality_updated_at).getTime();
+        const thirtyDaysMs = 30 * 24 * 60 * 60 * 1000;
+        if (Date.now() - updatedAt < thirtyDaysMs) {
+          setStylePersonality(sp.style_personality);
+          setStylePersonalityReason(sp.style_personality_reason || null);
+          return;
+        }
       }
 
-      if (items.length === 0 && styles.length === 0) {
-        const tag = "Style Explorer";
-        setStylePersonality(tag);
-        localStorage.setItem("style-personality", JSON.stringify({ tag, hash: currentHash }));
-        return;
+      // Need to analyze — gather data
+      setAnalyzingPersonality(true);
+      try {
+        const [wardrobeRes, dripRes] = await Promise.all([
+          supabase.from("wardrobe").select("type, style, material, color, brand").eq("user_id", user.id).is("deleted_at", null).limit(50),
+          supabase.from("drip_history").select("score, killer_tag, full_result, created_at").eq("user_id", user.id).order("created_at", { ascending: false }).limit(20),
+        ]);
+
+        const wardrobeItems = wardrobeRes.data || [];
+        const dripItems = (dripRes.data || []) as any[];
+
+        const wardrobeSummary = wardrobeItems.length > 0
+          ? `${wardrobeItems.length} items: ${wardrobeItems.map(i => `${i.type}(${i.style || ""}/${i.color || ""}/${i.material || ""})`).join(", ")}`
+          : "Empty wardrobe";
+
+        const dripSummary = dripItems.length > 0
+          ? dripItems.map(d => {
+              const fr = d.full_result as any;
+              return `Score:${d.score}, Tag:${d.killer_tag || ""}, Style:${fr?.style_reason || ""}, Occasion:${fr?.occasion || ""}`;
+            }).join(" | ")
+          : "No drip checks yet";
+
+        if (wardrobeItems.length === 0 && dripItems.length === 0) {
+          const tag = "Style Explorer";
+          setStylePersonality(tag);
+          setStylePersonalityReason("Start adding outfits and doing drip checks to discover your style personality! ✨");
+          await supabase.from("style_profiles").update({
+            style_personality: tag,
+            style_personality_reason: "Start adding outfits to discover your style! ✨",
+            style_personality_updated_at: new Date().toISOString(),
+          } as any).eq("user_id", user.id);
+          return;
+        }
+
+        const { data, error } = await supabase.functions.invoke("analyze-style-personality", {
+          body: { wardrobeSummary, dripHistory: dripSummary },
+        });
+
+        if (!error && data?.result) {
+          const { personality, reason } = data.result;
+          setStylePersonality(personality);
+          setStylePersonalityReason(reason || null);
+          await supabase.from("style_profiles").update({
+            style_personality: personality,
+            style_personality_reason: reason || null,
+            style_personality_updated_at: new Date().toISOString(),
+          } as any).eq("user_id", user.id);
+        } else {
+          // Fallback
+          setStylePersonality(sp?.style_personality || "Style Explorer");
+          setStylePersonalityReason(sp?.style_personality_reason || null);
+        }
+      } catch (err) {
+        console.error("Style personality analysis failed:", err);
+        setStylePersonality(sp?.style_personality || "Style Explorer");
+        setStylePersonalityReason(sp?.style_personality_reason || null);
+      } finally {
+        setAnalyzingPersonality(false);
       }
-
-      const typeCount: Record<string, number> = {};
-      const styleCount: Record<string, number> = {};
-      const materialCount: Record<string, number> = {};
-      items.forEach(i => {
-        if (i.type) typeCount[i.type.toLowerCase()] = (typeCount[i.type.toLowerCase()] || 0) + 1;
-        if (i.style) styleCount[i.style.toLowerCase()] = (styleCount[i.style.toLowerCase()] || 0) + 1;
-        if (i.material) materialCount[i.material.toLowerCase()] = (materialCount[i.material.toLowerCase()] || 0) + 1;
-      });
-      styles.forEach(s => { styleCount[s.toLowerCase()] = (styleCount[s.toLowerCase()] || 0) + 2; });
-
-      const hasStyle = (keywords: string[]) => keywords.some(k => Object.keys(styleCount).some(s => s.includes(k)));
-      const hasMaterial = (keywords: string[]) => keywords.some(k => Object.keys(materialCount).some(m => m.includes(k)));
-      const hasColor = (keywords: string[]) => keywords.some(k => items.some(i => i.color?.toLowerCase().includes(k)));
-      const hasType = (keywords: string[]) => keywords.some(k => Object.keys(typeCount).some(t => t.includes(k)));
-      const uniqueStyles = new Set(Object.keys(styleCount));
-
-      let tag = "Style Explorer";
-      if ((hasStyle(["formal", "classic"]) && hasColor(["black", "brown", "navy", "dark"])) || hasMaterial(["tweed", "leather"]) && hasMaterial(["wool"])) tag = "Dark Academia";
-      else if ((hasStyle(["minimalist", "formal"]) || hasStyle(["minimal"])) && hasMaterial(["cashmere", "silk", "merino"])) tag = "Quiet Luxury";
-      else if (hasStyle(["bohemian", "boho"]) && (hasMaterial(["linen", "cotton"]) || hasColor(["white", "cream", "pastel", "floral"]))) tag = "Cottagecore";
-      else if (hasStyle(["sporty", "urban"]) && hasMaterial(["nylon", "synthetic", "polyester", "gore-tex"])) tag = "Techwear";
-      else if (hasStyle(["streetwear", "street"]) && (hasColor(["pink", "blue", "bright", "neon"]) || hasType(["crop", "denim"]))) tag = "Y2K Nostalgia";
-      else if (hasStyle(["street", "grunge"]) && hasColor(["black", "grey", "dark"])) tag = "Grunge";
-      else if (hasStyle(["classic", "smart", "preppy"]) && (hasType(["polo", "blazer", "chino"]) || hasMaterial(["cotton"]))) tag = "Preppy";
-      else if (hasStyle(["streetwear", "street", "urban", "hip"])) tag = "Streetcore";
-      else if (hasStyle(["formal", "classic"]) || hasMaterial(["silk", "wool", "cashmere"])) tag = "Classic Sophisticate";
-      else if (hasStyle(["minimalist", "minimal"]) || (hasStyle(["casual"]) && items.length < 15)) tag = "Elegant Minimalist";
-      else if (hasStyle(["bohemian", "boho"])) tag = "Boho Spirit";
-      else if (hasStyle(["sporty", "gym", "athletic"])) tag = "Athleisure Icon";
-      else if (hasStyle(["vintage", "retro"])) tag = "Vintage Rebel";
-      else if (hasStyle(["casual", "smart"])) tag = "Smart Casual";
-      else if (uniqueStyles.size >= 5) tag = "Eclectic Mix";
-
-      setStylePersonality(tag);
-      localStorage.setItem("style-personality", JSON.stringify({ tag, hash: currentHash }));
     };
-    computeStylePersonality();
-  }, [user, styleActions.selectedStyles]);
+    loadStylePersonality();
+  }, [user]);
 
   useEffect(() => {
     if (profile?.name !== undefined && profile?.name !== null) {
@@ -195,9 +218,13 @@ const ProfileScreen = () => {
 
   const fetchDeletedItems = async () => {
     if (!user) return;
+    // Auto-delete items older than 7 days
+    const sevenDaysAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString();
+    await supabase.from("wardrobe").delete().eq("user_id", user.id).not("deleted_at", "is", null).lt("deleted_at", sevenDaysAgo);
+    
     const { data } = await supabase
       .from("wardrobe")
-      .select("id, image_url, type, color, material, name, brand, quality, season, style, pinned, pin_order")
+      .select("id, image_url, type, color, material, name, brand, quality, season, style, pinned, pin_order, deleted_at")
       .eq("user_id", user.id)
       .not("deleted_at", "is", null)
       .order("created_at", { ascending: false });
@@ -287,7 +314,7 @@ const ProfileScreen = () => {
     if (!file || !user) return;
     setUploading(true);
     try {
-      const { blob: compressedBlob } = await compressImage(file);
+      const { blob: compressedBlob } = await compressImage(file, 800, 800, 0.65, 200);
       const path = `${user.id}/avatar.jpg`;
       const { publicUrl, error: uploadError } = await r2.upload(path, compressedBlob, { contentType: "image/jpeg" });
       if (uploadError) { toast.error("Failed to upload avatar"); setUploading(false); return; }
@@ -629,11 +656,25 @@ const ProfileScreen = () => {
           </div>
           <input type="file" ref={fileRef} accept="image/*" className="hidden" onChange={handleAvatarUpload} />
           {uploading && <p className="text-[10px] text-muted-foreground">Uploading...</p>}
-          {stylePersonality && (
-            <span className="text-[11px] tracking-wider text-primary/70 bg-primary/5 border border-primary/10 rounded-full px-3 py-1">
-              My Style Personality: <span className="font-semibold text-primary">{stylePersonality}</span>
+          {analyzingPersonality ? (
+            <span className="text-[11px] tracking-wider text-muted-foreground bg-secondary border border-border rounded-full px-3 py-1 flex items-center gap-1.5">
+              <Loader2 size={10} className="animate-spin" /> Analyzing your style...
             </span>
-          )}
+          ) : stylePersonality ? (
+            <button onClick={() => setActiveTooltipKey(prev => prev === "personality" ? null : "personality")}
+              className="text-[11px] tracking-wider text-primary/70 bg-primary/5 border border-primary/10 rounded-full px-3 py-1 active:scale-95 transition-transform">
+              My Style Personality: <span className="font-semibold text-primary">{stylePersonality}</span>
+            </button>
+          ) : null}
+          <AnimatePresence>
+            {activeTooltipKey === "personality" && stylePersonalityReason && (
+              <motion.div initial={{ opacity: 0, y: -5 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -5 }}
+                className="bg-card border border-border rounded-xl p-3 shadow-lg max-w-xs">
+                <p className="text-xs text-muted-foreground">{stylePersonalityReason}</p>
+                <p className="text-[9px] text-muted-foreground/50 mt-1">Updated every 30 days</p>
+              </motion.div>
+            )}
+          </AnimatePresence>
         </motion.div>
 
         {/* Tabs */}
@@ -1083,6 +1124,7 @@ const ProfileScreen = () => {
                     </button>
                   )}
                 </div>
+                <p className="text-[10px] text-muted-foreground/60">Auto-deleted after 7 days</p>
                 {deletedItems.length === 0 ? (
                   <p className="text-xs text-muted-foreground py-3 text-center">No deleted items</p>
                 ) : (
@@ -1096,10 +1138,16 @@ const ProfileScreen = () => {
                         <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/70 to-transparent rounded-b-xl p-1.5">
                           <p className="text-[10px] font-medium text-white truncate">{item.name || item.type}</p>
                         </div>
-                        <button onClick={() => restoreItem(item.id)}
-                          className="absolute top-1 right-1 w-6 h-6 rounded-full bg-primary text-primary-foreground flex items-center justify-center" title="Re-add">
-                          <RotateCcw size={11} />
-                        </button>
+                        <div className="absolute top-1 right-1 flex flex-col gap-1">
+                          <button onClick={() => restoreItem(item.id)}
+                            className="w-6 h-6 rounded-full bg-primary text-primary-foreground flex items-center justify-center" title="Re-add">
+                            <RotateCcw size={11} />
+                          </button>
+                          <button onClick={() => permanentlyDeleteItem(item.id)}
+                            className="w-6 h-6 rounded-full bg-destructive text-destructive-foreground flex items-center justify-center" title="Delete permanently">
+                            <Trash2 size={11} />
+                          </button>
+                        </div>
                       </motion.div>
                     ))}
                   </div>
