@@ -5,7 +5,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { toast } from "sonner";
 import html2canvas from "html2canvas";
-import closetaiLogo from "@/assets/closetai-logo.webp";
+import dripdLogo from "@/assets/closetai-logo.webp";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 
 const RANK_TAGS: Record<number, string> = {
