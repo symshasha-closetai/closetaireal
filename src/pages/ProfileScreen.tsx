@@ -1124,6 +1124,7 @@ const ProfileScreen = () => {
                     </button>
                   )}
                 </div>
+                <p className="text-[10px] text-muted-foreground/60">Auto-deleted after 7 days</p>
                 {deletedItems.length === 0 ? (
                   <p className="text-xs text-muted-foreground py-3 text-center">No deleted items</p>
                 ) : (
@@ -1137,10 +1138,16 @@ const ProfileScreen = () => {
                         <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/70 to-transparent rounded-b-xl p-1.5">
                           <p className="text-[10px] font-medium text-white truncate">{item.name || item.type}</p>
                         </div>
-                        <button onClick={() => restoreItem(item.id)}
-                          className="absolute top-1 right-1 w-6 h-6 rounded-full bg-primary text-primary-foreground flex items-center justify-center" title="Re-add">
-                          <RotateCcw size={11} />
-                        </button>
+                        <div className="absolute top-1 right-1 flex flex-col gap-1">
+                          <button onClick={() => restoreItem(item.id)}
+                            className="w-6 h-6 rounded-full bg-primary text-primary-foreground flex items-center justify-center" title="Re-add">
+                            <RotateCcw size={11} />
+                          </button>
+                          <button onClick={() => permanentlyDeleteItem(item.id)}
+                            className="w-6 h-6 rounded-full bg-destructive text-destructive-foreground flex items-center justify-center" title="Delete permanently">
+                            <Trash2 size={11} />
+                          </button>
+                        </div>
                       </motion.div>
                     ))}
                   </div>
