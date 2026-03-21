@@ -69,6 +69,78 @@ const LeaderboardTab = () => {
   const [myRank, setMyRank] = useState<number | null>(null);
   const [sharingId, setSharingId] = useState<string | null>(null);
   const [selectedEntry, setSelectedEntry] = useState<{ entry: LeaderboardEntry; rank: number } | null>(null);
+  const [confirmAction, setConfirmAction] = useState<"sit_out" | "revert" | null>(null);
+  const [optOutLoading, setOptOutLoading] = useState(false);
+
+  const handleSitOut = async () => {
+    if (!user) return;
+    setOptOutLoading(true);
+    try {
+      const today = new Date().toISOString().split("T")[0];
+      await supabase
+        .from("drip_history")
+        .delete()
+        .eq("user_id", user.id)
+        .gte("created_at", `${today}T00:00:00`)
+        .lt("created_at", `${today}T23:59:59.999`);
+      dailyCache = null;
+      weeklyCache = null;
+      await fetchDaily(true);
+      toast.success("Gracefully withdrawn from today's ranking");
+    } catch {
+      toast.error("Something went wrong");
+    } finally {
+      setOptOutLoading(false);
+      setConfirmAction(null);
+    }
+  };
+
+  const handleRevert = async () => {
+    if (!user) return;
+    setOptOutLoading(true);
+    try {
+      const today = new Date().toISOString().split("T")[0];
+      // Delete today's entries
+      await supabase
+        .from("drip_history")
+        .delete()
+        .eq("user_id", user.id)
+        .gte("created_at", `${today}T00:00:00`)
+        .lt("created_at", `${today}T23:59:59.999`);
+      // Find most recent previous entry
+      const { data: prev } = await supabase
+        .from("drip_history")
+        .select("*")
+        .eq("user_id", user.id)
+        .lt("created_at", `${today}T00:00:00`)
+        .order("created_at", { ascending: false })
+        .limit(1)
+        .maybeSingle();
+      if (prev) {
+        await supabase.from("drip_history").insert({
+          user_id: user.id,
+          score: prev.score,
+          image_url: prev.image_url,
+          killer_tag: prev.killer_tag,
+          praise_line: prev.praise_line,
+          confidence_score: prev.confidence_score,
+          full_result: prev.full_result,
+          image_hash: prev.image_hash,
+        });
+        toast.success("Previous evaluation restored for today");
+      } else {
+        toast.info("No prior evaluation found to restore");
+      }
+      dailyCache = null;
+      weeklyCache = null;
+      await fetchDaily(true);
+    } catch {
+      toast.error("Something went wrong");
+    } finally {
+      setOptOutLoading(false);
+      setConfirmAction(null);
+    }
+  };
 
   const fetchFriends = async () => {
     if (!user) return [];
