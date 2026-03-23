@@ -736,12 +736,12 @@ const HomeScreen = () => {
             )}
           </div>
 
-          {/* What to Wear — Calendar Section */}
+          {/* Dripd Calendar Section */}
           <div className="glass-card-elevated p-4">
             <div className="flex items-center justify-between mb-3">
               <div className="flex items-center gap-2">
                 <CalendarDays size={18} className="text-primary" />
-                <h2 className="text-base font-semibold text-foreground">What to Wear</h2>
+                <h2 className="text-base font-semibold text-foreground">Dripd Calendar</h2>
                 {calendarOutfits.length > 0 && (
                   <span className="px-2 py-0.5 rounded-full bg-primary/10 text-xs font-bold text-foreground">{calendarOutfits.length} days</span>
                 )}
