@@ -499,7 +499,7 @@ const OutfitRatingCard = ({ image, imageBase64, result, wardrobeItems = [],
       </motion.div>
 
       {/* Analysis Section */}
-      <motion.div initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.1 }} className="rounded-2xl bg-card border border-border/30 p-6 space-y-5">
+      <motion.div initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.1 }} className="rounded-2xl bg-card border border-border/20 p-6 space-y-5 shadow-card">
         {/* Drip/Confidence Tooltip */}
         <AnimatePresence>
           {(activeTooltip === "drip" || activeTooltip === "confidence") && (
