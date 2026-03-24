@@ -464,21 +464,21 @@ const LeaderboardTab = () => {
 
   const ShareCard = ({ entry, rank }: { entry: LeaderboardEntry; rank: number }) => (
     <div className="fixed -left-[9999px] top-0" id={`share-card-${entry.user_id}`}>
-      <div className="w-[360px] bg-gradient-to-br from-gray-900 to-gray-800 rounded-2xl overflow-hidden p-5 text-white">
+      <div className="w-[360px] bg-gradient-to-br from-[#1a1612] to-[#0d0a08] rounded-2xl overflow-hidden p-5 text-white">
         <div className="flex items-center gap-2 mb-4">
           <img src={dripdLogo} alt="" className="w-8 h-8 rounded-lg" crossOrigin="anonymous" />
-          <span className="font-bold text-sm">Dripd</span>
+          <span className="font-bold text-sm tracking-wider" style={{ color: '#C9A96E' }}>Dripd</span>
         </div>
         {entry.image_url && (
           <img src={entry.image_url} alt="" className="w-full aspect-[3/4] object-cover rounded-xl mb-4" crossOrigin="anonymous" />
         )}
         <div className="space-y-2">
-          <p className="text-3xl font-bold">{entry.score.toFixed(1)}<span className="text-lg text-white/60">/100</span></p>
+          <p className="text-3xl font-bold" style={{ color: '#C9A96E' }}>{entry.score.toFixed(1)}<span className="text-lg text-white/40">/100</span></p>
           {getRankTag(rank) && <p className="text-lg font-semibold">{getRankTag(rank)}</p>}
           {entry.killer_tag && <p className="text-xs text-white/50">{entry.killer_tag}</p>}
         </div>
         <div className="mt-4 pt-3 border-t border-white/10 text-center">
-          <p className="text-sm font-semibold bg-gradient-to-r from-purple-400 to-yellow-400 bg-clip-text text-transparent">
+          <p className="text-sm font-semibold" style={{ color: '#C9A96E' }}>
             Drop My Drip ✨
           </p>
         </div>
