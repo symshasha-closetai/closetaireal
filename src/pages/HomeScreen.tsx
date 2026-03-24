@@ -646,7 +646,7 @@ const HomeScreen = () => {
                 <img src={todayPhoto} alt="Today's look" className="w-full aspect-[4/5] object-cover" />
                 <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/40 to-black/20" />
                 <div className="absolute top-3 left-3 flex gap-2">
-                  <span className="px-2.5 py-1 rounded-full bg-primary/90 text-primary-foreground text-[10px] font-semibold" style={{ textShadow: "0 1px 4px rgba(0,0,0,0.6)" }}>Today's Look</span>
+                  <span className="px-2.5 py-1 rounded-full bg-gold/90 text-white text-[10px] font-semibold" style={{ textShadow: "0 1px 4px rgba(0,0,0,0.6)" }}>Today's Look</span>
                   {streak > 0 && (
                     <span className="px-2.5 py-1 rounded-full bg-orange-500/90 text-white text-[10px] font-semibold flex items-center gap-1" style={{ textShadow: "0 1px 4px rgba(0,0,0,0.6)" }}>
                       <Flame size={10} /> {streak} day{streak > 1 ? "s" : ""}
