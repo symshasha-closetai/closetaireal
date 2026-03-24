@@ -445,16 +445,16 @@ const LeaderboardTab = () => {
   const podiumOrder = [1, 0, 2];
 
   const getRankBorderClass = (rank: number) => {
-    if (rank === 1) return "ring-2 ring-yellow-400 shadow-[0_0_24px_rgba(250,204,21,0.4),0_0_8px_rgba(251,146,60,0.3)]";
+    if (rank === 1) return "ring-2 ring-gold shadow-[0_0_24px_hsl(42_60%_55%/0.4)]";
     if (rank === 2) return "ring-2 ring-gray-300 shadow-[0_0_16px_rgba(156,163,175,0.3)]";
-    if (rank === 3) return "ring-2 ring-amber-600 shadow-[0_0_16px_rgba(217,119,6,0.3)]";
+    if (rank === 3) return "ring-2 ring-amber-700 shadow-[0_0_16px_rgba(180,100,30,0.3)]";
     return "ring-1 ring-border/30";
   };
 
   const getRankGradientWrapper = (rank: number) => {
-    if (rank === 1) return "bg-gradient-to-br from-yellow-400 via-orange-500 to-red-500 p-[2px] rounded-2xl";
-    if (rank === 2) return "bg-gradient-to-br from-gray-200 via-gray-400 to-gray-300 p-[2px] rounded-2xl";
-    if (rank === 3) return "bg-gradient-to-br from-amber-600 via-amber-500 to-amber-700 p-[2px] rounded-2xl";
+    if (rank === 1) return "border-gradient-gold p-[2px] rounded-2xl relative";
+    if (rank === 2) return "border-gradient-silver p-[2px] rounded-2xl relative";
+    if (rank === 3) return "border-gradient-bronze p-[2px] rounded-2xl relative";
     return "";
   };
 
