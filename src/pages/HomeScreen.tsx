@@ -819,8 +819,8 @@ const HomeScreen = () => {
                       isSelected ? "bg-card border-2 border-gold shadow-soft" : "bg-secondary border-2 border-transparent"
                     }`}
                   >
-                    <OccIcon size={18} className={isSelected ? "text-accent-foreground" : "text-muted-foreground"} />
-                    <span className={`text-[10px] font-medium ${isSelected ? "text-accent-foreground" : "text-muted-foreground"}`}>{occ.label}</span>
+                    <OccIcon size={18} className={isSelected ? "text-gold" : "text-muted-foreground"} />
+                    <span className={`text-[10px] font-medium ${isSelected ? "text-foreground" : "text-muted-foreground"}`}>{occ.label}</span>
                   </button>
                 );
               })}
