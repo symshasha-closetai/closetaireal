@@ -46,7 +46,6 @@ const AppHeader = () => {
       ));
     };
     const fetchUnreadMessages = async () => {
-      // Get user's conversations
       const { data: participations } = await supabase
         .from("conversation_participants")
         .select("conversation_id")
@@ -56,7 +55,6 @@ const AppHeader = () => {
         return;
       }
       const convIds = participations.map(p => p.conversation_id);
-      // Count messages from others in the last 24h
       const since = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString();
       const { count } = await supabase
         .from("messages")
@@ -71,7 +69,6 @@ const AppHeader = () => {
     fetchFriends();
     fetchUnreadMessages();
 
-    // Realtime subscription for new messages
     const channel = supabase
       .channel("header-unread-msgs")
       .on("postgres_changes", {
@@ -103,46 +100,43 @@ const AppHeader = () => {
       <div className="flex items-center justify-between">
         <button
           onClick={() => setTheme(theme === "dark" ? "light" : "dark")}
-          className="w-9 h-9 rounded-full bg-secondary border border-border flex items-center justify-center active:scale-95 transition-transform"
+          className="w-9 h-9 rounded-full bg-card shadow-soft flex items-center justify-center active:scale-95 transition-transform"
         >
           {theme === "dark" ? (
-            <Sun size={16} className="text-muted-foreground" />
+            <Sun size={16} className="text-gold" />
           ) : (
             <Moon size={16} className="text-muted-foreground" />
           )}
         </button>
 
-        <h1 className="font-display text-lg font-semibold text-foreground">Dripd</h1>
+        <h1 className="font-display text-lg font-semibold text-gradient-gold tracking-wide">Dripd</h1>
 
         <div className="flex items-center gap-1.5">
-          {/* Messages */}
           <button
             onClick={() => navigate("/messages")}
-            className="w-9 h-9 rounded-full bg-secondary border border-border flex items-center justify-center active:scale-95 transition-transform"
+            className="w-9 h-9 rounded-full bg-card shadow-soft flex items-center justify-center active:scale-95 transition-transform"
           >
             <MessageCircle size={16} className="text-muted-foreground" />
           </button>
 
-          {/* Bell — unread messages count */}
           <button
             onClick={() => navigate("/messages")}
-            className="relative w-9 h-9 rounded-full bg-secondary border border-border flex items-center justify-center active:scale-95 transition-transform"
+            className="relative w-9 h-9 rounded-full bg-card shadow-soft flex items-center justify-center active:scale-95 transition-transform"
           >
             <Bell size={16} className="text-muted-foreground" />
             {unreadMsgCount > 0 && (
-              <span className="absolute -top-0.5 -right-0.5 min-w-[16px] h-4 rounded-full bg-destructive text-destructive-foreground text-[9px] font-bold flex items-center justify-center px-1">
+              <span className="absolute -top-0.5 -right-0.5 min-w-[16px] h-4 rounded-full bg-gold text-white text-[9px] font-bold flex items-center justify-center px-1">
                 {unreadMsgCount > 99 ? "99+" : unreadMsgCount}
               </span>
             )}
           </button>
 
-          {/* Plus menu — friend requests here */}
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
-              <button className="relative w-9 h-9 rounded-full bg-secondary border border-border flex items-center justify-center active:scale-95 transition-transform">
+              <button className="relative w-9 h-9 rounded-full bg-card shadow-soft flex items-center justify-center active:scale-95 transition-transform">
                 <Plus size={16} className="text-muted-foreground" />
                 {pendingCount > 0 && (
-                  <span className="absolute -top-0.5 -right-0.5 min-w-[16px] h-4 rounded-full bg-destructive text-destructive-foreground text-[9px] font-bold flex items-center justify-center px-1">
+                  <span className="absolute -top-0.5 -right-0.5 min-w-[16px] h-4 rounded-full bg-gold text-white text-[9px] font-bold flex items-center justify-center px-1">
                     {pendingCount}
                   </span>
                 )}
@@ -157,7 +151,7 @@ const AppHeader = () => {
                 <Clock size={14} className="mr-2" />
                 Pending Requests
                 {pendingCount > 0 && (
-                  <span className="ml-auto min-w-[18px] h-[18px] rounded-full bg-destructive text-destructive-foreground text-[10px] font-bold flex items-center justify-center px-1">
+                  <span className="ml-auto min-w-[18px] h-[18px] rounded-full bg-gold text-white text-[10px] font-bold flex items-center justify-center px-1">
                     {pendingCount}
                   </span>
                 )}

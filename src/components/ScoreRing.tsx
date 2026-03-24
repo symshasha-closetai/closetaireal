@@ -19,6 +19,9 @@ const ScoreRing = ({ score, maxScore = 10, size = 56, label, colorClass, strokeC
 
   const displayScore = Number.isInteger(score) ? score.toString() : score.toFixed(1);
 
+  // Default to gold if no color specified
+  const defaultStroke = "#C9A96E";
+
   return (
     <div className="flex flex-col items-center gap-1.5">
       <div className="relative" style={{ width: size, height: size }}>
@@ -28,7 +31,7 @@ const ScoreRing = ({ score, maxScore = 10, size = 56, label, colorClass, strokeC
             cy={size / 2}
             r={radius}
             fill="none"
-            className={light ? "stroke-white/30" : "stroke-border/20"}
+            className={light ? "stroke-white/20" : "stroke-border/15"}
             strokeWidth={strokeWidth}
           />
           <motion.circle
@@ -37,7 +40,7 @@ const ScoreRing = ({ score, maxScore = 10, size = 56, label, colorClass, strokeC
             r={radius}
             fill="none"
             className={colorClass}
-            style={strokeColor ? { stroke: strokeColor } : undefined}
+            style={strokeColor ? { stroke: strokeColor } : !colorClass ? { stroke: defaultStroke } : undefined}
             strokeWidth={strokeWidth}
             strokeLinecap="round"
             strokeDasharray={circumference}
