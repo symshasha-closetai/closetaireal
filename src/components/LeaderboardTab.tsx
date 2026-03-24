@@ -643,7 +643,7 @@ const LeaderboardTab = () => {
                             {getRankTag(rank)}
                           </p>
                         )}
-                        <p className="text-lg font-bold text-white leading-none mt-0.5">{entry.score.toFixed(1)}</p>
+                        <p className="text-lg font-bold text-white leading-none mt-0.5" style={{ textShadow: '0 0 12px rgba(201,169,110,0.4)' }}>{entry.score.toFixed(1)}</p>
                       </div>
 
                       {sharingId === entry.user_id && <ShareCard entry={entry} rank={rank} />}
