@@ -864,7 +864,7 @@ const HomeScreen = () => {
                     }`}
                   >
                     <span className="text-lg">{w.emoji}</span>
-                    <span className={`text-[10px] font-medium ${isSelected ? "text-accent-foreground" : "text-muted-foreground"}`}>{w.label}</span>
+                    <span className={`text-[10px] font-medium ${isSelected ? "text-foreground" : "text-muted-foreground"}`}>{w.label}</span>
                   </button>
                 );
               })}
