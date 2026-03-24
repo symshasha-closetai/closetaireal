@@ -696,8 +696,8 @@ const LeaderboardTab = () => {
           {myRank && (
             <div className="fixed bottom-20 left-0 right-0 z-40 flex justify-center pointer-events-none">
               <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }}
-                className="pointer-events-auto flex items-center justify-center gap-2 py-2.5 px-5 rounded-full bg-card/95 backdrop-blur-xl border border-border/40 shadow-elevated">
-                <Trophy size={14} className="text-yellow-500" />
+                className="pointer-events-auto flex items-center justify-center gap-2 py-2.5 px-5 rounded-full bg-card/95 backdrop-blur-xl border border-gold/20 shadow-elevated glow-gold">
+                <Trophy size={14} className="text-gold" />
                 <span className="text-sm font-semibold text-foreground">You are #{myRank}</span>
                 {getRankTag(myRank) && <span className="text-xs text-muted-foreground">{getRankTag(myRank)}</span>}
               </motion.div>
