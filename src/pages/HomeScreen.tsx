@@ -842,7 +842,7 @@ const HomeScreen = () => {
                     }`}
                   >
                     <span className="text-lg">{t.emoji}</span>
-                    <span className={`text-[10px] font-medium ${isSelected ? "text-accent-foreground" : "text-muted-foreground"}`}>{t.label}</span>
+                    <span className={`text-[10px] font-medium ${isSelected ? "text-foreground" : "text-muted-foreground"}`}>{t.label}</span>
                   </button>
                 );
               })}
