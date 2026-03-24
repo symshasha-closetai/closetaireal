@@ -445,13 +445,13 @@ const CameraScreen = () => {
         <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }}><AppHeader /></motion.div>
 
         {/* Tab switcher */}
-        <div className="flex gap-1 p-1 rounded-xl bg-secondary/50">
+        <div className="flex gap-1 p-1 rounded-xl bg-card shadow-soft">
           <button onClick={() => setActiveTab("drip")}
-            className={`flex-1 py-2 rounded-lg text-sm font-medium transition-all ${activeTab === "drip" ? "bg-card shadow-sm text-foreground" : "text-muted-foreground"}`}>
+            className={`flex-1 py-2 rounded-lg text-sm font-medium transition-all ${activeTab === "drip" ? "gradient-gold text-white shadow-sm" : "text-muted-foreground"}`}>
             Drip Check
           </button>
           <button onClick={() => setActiveTab("leaderboard")}
-            className={`flex-1 py-2 rounded-lg text-sm font-medium transition-all ${activeTab === "leaderboard" ? "bg-card shadow-sm text-foreground" : "text-muted-foreground"}`}>
+            className={`flex-1 py-2 rounded-lg text-sm font-medium transition-all ${activeTab === "leaderboard" ? "gradient-gold text-white shadow-sm" : "text-muted-foreground"}`}>
             Leaderboard
           </button>
         </div>
@@ -470,20 +470,24 @@ const CameraScreen = () => {
 
         <AnimatePresence mode="wait">
           {!image ? (
-            <motion.div key="upload" initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0, scale: 0.95 }} className="rounded-2xl bg-card border border-border/30 overflow-hidden">
+             <motion.div key="upload" initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0, scale: 0.95 }} className="rounded-2xl bg-card border border-dashed border-gold/30 overflow-hidden shadow-card">
               <div className="aspect-[3/4] flex flex-col items-center justify-center gap-6 p-8">
-                <div className="w-20 h-20 rounded-full bg-secondary flex items-center justify-center">
-                  <Camera size={32} className="text-muted-foreground" />
-                </div>
+                <motion.div
+                  animate={{ scale: [1, 1.05, 1] }}
+                  transition={{ repeat: Infinity, duration: 2.5, ease: "easeInOut" }}
+                  className="w-20 h-20 rounded-full bg-gold/10 flex items-center justify-center"
+                >
+                  <Camera size={32} className="text-gold" />
+                </motion.div>
                 <div className="text-center space-y-2">
-                  <p className="font-medium text-foreground">Capture Your Look</p>
+                  <p className="font-display font-semibold text-foreground text-lg">Capture Your Look</p>
                   <p className="text-sm text-muted-foreground">Take a photo or upload from gallery</p>
                 </div>
                 <div className="flex gap-3 w-full max-w-xs">
-                  <button onClick={() => cameraFileRef.current?.click()} className="flex-1 flex items-center justify-center gap-2 py-3 rounded-xl gradient-accent text-accent-foreground font-medium text-sm shadow-soft active:scale-[0.98] transition-transform">
+                  <button onClick={() => cameraFileRef.current?.click()} className="flex-1 flex items-center justify-center gap-2 py-3 rounded-xl gradient-gold text-white font-medium text-sm glow-gold active:scale-[0.98] transition-transform">
                     <Camera size={16} /> Camera
                   </button>
-                  <button onClick={() => fileRef.current?.click()} className="flex-1 flex items-center justify-center gap-2 py-3 rounded-xl bg-secondary text-secondary-foreground font-medium text-sm active:scale-[0.98] transition-transform">
+                  <button onClick={() => fileRef.current?.click()} className="flex-1 flex items-center justify-center gap-2 py-3 rounded-xl bg-card border border-border text-foreground font-medium text-sm shadow-soft active:scale-[0.98] transition-transform">
                     <Upload size={16} /> Gallery
                   </button>
                 </div>
@@ -500,7 +504,7 @@ const CameraScreen = () => {
                   <div className="absolute inset-0 bg-background/60 backdrop-blur-md flex items-center justify-center">
                     <div className="flex flex-col items-center gap-5 w-full max-w-[260px]">
                       <motion.div animate={{ rotate: 360 }} transition={{ repeat: Infinity, duration: 2, ease: "linear" }}>
-                        <Sparkles size={32} className="text-accent drop-shadow-[0_0_12px_hsl(var(--accent))]" />
+                        <Sparkles size={32} className="text-gold drop-shadow-[0_0_12px_hsl(42_60%_55%)]" />
                       </motion.div>
                       <div className="w-full space-y-3">
                         {analysisSteps.map((step, i) => (

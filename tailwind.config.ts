@@ -31,7 +31,12 @@ export default {
   				'Playfair Display',
   				'Georgia',
   				'serif'
-  			],
+			],
+			'body-serif': [
+				'Lora',
+				'Georgia',
+				'serif'
+			],
   			serif: [
   				'Lora',
   				'ui-serif',
@@ -87,18 +92,23 @@ export default {
   				DEFAULT: 'hsl(var(--card))',
   				foreground: 'hsl(var(--card-foreground))'
   			},
-  			fashion: {
-  				warm: 'hsl(var(--fashion-warm))',
-  				cream: 'hsl(var(--fashion-cream))',
-  				sand: 'hsl(var(--fashion-sand))',
-  				taupe: 'hsl(var(--fashion-taupe))',
-  				espresso: 'hsl(var(--fashion-espresso))',
-  				blush: 'hsl(var(--fashion-blush))',
-  				sage: 'hsl(var(--fashion-sage))',
-  				sky: 'hsl(var(--fashion-sky))',
-  				gold: 'hsl(var(--fashion-gold))',
-  				rose: 'hsl(var(--fashion-rose))'
-  			},
+			fashion: {
+				warm: 'hsl(var(--fashion-warm))',
+				cream: 'hsl(var(--fashion-cream))',
+				sand: 'hsl(var(--fashion-sand))',
+				taupe: 'hsl(var(--fashion-taupe))',
+				espresso: 'hsl(var(--fashion-espresso))',
+				blush: 'hsl(var(--fashion-blush))',
+				sage: 'hsl(var(--fashion-sage))',
+				sky: 'hsl(var(--fashion-sky))',
+				gold: 'hsl(var(--fashion-gold))',
+				rose: 'hsl(var(--fashion-rose))'
+			},
+			gold: {
+				DEFAULT: 'hsl(var(--gold))',
+				light: 'hsl(var(--gold-light))',
+				dark: 'hsl(var(--gold-dark))'
+			},
   			sidebar: {
   				DEFAULT: 'hsl(var(--sidebar-background))',
   				foreground: 'hsl(var(--sidebar-foreground))',

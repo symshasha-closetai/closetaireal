@@ -605,7 +605,7 @@ const HomeScreen = () => {
 
         {/* Greeting */}
         <div>
-          <h1 className="font-display text-2xl font-semibold text-foreground">
+          <h1 className="font-display text-2xl font-semibold text-foreground tracking-tight">
             {greeting}, {displayName}!
           </h1>
           <p className="text-sm text-muted-foreground mt-0.5">Let's find your perfect outfit today</p>
@@ -646,7 +646,7 @@ const HomeScreen = () => {
                 <img src={todayPhoto} alt="Today's look" className="w-full aspect-[4/5] object-cover" />
                 <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/40 to-black/20" />
                 <div className="absolute top-3 left-3 flex gap-2">
-                  <span className="px-2.5 py-1 rounded-full bg-primary/90 text-primary-foreground text-[10px] font-semibold" style={{ textShadow: "0 1px 4px rgba(0,0,0,0.6)" }}>Today's Look</span>
+                  <span className="px-2.5 py-1 rounded-full bg-gold/90 text-white text-[10px] font-semibold" style={{ textShadow: "0 1px 4px rgba(0,0,0,0.6)" }}>Today's Look</span>
                   {streak > 0 && (
                     <span className="px-2.5 py-1 rounded-full bg-orange-500/90 text-white text-[10px] font-semibold flex items-center gap-1" style={{ textShadow: "0 1px 4px rgba(0,0,0,0.6)" }}>
                       <Flame size={10} /> {streak} day{streak > 1 ? "s" : ""}
@@ -806,7 +806,7 @@ const HomeScreen = () => {
 
           {/* Occasion Selector */}
           <div className="glass-card p-4">
-            <h2 className="text-base font-semibold text-foreground mb-3">Pick an Occasion</h2>
+            <h2 className="text-base font-display font-semibold text-foreground mb-3">Pick an Occasion</h2>
             <div className="flex gap-2 overflow-x-auto pb-2 no-scrollbar">
               {occasions.map((occ) => {
                 const OccIcon = occ.icon;
@@ -816,11 +816,11 @@ const HomeScreen = () => {
                     key={occ.label}
                     onClick={() => setSelectedOccasion(occ.label)}
                     className={`flex flex-col items-center gap-1.5 px-3 py-2 rounded-xl flex-shrink-0 transition-all ${
-                      isSelected ? "gradient-accent shadow-soft" : "bg-secondary"
+                      isSelected ? "bg-card border-2 border-gold shadow-soft" : "bg-secondary border-2 border-transparent"
                     }`}
                   >
-                    <OccIcon size={18} className={isSelected ? "text-accent-foreground" : "text-muted-foreground"} />
-                    <span className={`text-[10px] font-medium ${isSelected ? "text-accent-foreground" : "text-muted-foreground"}`}>{occ.label}</span>
+                    <OccIcon size={18} className={isSelected ? "text-gold" : "text-muted-foreground"} />
+                    <span className={`text-[10px] font-medium ${isSelected ? "text-foreground" : "text-muted-foreground"}`}>{occ.label}</span>
                   </button>
                 );
               })}
@@ -829,7 +829,7 @@ const HomeScreen = () => {
 
           {/* Time of Day - Card style matching occasions */}
           <div className="glass-card p-4">
-            <h2 className="text-base font-semibold text-foreground mb-3">Time of Day</h2>
+            <h2 className="text-base font-display font-semibold text-foreground mb-3">Time of Day</h2>
             <div className="flex gap-2 overflow-x-auto pb-2 no-scrollbar">
               {timeOfDay.map((t) => {
                 const isSelected = selectedTime === t.label;
@@ -838,11 +838,11 @@ const HomeScreen = () => {
                     key={t.label}
                     onClick={() => setSelectedTime(t.label)}
                     className={`flex flex-col items-center gap-1.5 px-4 py-2.5 rounded-xl flex-shrink-0 transition-all ${
-                      isSelected ? "gradient-accent shadow-soft" : "bg-secondary"
+                      isSelected ? "bg-card border-2 border-gold shadow-soft" : "bg-secondary border-2 border-transparent"
                     }`}
                   >
                     <span className="text-lg">{t.emoji}</span>
-                    <span className={`text-[10px] font-medium ${isSelected ? "text-accent-foreground" : "text-muted-foreground"}`}>{t.label}</span>
+                    <span className={`text-[10px] font-medium ${isSelected ? "text-foreground" : "text-muted-foreground"}`}>{t.label}</span>
                   </button>
                 );
               })}
@@ -851,7 +851,7 @@ const HomeScreen = () => {
 
           {/* Weather Selector - Card style matching occasions */}
           <div className="glass-card p-4">
-            <h2 className="text-base font-semibold text-foreground mb-3">Weather</h2>
+            <h2 className="text-base font-display font-semibold text-foreground mb-3">Weather</h2>
             <div className="flex gap-2 overflow-x-auto pb-2 no-scrollbar">
               {weatherOptions.map((w) => {
                 const isSelected = selectedWeather === w.label;
@@ -860,11 +860,11 @@ const HomeScreen = () => {
                     key={w.label}
                     onClick={() => setSelectedWeather(w.label)}
                     className={`flex flex-col items-center gap-1.5 px-4 py-2.5 rounded-xl flex-shrink-0 transition-all ${
-                      isSelected ? "gradient-accent shadow-soft" : "bg-secondary"
+                      isSelected ? "bg-card border-2 border-gold shadow-soft" : "bg-secondary border-2 border-transparent"
                     }`}
                   >
                     <span className="text-lg">{w.emoji}</span>
-                    <span className={`text-[10px] font-medium ${isSelected ? "text-accent-foreground" : "text-muted-foreground"}`}>{w.label}</span>
+                    <span className={`text-[10px] font-medium ${isSelected ? "text-foreground" : "text-muted-foreground"}`}>{w.label}</span>
                   </button>
                 );
               })}
@@ -872,7 +872,7 @@ const HomeScreen = () => {
           </div>
 
           {/* Style Me Button */}
-          <button onClick={handleStyleMe} disabled={isProcessing} className="w-full py-4 rounded-2xl gradient-accent text-accent-foreground font-semibold text-base shadow-soft active:scale-[0.98] transition-transform flex items-center justify-center gap-2 disabled:opacity-60">
+          <button onClick={handleStyleMe} disabled={isProcessing} className="w-full py-4 rounded-2xl gradient-gold text-white font-semibold text-base glow-gold active:scale-[0.98] transition-transform flex items-center justify-center gap-2 disabled:opacity-60">
             {styling ? (
               <>
                 <motion.div animate={{ rotate: 360 }} transition={{ repeat: Infinity, duration: 1.5, ease: "linear" }}>
@@ -886,7 +886,7 @@ const HomeScreen = () => {
           </button>
 
           {/* Surprise Me Button */}
-          <button onClick={handleSurpriseMe} disabled={isProcessing} className="w-full py-4 rounded-2xl bg-foreground text-background font-semibold text-base shadow-soft active:scale-[0.98] transition-transform flex items-center justify-center gap-2 disabled:opacity-60">
+          <button onClick={handleSurpriseMe} disabled={isProcessing} className="w-full py-4 rounded-2xl bg-foreground text-background font-semibold text-base shadow-soft active:scale-[0.98] transition-transform flex items-center justify-center gap-2 disabled:opacity-60 border border-gold/20">
             {surprising ? (
               <>
                 <motion.div animate={{ rotate: 360 }} transition={{ repeat: Infinity, duration: 1.5, ease: "linear" }}>
@@ -909,7 +909,7 @@ const HomeScreen = () => {
                 <h3 className="text-sm font-semibold text-foreground">Check Your Drip Score</h3>
                 <p className="text-xs text-muted-foreground">Snap a photo and get AI feedback</p>
               </div>
-              <button onClick={() => navigate("/camera")} className="px-4 py-2 rounded-full gradient-accent text-accent-foreground text-xs font-medium shadow-soft active:scale-95 transition-transform">
+              <button onClick={() => navigate("/camera")} className="px-4 py-2 rounded-full gradient-gold text-white text-xs font-medium glow-gold active:scale-95 transition-transform">
                 <Camera size={14} className="inline mr-1" /> Check
               </button>
             </div>
