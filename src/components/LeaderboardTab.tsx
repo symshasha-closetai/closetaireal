@@ -299,7 +299,6 @@ const LeaderboardTab = () => {
       .select("user_id, score, image_url, confidence_score, killer_tag, created_at")
       .gte("created_at", `${startStr}T00:00:00`)
       .lte("created_at", `${endStr}T23:59:59.999999`)
-      .in("user_id", relevantIds)
       .order("score", { ascending: false }) as any;
 
     if (!dripData || dripData.length === 0) {
