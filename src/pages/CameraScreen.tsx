@@ -445,13 +445,13 @@ const CameraScreen = () => {
         <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }}><AppHeader /></motion.div>
 
         {/* Tab switcher */}
-        <div className="flex gap-1 p-1 rounded-xl bg-secondary/50">
+        <div className="flex gap-1 p-1 rounded-xl bg-card shadow-soft">
           <button onClick={() => setActiveTab("drip")}
-            className={`flex-1 py-2 rounded-lg text-sm font-medium transition-all ${activeTab === "drip" ? "bg-card shadow-sm text-foreground" : "text-muted-foreground"}`}>
+            className={`flex-1 py-2 rounded-lg text-sm font-medium transition-all ${activeTab === "drip" ? "gradient-gold text-white shadow-sm" : "text-muted-foreground"}`}>
             Drip Check
           </button>
           <button onClick={() => setActiveTab("leaderboard")}
-            className={`flex-1 py-2 rounded-lg text-sm font-medium transition-all ${activeTab === "leaderboard" ? "bg-card shadow-sm text-foreground" : "text-muted-foreground"}`}>
+            className={`flex-1 py-2 rounded-lg text-sm font-medium transition-all ${activeTab === "leaderboard" ? "gradient-gold text-white shadow-sm" : "text-muted-foreground"}`}>
             Leaderboard
           </button>
         </div>
