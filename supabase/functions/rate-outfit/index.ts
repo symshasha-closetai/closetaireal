@@ -51,11 +51,15 @@ serve(async (req) => {
     const prompt = `Fashion stylist AI.${profileContext}
 
 Return ONLY valid JSON:
-{"drip_score":number,"drip_reason":"string","confidence_rating":number,"confidence_reason":"string","killer_tag":"string","color_score":number,"color_reason":"string","style_score":number,"style_reason":"string","fit_score":number,"fit_reason":"string","occasion":"string","advice":"string","praise_line":"string"}
+{"drip_score":number,"drip_reason":"string","confidence_rating":number,"confidence_reason":"string","killer_tag":"string","color_score":number,"color_reason":"string","posture_score":number,"posture_reason":"string","layering_score":number,"layering_reason":"string","face_score":number,"face_reason":"string","advice":"string","praise_line":"string"}
 
 Rules:
-- All scores 0-10 decimals. drip_score = Color(25%)+Style(20%)+Fit(25%)+Occasion(20%)+Accessories(10%)
-- confidence_rating: Score posture/body language 0-10.
+- All scores 0-10 decimals. drip_score = Color Combination(30%) + Posture & Pose(30%) + Layering & Accessories(25%) + Face & Smile(15%)
+- color_score: Rate color coordination, palette harmony, contrast.
+- posture_score: Rate posture, stance, pose, body language, confidence conveyed.
+- layering_score: Rate layering, accessory use, styling details, texture mix.
+- face_score: Rate facial expression, smile, energy, vibe conveyed.
+- confidence_rating: Overall confidence/body language 0-10 (separate display metric).
 - killer_tag: 1-3 words + 1-2 emojis. ${genderInstruction}
 - praise_line: witty shareable sentence, Gen Z tone, emojis.
 - reasons: 1 sentence each. NO profanity.

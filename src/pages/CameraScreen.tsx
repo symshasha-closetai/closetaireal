@@ -108,13 +108,20 @@ export type RatingResult = {
   killer_tag?: string;
   color_score: number;
   color_reason?: string;
-  style_score: number;
-  style_reason?: string;
-  fit_score: number;
-  fit_reason?: string;
-  occasion: string;
+  posture_score: number;
+  posture_reason?: string;
+  layering_score: number;
+  layering_reason?: string;
+  face_score: number;
+  face_reason?: string;
   advice: string;
   praise_line?: string;
+  // Legacy fields for backward compat with old results
+  style_score?: number;
+  style_reason?: string;
+  fit_score?: number;
+  fit_reason?: string;
+  occasion?: string;
   wardrobe_suggestions?: { item_name: string; category: string; reason: string; wardrobe_item_id?: string }[];
   shopping_suggestions?: { item_name: string; category: string; reason: string; image_prompt?: string }[];
 };
