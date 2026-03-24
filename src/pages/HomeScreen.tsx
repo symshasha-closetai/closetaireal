@@ -909,7 +909,7 @@ const HomeScreen = () => {
                 <h3 className="text-sm font-semibold text-foreground">Check Your Drip Score</h3>
                 <p className="text-xs text-muted-foreground">Snap a photo and get AI feedback</p>
               </div>
-              <button onClick={() => navigate("/camera")} className="px-4 py-2 rounded-full gradient-accent text-accent-foreground text-xs font-medium shadow-soft active:scale-95 transition-transform">
+              <button onClick={() => navigate("/camera")} className="px-4 py-2 rounded-full gradient-gold text-white text-xs font-medium glow-gold active:scale-95 transition-transform">
                 <Camera size={14} className="inline mr-1" /> Check
               </button>
             </div>
