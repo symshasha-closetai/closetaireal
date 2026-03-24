@@ -84,17 +84,17 @@ const CLIENT_PRAISE_LINES = [
 function clientFallbackResult(gender?: string | null): RatingResult {
   const r = (min: number, max: number) => Math.round((Math.random() * (max - min) + min) * 10) / 10;
   const pick = <T,>(a: T[]) => a[Math.floor(Math.random() * a.length)];
-  const color = r(7, 9.5), style = r(7, 9.5), fit = r(7, 9.5);
+  const color = r(7, 9.5), posture = r(7, 9.5), layering = r(7, 9.5), face = r(7, 9.5);
   return {
-    drip_score: Math.round((color * 0.25 + style * 0.20 + fit * 0.25 + r(7, 9.5) * 0.20 + r(7, 9.5) * 0.10) * 10) / 10,
+    drip_score: Math.round((color * 0.30 + posture * 0.30 + layering * 0.25 + face * 0.15) * 10) / 10,
     drip_reason: "Great color coordination that creates visual harmony",
     confidence_rating: r(7.5, 9.5),
     confidence_reason: "This look shows intentional styling choices",
     killer_tag: pick(getClientKillerTags(gender)),
     color_score: color, color_reason: "Colors complement each other beautifully",
-    style_score: style, style_reason: "Strong silhouette choices that flatter your frame",
-    fit_score: fit, fit_reason: "Well-balanced proportions throughout the outfit",
-    occasion: pick(["Casual", "Smart Casual", "Street Style", "Date Night"]),
+    posture_score: posture, posture_reason: "Strong stance that conveys confidence",
+    layering_score: layering, layering_reason: "Well-layered with complementary accessories",
+    face_score: face, face_reason: "Great expression that ties the look together",
     advice: "Keep experimenting with your personal style — you're on the right track!",
     praise_line: pick(CLIENT_PRAISE_LINES),
   };
