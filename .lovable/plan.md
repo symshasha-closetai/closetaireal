@@ -1,49 +1,132 @@
-# ✅ COMPLETED: Update Drip Score Formula, Leaderboard Visibility, and Weekly Logic
 
-## Changes Made
 
-### 1. New Drip Score Formula
-- **Edge function** (`rate-outfit`): Updated prompt to use Color(30%) + Posture & Pose(30%) + Layering & Accessories(25%) + Face & Smile(15%)
-- **CameraScreen**: Updated `RatingResult` type and `clientFallbackResult` with new fields
-- **OutfitRatingCard**: Updated sub-score rings (4 rings: Color, Posture, Layering, Face) and share card canvas
-- Backward compatible with old results via `?? result.style_score` fallbacks
+# Premium Design Overhaul — Luxury Fashion App Aesthetic
 
-### 2. Weekly Leaderboard — All Users
-- Removed `.in("user_id", relevantIds)` filter from weekly fetch so all users appear
+## What's Wrong Now
 
-### 3. Confidence kept as separate display metric
+1. **Light mode background is flat white** (`--background: 0 0% 100%`) — looks clinical, not premium
+2. **Cards use plain white** with generic borders — no depth or warmth
+3. **Typography is functional but not luxurious** — Inter is good but needs tighter tracking, bolder hierarchy, and more use of the display font (Playfair Display)
+4. **Color palette is muted/grey** — lacks the warm cream/gold accents that luxury apps use
+5. **Buttons and toggles look generic** — standard rounded rectangles without premium texture
+6. **Bottom nav feels flat** — no frosted glass depth or premium separation
+7. **Leaderboard cards are dark gradient boxes** — need more gamified energy (glow effects, animated borders, XP-bar feel) while staying clean
+8. **Drip Check result card** is functional but not "screenshot-worthy" for Gen Z sharing
+9. **Border radius is small** (`0.375rem`) — premium mobile apps use larger, softer corners
 
-# Auto-Delete History Unless Kept (Heart to Keep)
+## Design Direction
 
-## Overview
-Add a "keep" system across all history sections (Drip History, Saved Outfits, Saved Suggestions). Items not marked as kept will auto-delete after 7 days. A heart icon on each item lets users keep it. A subtle notice informs users of this behavior.
+Think **Apple Fitness rings + Tesla's dark glass panels + Vogue's editorial typography**. Warm cream backgrounds, frosted glass cards, gold accent touches, generous whitespace, and for gamified sections (Leaderboard + Drip Check), add subtle glow effects and animated gradients that feel like a luxury game.
 
-## Database Changes
+---
 
-**Migration**: Add `kept` boolean column (default `false`) to three tables:
-- `drip_history` — `ALTER TABLE drip_history ADD COLUMN kept boolean NOT NULL DEFAULT false;`
-- `saved_outfits` — `ALTER TABLE saved_outfits ADD COLUMN kept boolean NOT NULL DEFAULT false;`
-- `saved_suggestions` — `ALTER TABLE saved_suggestions ADD COLUMN kept boolean NOT NULL DEFAULT false;`
+## Changes
 
-## Code Changes
+### 1. Light Mode Color Palette — Warm Cream
+**File: `src/index.css`**
 
-**File: `src/pages/ProfileScreen.tsx`**
+```text
+Current → New (light mode :root)
+--background: 0 0% 100%          → 38 30% 97%     (warm off-white cream)
+--card: 0 0% 100%                → 40 25% 99%     (slightly warmer white)
+--secondary: 248 0.7% 96.8%     → 35 20% 94%     (warm sand tint)
+--muted: 248 0.7% 96.8%         → 35 15% 93%     (warm grey)
+--border: 256 1.3% 92.9%        → 30 15% 90%     (warm border)
+--accent: 248 0.7% 96.8%        → 42 45% 52%     (gold accent)
+--accent-foreground: ...         → 0 0% 100%      (white on gold)
+--radius: 0.375rem              → 0.75rem         (softer corners everywhere)
+```
 
-1. **Auto-delete on mount**: When syncing history, delete rows where `kept = false` AND `created_at` is older than 7 days from all three tables (similar to existing deleted wardrobe items auto-purge logic).
+Update gradient vars to use warmer tones.
 
-2. **Heart button on every history card** (all 3 sections — drip, outfits, suggestions):
-   - In the horizontal scroll preview cards and the "View All" grid
-   - Heart icon overlay (top-left corner): hollow = not kept, filled red = kept
-   - Tapping toggles `kept` in DB via update query
-   - Kept items show a filled heart; unkept items show an outline heart
+### 2. Typography Refinements
+**File: `src/index.css`** — Add base styles:
+- Body: `letter-spacing: -0.01em` for tighter, modern feel
+- All section headings (`h2`): use `font-display` (Playfair Display) with `tracking-tight`
+- Sub-labels: `uppercase tracking-[0.15em]` for luxury small-cap look (already done in ScoreRing, extend everywhere)
 
-3. **Info notice banner**: Add a subtle text line below each section header:
-   - "Items auto-delete after 7 days — tap ♥ to keep forever"
-   - Styled like the existing "Auto-deleted after 7 days" text on Deleted Items section
+**File: `index.html`** — Add `Lora` font for serif body accents:
+- Already in tailwind config but not loaded
 
-4. **Filter kept from auto-delete**: The existing 14-day filter on drip history fetch (`fourteenDaysAgo`) will be replaced — fetch all items, but auto-purge unkept items older than 7 days via DB delete on mount.
+### 3. Glass Card Upgrade
+**File: `src/index.css`** — Enhance `.glass-card` and `.glass-card-elevated`:
+- Add subtle warm inner glow: `shadow: inset 0 1px 0 hsl(40 30% 100% / 0.5)`
+- Increase backdrop-blur from `xl` to `2xl`
+- Add a very faint warm gradient overlay
+
+### 4. Bottom Nav — Frosted Premium
+**File: `src/components/BottomNav.tsx`**:
+- Add top border with subtle gold gradient line
+- Increase blur and opacity for true frosted glass
+- Active tab indicator: thin gold line above icon instead of bg highlight
+- Slightly larger icons (24px) with thinner stroke
+
+### 5. Header — Luxury Branding
+**File: `src/components/AppHeader.tsx`**:
+- "Dripd" title: use `font-display` with slight letter-spacing and gold gradient text
+- Icon buttons: remove border, use softer shadow instead
+- Reduce visual clutter
+
+### 6. Drip Check Card — Gen Z Shareable + Premium
+**File: `src/components/OutfitRatingCard.tsx`** (rendered UI section):
+- Main score display: large gold number with subtle glow
+- Sub-score rings: add percentage labels beneath, use branded colors (gold, sage, rose, sky)
+- Killer tag: styled as a badge with gradient background and slight rotation for "stamp" feel
+- Add subtle animated shimmer on the score when it first appears
+- Praise line: italic serif font (Lora) for editorial feel
+
+**File: `src/pages/CameraScreen.tsx`**:
+- Upload area: add dashed border with gold accent, icon with subtle pulse animation
+- Tab switcher: gold underline for active tab instead of bg swap
+- Analysis overlay: gold spinning sparkle, steps with check marks in gold
+
+### 7. Leaderboard — Gamified but Premium
+**File: `src/components/LeaderboardTab.tsx`**:
+- Podium cards: add subtle animated gradient border (gold shimmer for #1, silver for #2, bronze for #3) using CSS `@keyframes`
+- Score display: large bold number with XP-bar style progress indicator beneath
+- Rank tags: styled as metallic-look pills with subtle gradient
+- "Boost Your Score" popover: restyle as a premium tooltip with gold accent line
+- Weekly toggle: pill-style with gold active indicator
+- Add "🏆" or crown emoji animations for top ranks
+
+### 8. Home Screen Cards — Editorial Layout
+**File: `src/pages/HomeScreen.tsx`**:
+- "Today's Look" card: softer gradient overlay, gold "Today's Look" badge
+- Occasion/Time/Weather selectors: larger pills with subtle shadow, gold border when selected (instead of gradient fill)
+- "Style Me" button: gold gradient with subtle shadow, not the generic purple-gold gradient
+- "Surprise Me" button: dark with gold text/border
+
+### 9. New CSS Utilities
+**File: `src/index.css`** — Add:
+- `.text-gold` — gold color for accents
+- `.glow-gold` — subtle gold box-shadow glow
+- `.shimmer` — CSS keyframe for metallic shimmer effect on share cards
+- `.border-gradient-gold` — animated gold gradient border for leaderboard podium
+
+### 10. Dark Mode Refinements
+**File: `src/index.css`** — Dark mode stays mostly the same but:
+- Accent becomes gold: `--accent: 42 45% 52%`
+- Cards get very subtle warm tint: `--card: 30 5% 12%`
+- Borders get warm tint: `--border: 30 10% 18%`
+
+---
+
+## Files Modified
+1. `src/index.css` — Color palette, new utilities, glass card, shimmer keyframes
+2. `index.html` — Load Lora font
+3. `tailwind.config.ts` — Update radius default, add gold utilities
+4. `src/components/BottomNav.tsx` — Frosted glass + gold accent
+5. `src/components/AppHeader.tsx` — Gold branding, cleaner icons
+6. `src/components/LeaderboardTab.tsx` — Gamified podium, animated borders, XP feel
+7. `src/components/OutfitRatingCard.tsx` — Premium score display, serif praise, gold accents
+8. `src/pages/CameraScreen.tsx` — Upload area, tab switcher, analysis overlay styling
+9. `src/pages/HomeScreen.tsx` — Card styling, button upgrades, gold accents
+10. `src/components/ScoreRing.tsx` — Gold stroke for drip score ring
 
 ## Technical Notes
-- Uses `UPDATE` on the three tables — `saved_outfits` and `saved_suggestions` currently lack UPDATE RLS policies, so we need to add those via migration
-- The heart toggle calls: `supabase.from("drip_history").update({ kept: true/false }).eq("id", id)`
-- Auto-delete on mount: `supabase.from("drip_history").delete().eq("user_id", uid).eq("kept", false).lt("created_at", sevenDaysAgoISO)`
+- No database or backend changes
+- No new dependencies — all CSS/Tailwind
+- Animations use CSS `@keyframes` (no JS overhead)
+- Backward compatible with dark mode
+- All changes are visual/cosmetic only
+
