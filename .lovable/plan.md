@@ -1,37 +1,52 @@
-
-
-# Auto-Delete History Unless Kept (Heart to Keep)
+# Update Drip Score Formula, Leaderboard Visibility, and Weekly Logic
 
 ## Overview
-Add a "keep" system across all history sections (Drip History, Saved Outfits, Saved Suggestions). Items not marked as kept will auto-delete after 7 days. A heart icon on each item lets users keep it. A subtle notice informs users of this behavior.
 
-## Database Changes
+Three changes: (1) new drip score breakdown, (2) daily leaderboard visible to all users joined as friends to that particular user, (3) weekly leaderboard = average of current week's 7 days, frozen until next week.
 
-**Migration**: Add `kept` boolean column (default `false`) to three tables:
-- `drip_history` — `ALTER TABLE drip_history ADD COLUMN kept boolean NOT NULL DEFAULT false;`
-- `saved_outfits` — `ALTER TABLE saved_outfits ADD COLUMN kept boolean NOT NULL DEFAULT false;`
-- `saved_suggestions` — `ALTER TABLE saved_suggestions ADD COLUMN kept boolean NOT NULL DEFAULT false;`
+---
 
-## Code Changes
+## 1. New Drip Score Formula
 
-**File: `src/pages/ProfileScreen.tsx`**
+**Current**: Color(25%) + Style(20%) + Fit(25%) + Occasion(20%) + Accessories(10%)
+**New**: Color Combination(30%) + Posture & Pose(30%) + Layering & Accessories(25%) + Face & Smile(15%)
 
-1. **Auto-delete on mount**: When syncing history, delete rows where `kept = false` AND `created_at` is older than 7 days from all three tables (similar to existing deleted wardrobe items auto-purge logic).
+### Files to change:
 
-2. **Heart button on every history card** (all 3 sections — drip, outfits, suggestions):
-   - In the horizontal scroll preview cards and the "View All" grid
-   - Heart icon overlay (top-left corner): hollow = not kept, filled red = kept
-   - Tapping toggles `kept` in DB via update query
-   - Kept items show a filled heart; unkept items show an outline heart
+`**supabase/functions/rate-outfit/index.ts**` — Update the AI prompt:
 
-3. **Info notice banner**: Add a subtle text line below each section header:
-   - "Items auto-delete after 7 days — tap ♥ to keep forever"
-   - Styled like the existing "Auto-deleted after 7 days" text on Deleted Items section
+- Change the JSON schema to return: `color_score`, `posture_score`, `layering_score`, `face_score` (with corresponding reasons)
+- Remove `style_score`, `fit_score`, `occasion` field from prompt
+- Update formula line: `drip_score = Color(30%) + Posture(30%) + Layering(25%) + Face(15%)`
+- Remove separate `confidence_rating` — posture/pose now covers that territory (or keep confidence as a separate display metric if desired)
 
-4. **Filter kept from auto-delete**: The existing 14-day filter on drip history fetch (`fourteenDaysAgo`) will be replaced — fetch all items, but auto-purge unkept items older than 7 days via DB delete on mount.
+`**src/pages/CameraScreen.tsx**` — Update `RatingResult` type and `clientFallbackResult`:
 
-## Technical Notes
-- Uses `UPDATE` on the three tables — `saved_outfits` and `saved_suggestions` currently lack UPDATE RLS policies, so we need to add those via migration
-- The heart toggle calls: `supabase.from("drip_history").update({ kept: true/false }).eq("id", id)`
-- Auto-delete on mount: `supabase.from("drip_history").delete().eq("user_id", uid).eq("kept", false).lt("created_at", sevenDaysAgoISO)`
+- Replace `style_score`/`fit_score` with `posture_score`/`layering_score`/`face_score`
+- Update fallback formula to match new weights
 
+`**src/components/OutfitRatingCard.tsx**` — Update sub-score rings display:
+
+- Show 4 sub-scores: Color (30%), Posture (30%), Layering (25%), Face (15%)
+- Update share card canvas drawing to match
+- Update colors for new categories
+
+---
+
+## 3. Weekly Leaderboard — Avg of All 7 Days, Same for the Whole Week
+
+**Current**: Shows previous week (Mon–Sun) average, only for friends
+**New**: Shows previous week (Mon–Sun) average for ALL users, static until next Monday
+
+`**src/components/LeaderboardTab.tsx**` — `fetchWeekly`:
+
+- Remove the `.in("user_id", relevantIds)` filter
+- Keep the existing previous-week logic (already correct — Mon to Sun of last week, stays the same all current week)
+
+---
+
+## Technical Details
+
+- The `drip_history` table SELECT RLS already has a `USING (true)` policy for authenticated users — no DB changes needed for visibility
+- The `confidence_rating` field can be kept as a separate display metric on the card (posture/pose in the score formula is different from the confidence body-language metric)
+- No database schema changes required — `full_result` jsonb stores whatever fields the AI returns
