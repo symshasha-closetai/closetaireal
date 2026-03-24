@@ -504,7 +504,7 @@ const CameraScreen = () => {
                   <div className="absolute inset-0 bg-background/60 backdrop-blur-md flex items-center justify-center">
                     <div className="flex flex-col items-center gap-5 w-full max-w-[260px]">
                       <motion.div animate={{ rotate: 360 }} transition={{ repeat: Infinity, duration: 2, ease: "linear" }}>
-                        <Sparkles size={32} className="text-accent drop-shadow-[0_0_12px_hsl(var(--accent))]" />
+                        <Sparkles size={32} className="text-gold drop-shadow-[0_0_12px_hsl(42_60%_55%)]" />
                       </motion.div>
                       <div className="w-full space-y-3">
                         {analysisSteps.map((step, i) => (
