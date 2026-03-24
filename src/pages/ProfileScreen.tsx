@@ -26,8 +26,9 @@ type DripHistoryEntry = {
   killerTag: string;
   praiseLine: string;
   timestamp: number;
-  dbId?: string; // DB row id for deletion
-  fullResult?: any; // Full RatingResult for OutfitRatingCard
+  dbId?: string;
+  fullResult?: any;
+  kept?: boolean;
 };
 
 // --- Suggest Me Section ---
@@ -252,10 +253,19 @@ const ProfileScreen = () => {
   const syncHistoryFromDb = async () => {
     if (!user) return;
     setHistoryLoading(true);
+
+    // Auto-purge unkept items older than 7 days
+    const sevenDaysAgoISO = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString();
+    await Promise.all([
+      supabase.from("drip_history").delete().eq("user_id", user.id).eq("kept", false).lt("created_at", sevenDaysAgoISO),
+      supabase.from("saved_outfits").delete().eq("user_id", user.id).eq("kept", false).lt("created_at", sevenDaysAgoISO),
+      supabase.from("saved_suggestions").delete().eq("user_id", user.id).eq("kept", false).lt("created_at", sevenDaysAgoISO),
+    ]);
+
     const [outfitsRes, suggestionsRes, dripRes] = await Promise.all([
-      supabase.from("saved_outfits" as any).select("*").eq("user_id", user.id).order("created_at", { ascending: false }).limit(50),
-      supabase.from("saved_suggestions" as any).select("*").eq("user_id", user.id).order("created_at", { ascending: false }).limit(50),
-      supabase.from("drip_history" as any).select("*").eq("user_id", user.id).order("created_at", { ascending: false }).limit(50),
+      supabase.from("saved_outfits").select("*").eq("user_id", user.id).order("created_at", { ascending: false }).limit(50),
+      supabase.from("saved_suggestions").select("*").eq("user_id", user.id).order("created_at", { ascending: false }).limit(50),
+      supabase.from("drip_history").select("*").eq("user_id", user.id).order("created_at", { ascending: false }).limit(50),
     ]);
     const outfits = outfitsRes.data || [];
     const suggestions = suggestionsRes.data || [];
@@ -264,9 +274,7 @@ const ProfileScreen = () => {
 
     // Map drip_history DB rows to DripHistoryEntry
     const dripRows = (dripRes.data || []) as any[];
-    const fourteenDaysAgo = Date.now() - 14 * 24 * 60 * 60 * 1000;
     const dripEntries: DripHistoryEntry[] = dripRows
-      .filter((r: any) => new Date(r.created_at).getTime() > fourteenDaysAgo)
       .map((r: any) => ({
         id: r.id,
         image: r.image_url || "",
@@ -276,6 +284,7 @@ const ProfileScreen = () => {
         timestamp: new Date(r.created_at).getTime(),
         dbId: r.id,
         fullResult: r.full_result || null,
+        kept: !!r.kept,
       }));
     setDripHistory(dripEntries);
 
@@ -407,6 +416,20 @@ const ProfileScreen = () => {
         toast.success("Image saved!");
       }
     } catch { toast.info("Couldn't share"); }
+  };
+
+  // Toggle keep for any table
+  const toggleKeep = async (table: "drip_history" | "saved_outfits" | "saved_suggestions", id: string, currentKept: boolean) => {
+    const newKept = !currentKept;
+    await supabase.from(table).update({ kept: newKept } as any).eq("id", id);
+    if (table === "drip_history") {
+      setDripHistory(prev => prev.map(e => e.id === id ? { ...e, kept: newKept } : e));
+    } else if (table === "saved_outfits") {
+      setSavedOutfits(prev => prev.map(o => o.id === id ? { ...o, kept: newKept } : o));
+    } else {
+      setSavedSuggestions(prev => prev.map(s => s.id === id ? { ...s, kept: newKept } : s));
+    }
+    toast.success(newKept ? "Kept forever ♥" : "Removed from kept", { duration: 1500 });
   };
 
   // Parse saved outfit data
@@ -844,6 +867,10 @@ const ProfileScreen = () => {
                               <p className="text-[10px] font-medium text-white">{entry.score}/10</p>
                               <p className="text-[8px] text-white/50 truncate">{entry.killerTag}</p>
                             </div>
+                            <button onClick={(e) => { e.stopPropagation(); toggleKeep("drip_history", entry.id, !!entry.kept); }}
+                              className="absolute top-1 left-1 w-6 h-6 rounded-full bg-black/40 flex items-center justify-center backdrop-blur-sm">
+                              <Heart size={12} className={entry.kept ? "text-red-500 fill-red-500" : "text-white/70"} />
+                            </button>
                             <button onClick={(e) => { e.stopPropagation(); deleteDripEntry(entry.id, entry.dbId); }}
                               className="absolute top-1 right-1 w-5 h-5 rounded-full bg-black/50 flex items-center justify-center opacity-70">
                               <X size={10} className="text-white" />
@@ -857,9 +884,10 @@ const ProfileScreen = () => {
                       <div className="space-y-2">
                         {savedOutfits.map((o: any) => (
                           <div key={o.id} className="glass-card p-3 flex items-center gap-3 cursor-pointer active:scale-[0.98] transition-transform" onClick={() => { setViewAllSection(null); setViewingSavedOutfit(o); }}>
-                            <div className="w-10 h-10 rounded-lg bg-secondary flex items-center justify-center flex-shrink-0">
-                              <Bookmark size={16} className="text-primary" />
-                            </div>
+                            <button onClick={(e) => { e.stopPropagation(); toggleKeep("saved_outfits", o.id, !!o.kept); }}
+                              className="flex-shrink-0 w-8 h-8 rounded-full bg-secondary flex items-center justify-center">
+                              <Heart size={14} className={o.kept ? "text-red-500 fill-red-500" : "text-muted-foreground"} />
+                            </button>
                             <div className="flex-1 min-w-0">
                               <div className="flex items-center justify-between">
                                 <span className="text-sm font-medium text-foreground truncate">{o.name}</span>
@@ -880,6 +908,10 @@ const ProfileScreen = () => {
                       <div className="space-y-2">
                         {savedSuggestions.map((s: any) => (
                           <div key={s.id} className="glass-card p-3 flex items-center gap-3">
+                            <button onClick={(e) => { e.stopPropagation(); toggleKeep("saved_suggestions", s.id, !!s.kept); }}
+                              className="flex-shrink-0 w-8 h-8 rounded-full bg-secondary flex items-center justify-center">
+                              <Heart size={14} className={s.kept ? "text-red-500 fill-red-500" : "text-muted-foreground"} />
+                            </button>
                             {s.image ? (
                               <img src={s.image} alt={s.item_name} className="w-10 h-10 rounded-lg object-cover flex-shrink-0" />
                             ) : (
@@ -994,6 +1026,7 @@ const ProfileScreen = () => {
                     )}
                   </div>
                 </div>
+                <p className="text-[10px] text-muted-foreground/60">Auto-deletes after 7 days — tap ♥ to keep forever</p>
                 {dripHistory.length === 0 ? (
                   <p className="text-xs text-muted-foreground py-3 text-center">No drip checks yet</p>
                 ) : (
@@ -1007,6 +1040,10 @@ const ProfileScreen = () => {
                         <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/70 to-transparent rounded-b-xl p-1.5">
                           <p className="text-[10px] font-medium text-white">{entry.score}/10</p>
                         </div>
+                        <button onClick={(e) => { e.stopPropagation(); toggleKeep("drip_history", entry.id, !!entry.kept); }}
+                          className="absolute top-1 left-1 w-6 h-6 rounded-full bg-black/40 flex items-center justify-center backdrop-blur-sm">
+                          <Heart size={12} className={entry.kept ? "text-red-500 fill-red-500" : "text-white/70"} />
+                        </button>
                       </motion.div>
                     ))}
                   </div>
@@ -1038,6 +1075,7 @@ const ProfileScreen = () => {
                     )}
                   </div>
                 </div>
+                <p className="text-[10px] text-muted-foreground/60">Auto-deletes after 7 days — tap ♥ to keep forever</p>
                 {savedOutfits.length === 0 ? (
                   <p className="text-xs text-muted-foreground py-3 text-center">No saved outfits yet</p>
                 ) : (
@@ -1052,6 +1090,10 @@ const ProfileScreen = () => {
                           <p className="text-[10px] font-medium text-white truncate">{o.name}</p>
                           <p className="text-[8px] text-white/60">{o.score?.toFixed(1)}/10</p>
                         </div>
+                        <button onClick={(e) => { e.stopPropagation(); toggleKeep("saved_outfits", o.id, !!o.kept); }}
+                          className="absolute top-1 left-1 w-6 h-6 rounded-full bg-black/40 flex items-center justify-center backdrop-blur-sm">
+                          <Heart size={12} className={o.kept ? "text-red-500 fill-red-500" : "text-white/70"} />
+                        </button>
                       </motion.div>
                     ))}
                   </div>
@@ -1083,6 +1125,7 @@ const ProfileScreen = () => {
                     )}
                   </div>
                 </div>
+                <p className="text-[10px] text-muted-foreground/60">Auto-deletes after 7 days — tap ♥ to keep forever</p>
                 {savedSuggestions.length === 0 ? (
                   <p className="text-xs text-muted-foreground py-3 text-center">No saved suggestions yet</p>
                 ) : (
@@ -1102,6 +1145,10 @@ const ProfileScreen = () => {
                         <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/70 to-transparent rounded-b-xl p-1.5">
                           <p className="text-[10px] font-medium text-white truncate">{s.item_name}</p>
                         </div>
+                        <button onClick={(e) => { e.stopPropagation(); toggleKeep("saved_suggestions", s.id, !!s.kept); }}
+                          className="absolute top-1 left-1 w-6 h-6 rounded-full bg-black/40 flex items-center justify-center backdrop-blur-sm">
+                          <Heart size={12} className={s.kept ? "text-red-500 fill-red-500" : "text-white/70"} />
+                        </button>
                       </motion.div>
                     ))}
                   </div>

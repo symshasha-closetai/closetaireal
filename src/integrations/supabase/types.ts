@@ -123,6 +123,7 @@ export type Database = {
           id: string
           image_hash: string | null
           image_url: string | null
+          kept: boolean
           killer_tag: string | null
           praise_line: string | null
           score: number
@@ -135,6 +136,7 @@ export type Database = {
           id?: string
           image_hash?: string | null
           image_url?: string | null
+          kept?: boolean
           killer_tag?: string | null
           praise_line?: string | null
           score: number
@@ -147,6 +149,7 @@ export type Database = {
           id?: string
           image_hash?: string | null
           image_url?: string | null
+          kept?: boolean
           killer_tag?: string | null
           praise_line?: string | null
           score?: number
@@ -340,6 +343,7 @@ export type Database = {
           explanation: string | null
           id: string
           items: Json
+          kept: boolean
           name: string
           occasion: string | null
           reasoning: Json | null
@@ -353,6 +357,7 @@ export type Database = {
           explanation?: string | null
           id?: string
           items?: Json
+          kept?: boolean
           name: string
           occasion?: string | null
           reasoning?: Json | null
@@ -366,6 +371,7 @@ export type Database = {
           explanation?: string | null
           id?: string
           items?: Json
+          kept?: boolean
           name?: string
           occasion?: string | null
           reasoning?: Json | null
@@ -384,6 +390,7 @@ export type Database = {
           id: string
           image: string | null
           item_name: string
+          kept: boolean
           killer_tag: string | null
           reason: string | null
           suggestion_type: string
@@ -396,6 +403,7 @@ export type Database = {
           id?: string
           image?: string | null
           item_name: string
+          kept?: boolean
           killer_tag?: string | null
           reason?: string | null
           suggestion_type?: string
@@ -408,6 +416,7 @@ export type Database = {
           id?: string
           image?: string | null
           item_name?: string
+          kept?: boolean
           killer_tag?: string | null
           reason?: string | null
           suggestion_type?: string
