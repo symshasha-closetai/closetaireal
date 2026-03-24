@@ -860,7 +860,7 @@ const HomeScreen = () => {
                     key={w.label}
                     onClick={() => setSelectedWeather(w.label)}
                     className={`flex flex-col items-center gap-1.5 px-4 py-2.5 rounded-xl flex-shrink-0 transition-all ${
-                      isSelected ? "gradient-accent shadow-soft" : "bg-secondary"
+                      isSelected ? "bg-card border-2 border-gold shadow-soft" : "bg-secondary border-2 border-transparent"
                     }`}
                   >
                     <span className="text-lg">{w.emoji}</span>
