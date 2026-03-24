@@ -806,7 +806,7 @@ const HomeScreen = () => {
 
           {/* Occasion Selector */}
           <div className="glass-card p-4">
-            <h2 className="text-base font-semibold text-foreground mb-3">Pick an Occasion</h2>
+            <h2 className="text-base font-display font-semibold text-foreground mb-3">Pick an Occasion</h2>
             <div className="flex gap-2 overflow-x-auto pb-2 no-scrollbar">
               {occasions.map((occ) => {
                 const OccIcon = occ.icon;
