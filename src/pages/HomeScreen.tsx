@@ -605,7 +605,7 @@ const HomeScreen = () => {
 
         {/* Greeting */}
         <div>
-          <h1 className="font-display text-2xl font-semibold text-foreground">
+          <h1 className="font-display text-2xl font-semibold text-foreground tracking-tight">
             {greeting}, {displayName}!
           </h1>
           <p className="text-sm text-muted-foreground mt-0.5">Let's find your perfect outfit today</p>
