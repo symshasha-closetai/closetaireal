@@ -1066,6 +1066,7 @@ const ProfileScreen = () => {
                     )}
                   </div>
                 </div>
+                <p className="text-[10px] text-muted-foreground/60">Auto-deletes after 7 days — tap ♥ to keep forever</p>
                 {savedOutfits.length === 0 ? (
                   <p className="text-xs text-muted-foreground py-3 text-center">No saved outfits yet</p>
                 ) : (
@@ -1080,6 +1081,10 @@ const ProfileScreen = () => {
                           <p className="text-[10px] font-medium text-white truncate">{o.name}</p>
                           <p className="text-[8px] text-white/60">{o.score?.toFixed(1)}/10</p>
                         </div>
+                        <button onClick={(e) => { e.stopPropagation(); toggleKeep("saved_outfits", o.id, !!o.kept); }}
+                          className="absolute top-1 left-1 w-6 h-6 rounded-full bg-black/40 flex items-center justify-center backdrop-blur-sm">
+                          <Heart size={12} className={o.kept ? "text-red-500 fill-red-500" : "text-white/70"} />
+                        </button>
                       </motion.div>
                     ))}
                   </div>
