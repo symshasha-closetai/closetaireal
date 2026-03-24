@@ -872,7 +872,7 @@ const HomeScreen = () => {
           </div>
 
           {/* Style Me Button */}
-          <button onClick={handleStyleMe} disabled={isProcessing} className="w-full py-4 rounded-2xl gradient-accent text-accent-foreground font-semibold text-base shadow-soft active:scale-[0.98] transition-transform flex items-center justify-center gap-2 disabled:opacity-60">
+          <button onClick={handleStyleMe} disabled={isProcessing} className="w-full py-4 rounded-2xl gradient-gold text-white font-semibold text-base glow-gold active:scale-[0.98] transition-transform flex items-center justify-center gap-2 disabled:opacity-60">
             {styling ? (
               <>
                 <motion.div animate={{ rotate: 360 }} transition={{ repeat: Infinity, duration: 1.5, ease: "linear" }}>
