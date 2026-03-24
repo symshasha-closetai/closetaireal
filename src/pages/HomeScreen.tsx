@@ -886,7 +886,7 @@ const HomeScreen = () => {
           </button>
 
           {/* Surprise Me Button */}
-          <button onClick={handleSurpriseMe} disabled={isProcessing} className="w-full py-4 rounded-2xl bg-foreground text-background font-semibold text-base shadow-soft active:scale-[0.98] transition-transform flex items-center justify-center gap-2 disabled:opacity-60">
+          <button onClick={handleSurpriseMe} disabled={isProcessing} className="w-full py-4 rounded-2xl bg-foreground text-background font-semibold text-base shadow-soft active:scale-[0.98] transition-transform flex items-center justify-center gap-2 disabled:opacity-60 border border-gold/20">
             {surprising ? (
               <>
                 <motion.div animate={{ rotate: 360 }} transition={{ repeat: Infinity, duration: 1.5, ease: "linear" }}>
