@@ -558,8 +558,8 @@ const OutfitRatingCard = ({ image, imageBase64, result, wardrobeItems = [],
         {/* Praise Line */}
         {result.praise_line && (
           <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.3 }} className="text-center">
-            <p className="text-sm italic text-foreground/70 leading-relaxed font-serif">
-              {result.praise_line}
+            <p className="text-sm italic text-foreground/70 leading-relaxed font-body-serif">
+              "{result.praise_line}"
             </p>
           </motion.div>
         )}
