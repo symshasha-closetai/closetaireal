@@ -1,4 +1,17 @@
+# ✅ COMPLETED: Update Drip Score Formula, Leaderboard Visibility, and Weekly Logic
 
+## Changes Made
+
+### 1. New Drip Score Formula
+- **Edge function** (`rate-outfit`): Updated prompt to use Color(30%) + Posture & Pose(30%) + Layering & Accessories(25%) + Face & Smile(15%)
+- **CameraScreen**: Updated `RatingResult` type and `clientFallbackResult` with new fields
+- **OutfitRatingCard**: Updated sub-score rings (4 rings: Color, Posture, Layering, Face) and share card canvas
+- Backward compatible with old results via `?? result.style_score` fallbacks
+
+### 2. Weekly Leaderboard — All Users
+- Removed `.in("user_id", relevantIds)` filter from weekly fetch so all users appear
+
+### 3. Confidence kept as separate display metric
 
 # Auto-Delete History Unless Kept (Heart to Keep)
 
@@ -34,4 +47,3 @@ Add a "keep" system across all history sections (Drip History, Saved Outfits, Sa
 - Uses `UPDATE` on the three tables — `saved_outfits` and `saved_suggestions` currently lack UPDATE RLS policies, so we need to add those via migration
 - The heart toggle calls: `supabase.from("drip_history").update({ kept: true/false }).eq("id", id)`
 - Auto-delete on mount: `supabase.from("drip_history").delete().eq("user_id", uid).eq("kept", false).lt("created_at", sevenDaysAgoISO)`
-
