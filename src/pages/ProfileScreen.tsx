@@ -908,6 +908,10 @@ const ProfileScreen = () => {
                       <div className="space-y-2">
                         {savedSuggestions.map((s: any) => (
                           <div key={s.id} className="glass-card p-3 flex items-center gap-3">
+                            <button onClick={(e) => { e.stopPropagation(); toggleKeep("saved_suggestions", s.id, !!s.kept); }}
+                              className="flex-shrink-0 w-8 h-8 rounded-full bg-secondary flex items-center justify-center">
+                              <Heart size={14} className={s.kept ? "text-red-500 fill-red-500" : "text-muted-foreground"} />
+                            </button>
                             {s.image ? (
                               <img src={s.image} alt={s.item_name} className="w-10 h-10 rounded-lg object-cover flex-shrink-0" />
                             ) : (
