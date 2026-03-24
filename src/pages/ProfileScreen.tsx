@@ -1017,6 +1017,7 @@ const ProfileScreen = () => {
                     )}
                   </div>
                 </div>
+                <p className="text-[10px] text-muted-foreground/60">Auto-deletes after 7 days — tap ♥ to keep forever</p>
                 {dripHistory.length === 0 ? (
                   <p className="text-xs text-muted-foreground py-3 text-center">No drip checks yet</p>
                 ) : (
@@ -1030,6 +1031,10 @@ const ProfileScreen = () => {
                         <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/70 to-transparent rounded-b-xl p-1.5">
                           <p className="text-[10px] font-medium text-white">{entry.score}/10</p>
                         </div>
+                        <button onClick={(e) => { e.stopPropagation(); toggleKeep("drip_history", entry.id, !!entry.kept); }}
+                          className="absolute top-1 left-1 w-6 h-6 rounded-full bg-black/40 flex items-center justify-center backdrop-blur-sm">
+                          <Heart size={12} className={entry.kept ? "text-red-500 fill-red-500" : "text-white/70"} />
+                        </button>
                       </motion.div>
                     ))}
                   </div>
