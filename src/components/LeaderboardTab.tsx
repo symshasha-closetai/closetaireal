@@ -490,11 +490,11 @@ const LeaderboardTab = () => {
     <div className="space-y-4">
       {/* Daily / Weekly Toggle + Bulb */}
       <div className="flex items-center gap-2">
-        <div className="flex flex-1 bg-secondary rounded-xl p-1 gap-1">
+        <div className="flex flex-1 bg-card rounded-xl p-1 gap-1 shadow-soft">
           <button
             onClick={() => setViewMode("daily")}
             className={`flex-1 py-1.5 text-xs font-medium rounded-lg transition-all ${
-              viewMode === "daily" ? "bg-card text-foreground shadow-sm" : "text-muted-foreground"
+              viewMode === "daily" ? "gradient-gold text-white shadow-sm" : "text-muted-foreground"
             }`}
           >
             Today
@@ -502,7 +502,7 @@ const LeaderboardTab = () => {
           <button
             onClick={() => setViewMode("weekly")}
             className={`flex-1 py-1.5 text-xs font-medium rounded-lg transition-all ${
-              viewMode === "weekly" ? "bg-card text-foreground shadow-sm" : "text-muted-foreground"
+              viewMode === "weekly" ? "gradient-gold text-white shadow-sm" : "text-muted-foreground"
             }`}
           >
             Last Week
