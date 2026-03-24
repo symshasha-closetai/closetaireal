@@ -495,14 +495,6 @@ const OutfitRatingCard = ({ image, imageBase64, result, wardrobeItems = [],
             </button>
           </div>
 
-          {/* Occasion Badge - inside photo */}
-          {result.occasion && (
-            <div className="flex justify-center mt-2">
-              <span className="text-[10px] uppercase tracking-wider border border-white/30 rounded-full px-3 py-1 text-white/80" style={{ textShadow: "0 1px 4px rgba(0,0,0,0.9)" }}>
-                {result.occasion}
-              </span>
-            </div>
-          )}
         </div>
       </motion.div>
 
