@@ -252,10 +252,19 @@ const ProfileScreen = () => {
   const syncHistoryFromDb = async () => {
     if (!user) return;
     setHistoryLoading(true);
+
+    // Auto-purge unkept items older than 7 days
+    const sevenDaysAgoISO = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString();
+    await Promise.all([
+      supabase.from("drip_history").delete().eq("user_id", user.id).eq("kept", false).lt("created_at", sevenDaysAgoISO),
+      supabase.from("saved_outfits").delete().eq("user_id", user.id).eq("kept", false).lt("created_at", sevenDaysAgoISO),
+      supabase.from("saved_suggestions").delete().eq("user_id", user.id).eq("kept", false).lt("created_at", sevenDaysAgoISO),
+    ]);
+
     const [outfitsRes, suggestionsRes, dripRes] = await Promise.all([
-      supabase.from("saved_outfits" as any).select("*").eq("user_id", user.id).order("created_at", { ascending: false }).limit(50),
-      supabase.from("saved_suggestions" as any).select("*").eq("user_id", user.id).order("created_at", { ascending: false }).limit(50),
-      supabase.from("drip_history" as any).select("*").eq("user_id", user.id).order("created_at", { ascending: false }).limit(50),
+      supabase.from("saved_outfits").select("*").eq("user_id", user.id).order("created_at", { ascending: false }).limit(50),
+      supabase.from("saved_suggestions").select("*").eq("user_id", user.id).order("created_at", { ascending: false }).limit(50),
+      supabase.from("drip_history").select("*").eq("user_id", user.id).order("created_at", { ascending: false }).limit(50),
     ]);
     const outfits = outfitsRes.data || [];
     const suggestions = suggestionsRes.data || [];
@@ -264,9 +273,7 @@ const ProfileScreen = () => {
 
     // Map drip_history DB rows to DripHistoryEntry
     const dripRows = (dripRes.data || []) as any[];
-    const fourteenDaysAgo = Date.now() - 14 * 24 * 60 * 60 * 1000;
     const dripEntries: DripHistoryEntry[] = dripRows
-      .filter((r: any) => new Date(r.created_at).getTime() > fourteenDaysAgo)
       .map((r: any) => ({
         id: r.id,
         image: r.image_url || "",
@@ -276,6 +283,7 @@ const ProfileScreen = () => {
         timestamp: new Date(r.created_at).getTime(),
         dbId: r.id,
         fullResult: r.full_result || null,
+        kept: !!r.kept,
       }));
     setDripHistory(dripEntries);
 
