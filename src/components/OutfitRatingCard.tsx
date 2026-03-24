@@ -442,8 +442,9 @@ const OutfitRatingCard = ({ image, imageBase64, result, wardrobeItems = [],
 
   const subScores = [
     { key: "color", score: result.color_score, label: "Color", strokeColor: "#8B9A7B", reason: result.color_reason },
-    { key: "style", score: result.style_score, label: "Style", strokeColor: "#C9A96E", reason: result.style_reason },
-    { key: "fit", score: result.fit_score, label: "Fit", strokeColor: "#B08B8B", reason: result.fit_reason },
+    { key: "posture", score: result.posture_score ?? result.style_score ?? 0, label: "Posture", strokeColor: "#C9A96E", reason: result.posture_reason ?? result.style_reason },
+    { key: "layering", score: result.layering_score ?? result.fit_score ?? 0, label: "Layering", strokeColor: "#B08B8B", reason: result.layering_reason ?? result.fit_reason },
+    { key: "face", score: result.face_score ?? 0, label: "Face", strokeColor: "#7B8FA8", reason: result.face_reason },
   ];
 
   const mainScores = [
