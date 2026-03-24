@@ -470,20 +470,24 @@ const CameraScreen = () => {
 
         <AnimatePresence mode="wait">
           {!image ? (
-            <motion.div key="upload" initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0, scale: 0.95 }} className="rounded-2xl bg-card border border-border/30 overflow-hidden">
+             <motion.div key="upload" initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0, scale: 0.95 }} className="rounded-2xl bg-card border border-dashed border-gold/30 overflow-hidden shadow-card">
               <div className="aspect-[3/4] flex flex-col items-center justify-center gap-6 p-8">
-                <div className="w-20 h-20 rounded-full bg-secondary flex items-center justify-center">
-                  <Camera size={32} className="text-muted-foreground" />
-                </div>
+                <motion.div
+                  animate={{ scale: [1, 1.05, 1] }}
+                  transition={{ repeat: Infinity, duration: 2.5, ease: "easeInOut" }}
+                  className="w-20 h-20 rounded-full bg-gold/10 flex items-center justify-center"
+                >
+                  <Camera size={32} className="text-gold" />
+                </motion.div>
                 <div className="text-center space-y-2">
-                  <p className="font-medium text-foreground">Capture Your Look</p>
+                  <p className="font-display font-semibold text-foreground text-lg">Capture Your Look</p>
                   <p className="text-sm text-muted-foreground">Take a photo or upload from gallery</p>
                 </div>
                 <div className="flex gap-3 w-full max-w-xs">
-                  <button onClick={() => cameraFileRef.current?.click()} className="flex-1 flex items-center justify-center gap-2 py-3 rounded-xl gradient-accent text-accent-foreground font-medium text-sm shadow-soft active:scale-[0.98] transition-transform">
+                  <button onClick={() => cameraFileRef.current?.click()} className="flex-1 flex items-center justify-center gap-2 py-3 rounded-xl gradient-gold text-white font-medium text-sm glow-gold active:scale-[0.98] transition-transform">
                     <Camera size={16} /> Camera
                   </button>
-                  <button onClick={() => fileRef.current?.click()} className="flex-1 flex items-center justify-center gap-2 py-3 rounded-xl bg-secondary text-secondary-foreground font-medium text-sm active:scale-[0.98] transition-transform">
+                  <button onClick={() => fileRef.current?.click()} className="flex-1 flex items-center justify-center gap-2 py-3 rounded-xl bg-card border border-border text-foreground font-medium text-sm shadow-soft active:scale-[0.98] transition-transform">
                     <Upload size={16} /> Gallery
                   </button>
                 </div>
