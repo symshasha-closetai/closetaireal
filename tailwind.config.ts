@@ -31,7 +31,12 @@ export default {
   				'Playfair Display',
   				'Georgia',
   				'serif'
-  			],
+			],
+			'body-serif': [
+				'Lora',
+				'Georgia',
+				'serif'
+			],
   			serif: [
   				'Lora',
   				'ui-serif',
