@@ -326,7 +326,9 @@ const LeaderboardTab = () => {
       weekDays.push(d.toISOString().split("T")[0]);
     }
 
-    const wIds = relevantIds.join(",");
+    // Fetch friend/streak bonuses for all users in the week
+    const allWeekUserIds = Array.from(dailyMaxes.keys());
+    const wIds = allWeekUserIds.join(",");
     const { data: weekFriends } = await supabase
       .from("friends" as any)
       .select("user_id, friend_id, created_at")
@@ -339,7 +341,7 @@ const LeaderboardTab = () => {
       .select("user_id, look_date, streak")
       .gte("look_date", startStr)
       .lte("look_date", endStr)
-      .in("user_id", relevantIds) as any;
+      .in("user_id", allWeekUserIds) as any;
 
     const userDailyTotals = new Map<string, number[]>();
     const allUserIds = new Set<string>();
