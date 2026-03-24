@@ -282,19 +282,20 @@ const OutfitRatingCard = ({ image, imageBase64, result, wardrobeItems = [],
     // Sub-scores
     const subScores = [
       { label: "COLOR", score: result.color_score, color: "#8B9A7B" },
-      { label: "STYLE", score: result.style_score, color: "#C9A96E" },
-      { label: "FIT", score: result.fit_score, color: "#B08B8B" },
+      { label: "POSTURE", score: result.posture_score ?? result.style_score ?? 0, color: "#C9A96E" },
+      { label: "LAYERING", score: result.layering_score ?? result.fit_score ?? 0, color: "#B08B8B" },
+      { label: "FACE", score: result.face_score ?? 0, color: "#7B8FA8" },
     ];
     const subY = H_IMG + 25;
     subScores.forEach((s, i) => {
-      const x = W / 4 + (i * W / 4) - 10;
+      const x = W / 5 + (i * W / 5) - 5;
       ctx.fillStyle = s.color;
-      ctx.font = "600 18px Inter, sans-serif";
+      ctx.font = "600 16px Inter, sans-serif";
       const scoreStr = Number.isInteger(s.score) ? String(s.score) : s.score.toFixed(1);
       const sw = ctx.measureText(scoreStr).width;
       ctx.fillText(scoreStr, x - sw / 2, subY);
       ctx.fillStyle = "rgba(255,255,255,0.35)";
-      ctx.font = "500 8px Inter, sans-serif";
+      ctx.font = "500 7px Inter, sans-serif";
       const lw = ctx.measureText(s.label).width;
       ctx.fillText(s.label, x - lw / 2, subY + 14);
     });
@@ -442,8 +443,9 @@ const OutfitRatingCard = ({ image, imageBase64, result, wardrobeItems = [],
 
   const subScores = [
     { key: "color", score: result.color_score, label: "Color", strokeColor: "#8B9A7B", reason: result.color_reason },
-    { key: "style", score: result.style_score, label: "Style", strokeColor: "#C9A96E", reason: result.style_reason },
-    { key: "fit", score: result.fit_score, label: "Fit", strokeColor: "#B08B8B", reason: result.fit_reason },
+    { key: "posture", score: result.posture_score ?? result.style_score ?? 0, label: "Posture", strokeColor: "#C9A96E", reason: result.posture_reason ?? result.style_reason },
+    { key: "layering", score: result.layering_score ?? result.fit_score ?? 0, label: "Layering", strokeColor: "#B08B8B", reason: result.layering_reason ?? result.fit_reason },
+    { key: "face", score: result.face_score ?? 0, label: "Face", strokeColor: "#7B8FA8", reason: result.face_reason },
   ];
 
   const mainScores = [
@@ -493,14 +495,6 @@ const OutfitRatingCard = ({ image, imageBase64, result, wardrobeItems = [],
             </button>
           </div>
 
-          {/* Occasion Badge - inside photo */}
-          {result.occasion && (
-            <div className="flex justify-center mt-2">
-              <span className="text-[10px] uppercase tracking-wider border border-white/30 rounded-full px-3 py-1 text-white/80" style={{ textShadow: "0 1px 4px rgba(0,0,0,0.9)" }}>
-                {result.occasion}
-              </span>
-            </div>
-          )}
         </div>
       </motion.div>
 
