@@ -418,6 +418,20 @@ const ProfileScreen = () => {
     } catch { toast.info("Couldn't share"); }
   };
 
+  // Toggle keep for any table
+  const toggleKeep = async (table: "drip_history" | "saved_outfits" | "saved_suggestions", id: string, currentKept: boolean) => {
+    const newKept = !currentKept;
+    await supabase.from(table).update({ kept: newKept } as any).eq("id", id);
+    if (table === "drip_history") {
+      setDripHistory(prev => prev.map(e => e.id === id ? { ...e, kept: newKept } : e));
+    } else if (table === "saved_outfits") {
+      setSavedOutfits(prev => prev.map(o => o.id === id ? { ...o, kept: newKept } : o));
+    } else {
+      setSavedSuggestions(prev => prev.map(s => s.id === id ? { ...s, kept: newKept } : s));
+    }
+    toast.success(newKept ? "Kept forever ♥" : "Removed from kept", { duration: 1500 });
+  };
+
   // Parse saved outfit data
   const parseScoreBreakdown = (sb: any) => {
     if (!sb) return null;
