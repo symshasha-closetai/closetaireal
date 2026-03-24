@@ -816,7 +816,7 @@ const HomeScreen = () => {
                     key={occ.label}
                     onClick={() => setSelectedOccasion(occ.label)}
                     className={`flex flex-col items-center gap-1.5 px-3 py-2 rounded-xl flex-shrink-0 transition-all ${
-                      isSelected ? "gradient-accent shadow-soft" : "bg-secondary"
+                      isSelected ? "bg-card border-2 border-gold shadow-soft" : "bg-secondary border-2 border-transparent"
                     }`}
                   >
                     <OccIcon size={18} className={isSelected ? "text-accent-foreground" : "text-muted-foreground"} />
