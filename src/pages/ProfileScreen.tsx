@@ -884,9 +884,10 @@ const ProfileScreen = () => {
                       <div className="space-y-2">
                         {savedOutfits.map((o: any) => (
                           <div key={o.id} className="glass-card p-3 flex items-center gap-3 cursor-pointer active:scale-[0.98] transition-transform" onClick={() => { setViewAllSection(null); setViewingSavedOutfit(o); }}>
-                            <div className="w-10 h-10 rounded-lg bg-secondary flex items-center justify-center flex-shrink-0">
-                              <Bookmark size={16} className="text-primary" />
-                            </div>
+                            <button onClick={(e) => { e.stopPropagation(); toggleKeep("saved_outfits", o.id, !!o.kept); }}
+                              className="flex-shrink-0 w-8 h-8 rounded-full bg-secondary flex items-center justify-center">
+                              <Heart size={14} className={o.kept ? "text-red-500 fill-red-500" : "text-muted-foreground"} />
+                            </button>
                             <div className="flex-1 min-w-0">
                               <div className="flex items-center justify-between">
                                 <span className="text-sm font-medium text-foreground truncate">{o.name}</span>
