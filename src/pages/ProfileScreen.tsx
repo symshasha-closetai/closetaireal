@@ -11,6 +11,7 @@ import AppHeader from "../components/AppHeader";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import ScoreRing from "../components/ScoreRing";
 import OutfitRatingCard from "../components/OutfitRatingCard";
+import { getCache, setCache, CACHE_KEYS } from "@/lib/deviceCache";
 import {
   GenderPicker,
   BodyProfileSection,
