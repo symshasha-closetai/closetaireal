@@ -411,6 +411,7 @@ const LeaderboardTab = () => {
     setMyRank(idx >= 0 ? idx + 1 : null);
     setLoading(false);
     weeklyCache = { entries: combined, friendIds: friends, ts: Date.now() };
+    if (user) setCache(CACHE_KEYS.LEADERBOARD_WEEKLY, user.id, { entries: combined, friendIds: friends });
   }, [user?.id]);
 
   useEffect(() => {
