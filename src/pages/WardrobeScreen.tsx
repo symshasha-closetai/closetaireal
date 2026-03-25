@@ -1,4 +1,5 @@
 import React, { useState, useRef, useEffect, useCallback, useMemo } from "react";
+import { getCache, setCache, CACHE_KEYS } from "@/lib/deviceCache";
 import { motion, AnimatePresence } from "framer-motion";
 import { Plus, Trash2, X, Loader2, Camera, Upload, Sparkles, Pencil, Save, Share2, CheckSquare, Square, SlidersHorizontal, RefreshCw, Pin, GripVertical, RotateCcw, Eye, Send } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
@@ -277,7 +278,27 @@ const WardrobeScreen = () => {
     return ["All", ...ordered];
   }, [customCategories, hiddenDefaults, categoryOrder]);
 
-  useEffect(() => { if (user) { fetchItems(); fetchDeletedItems(); fetchCustomCategories(); } }, [user]);
+  // Write-through: sync cache whenever items change
+  const itemsInitialized = useRef(false);
+  useEffect(() => {
+    if (user && itemsInitialized.current && items.length > 0) {
+      setCache(CACHE_KEYS.WARDROBE, user.id, items);
+    }
+  }, [items, user]);
+
+  useEffect(() => {
+    if (user) {
+      // Device-first: load from cache instantly
+      const cached = getCache<ClothingItem[]>(CACHE_KEYS.WARDROBE, user.id);
+      if (cached) {
+        setItems(cached);
+        setLoading(false);
+      }
+      fetchItems();
+      fetchDeletedItems();
+      fetchCustomCategories();
+    }
+  }, [user]);
 
   const fetchCustomCategories = async () => {
     if (!user) return;
@@ -320,6 +341,7 @@ const WardrobeScreen = () => {
         return 0;
       });
       setItems(wardrobeItems);
+      itemsInitialized.current = true;
       precacheImages(wardrobeItems.flatMap((i) => [i.image_url, i.original_image_url].filter(Boolean) as string[]));
     }
     setLoading(false);
