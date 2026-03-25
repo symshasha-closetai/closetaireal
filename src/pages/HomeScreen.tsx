@@ -495,11 +495,11 @@ const HomeScreen = () => {
 
   const fetchStyleProfile = useCallback(async () => {
     if (!user) return null;
-    const cacheKey = `style_profile_cache_${user.id}`;
-    const cached = getCached<any>(cacheKey, 48 * 60 * 60 * 1000);
+    const cacheKey = `style_profile_cache`;
+    const cached = getCache<any>(cacheKey, user.id);
     if (cached) return cached;
     const { data } = await supabase.from("style_profiles").select("*").eq("user_id", user.id).maybeSingle();
-    if (data) setCache(cacheKey, data);
+    if (data) setCache(cacheKey, user.id, data);
     return data;
   }, [user]);
 
