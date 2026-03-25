@@ -208,6 +208,19 @@ const ProfileScreen = () => {
     loadStylePersonality();
   }, [user]);
 
+  // Load cached history data on mount
+  useEffect(() => {
+    if (!user) return;
+    const cachedHistory = getCache<DripHistoryEntry[]>(CACHE_KEYS.DRIP_HISTORY, user.id);
+    if (cachedHistory) setDripHistory(cachedHistory);
+    const cachedOutfits = getCache<any[]>(CACHE_KEYS.SAVED_OUTFITS, user.id);
+    if (cachedOutfits) setSavedOutfits(cachedOutfits);
+    const cachedSuggestions = getCache<any[]>(CACHE_KEYS.SAVED_SUGGESTIONS, user.id);
+    if (cachedSuggestions) setSavedSuggestions(cachedSuggestions);
+    // Background refresh
+    syncHistoryFromDb();
+  }, [user?.id]);
+
   useEffect(() => {
     if (profile?.name !== undefined && profile?.name !== null) {
       setName(profile.name);
