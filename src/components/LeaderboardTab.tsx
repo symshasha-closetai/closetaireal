@@ -66,8 +66,16 @@ function getMonday(d: Date) {
 const LeaderboardTab = () => {
   const { user } = useAuth();
   const [viewMode, setViewMode] = useState<ViewMode>("daily");
-  const [entries, setEntries] = useState<LeaderboardEntry[]>(dailyCache?.entries || []);
-  const [loading, setLoading] = useState(!dailyCache);
+  const [entries, setEntries] = useState<LeaderboardEntry[]>(() => {
+    if (dailyCache?.entries) return dailyCache.entries;
+    const cached = user ? getCache<LeaderboardCache>(CACHE_KEYS.LEADERBOARD_DAILY, user.id) : null;
+    return cached?.entries || [];
+  });
+  const [loading, setLoading] = useState(() => {
+    if (dailyCache) return false;
+    const cached = user ? getCache<LeaderboardCache>(CACHE_KEYS.LEADERBOARD_DAILY, user.id) : null;
+    return !cached;
+  });
   const [friendIds, setFriendIds] = useState<string[]>(dailyCache?.friendIds || []);
   const [myRank, setMyRank] = useState<number | null>(null);
   const [sharingId, setSharingId] = useState<string | null>(null);
