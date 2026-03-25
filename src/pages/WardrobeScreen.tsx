@@ -278,7 +278,24 @@ const WardrobeScreen = () => {
     return ["All", ...ordered];
   }, [customCategories, hiddenDefaults, categoryOrder]);
 
-  useEffect(() => { if (user) { fetchItems(); fetchDeletedItems(); fetchCustomCategories(); } }, [user]);
+  // Write-through cache helper
+  const syncCache = useCallback((updatedItems: ClothingItem[]) => {
+    if (user) setCache(CACHE_KEYS.WARDROBE, user.id, updatedItems);
+  }, [user]);
+
+  useEffect(() => {
+    if (user) {
+      // Device-first: load from cache instantly
+      const cached = getCache<ClothingItem[]>(CACHE_KEYS.WARDROBE, user.id);
+      if (cached) {
+        setItems(cached);
+        setLoading(false);
+      }
+      fetchItems();
+      fetchDeletedItems();
+      fetchCustomCategories();
+    }
+  }, [user]);
 
   const fetchCustomCategories = async () => {
     if (!user) return;
@@ -321,6 +338,7 @@ const WardrobeScreen = () => {
         return 0;
       });
       setItems(wardrobeItems);
+      syncCache(wardrobeItems);
       precacheImages(wardrobeItems.flatMap((i) => [i.image_url, i.original_image_url].filter(Boolean) as string[]));
     }
     setLoading(false);
