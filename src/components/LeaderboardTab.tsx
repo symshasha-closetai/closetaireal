@@ -50,8 +50,12 @@ type LeaderboardEntry = {
 
 type ViewMode = "daily" | "weekly";
 
-// Device-first cache via shared utility
 import { getCache, setCache, CACHE_KEYS } from "@/lib/deviceCache";
+
+type LeaderboardCache = { entries: LeaderboardEntry[]; friendIds: string[] };
+let dailyCache: (LeaderboardCache & { ts: number }) | null = null;
+let weeklyCache: (LeaderboardCache & { ts: number }) | null = null;
+const CACHE_TTL = 48 * 60 * 60 * 1000;
 
 function getMonday(d: Date) {
   const day = d.getDay();
