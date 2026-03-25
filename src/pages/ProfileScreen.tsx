@@ -92,12 +92,8 @@ const ProfileScreen = () => {
 
   // History
   const [dripHistory, setDripHistory] = useState<DripHistoryEntry[]>([]);
-  const [savedOutfits, setSavedOutfits] = useState<any[]>(() => {
-    try { return JSON.parse(localStorage.getItem("saved-outfits") || "[]"); } catch { return []; }
-  });
-  const [savedSuggestions, setSavedSuggestions] = useState<any[]>(() => {
-    try { return JSON.parse(localStorage.getItem("saved-suggestions") || "[]"); } catch { return []; }
-  });
+  const [savedOutfits, setSavedOutfits] = useState<any[]>([]);
+  const [savedSuggestions, setSavedSuggestions] = useState<any[]>([]);
   const [historyLoading, setHistoryLoading] = useState(false);
   const [viewingCard, setViewingCard] = useState<DripHistoryEntry | null>(null);
   const [viewingSavedOutfit, setViewingSavedOutfit] = useState<any>(null);
