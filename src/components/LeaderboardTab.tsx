@@ -279,6 +279,7 @@ const LeaderboardTab = () => {
     setMyRank(idx >= 0 ? idx + 1 : null);
     setLoading(false);
     dailyCache = { entries: combined, friendIds: friends, ts: Date.now() };
+    if (user) setCache(CACHE_KEYS.LEADERBOARD_DAILY, user.id, { entries: combined, friendIds: friends });
   }, [user?.id]);
 
   const fetchWeekly = useCallback(async (force = false) => {
