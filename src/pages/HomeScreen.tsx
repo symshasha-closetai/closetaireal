@@ -400,24 +400,9 @@ const HomeScreen = () => {
   const [progressStage, setProgressStage] = useState<string>("");
   const [progressPercent, setProgressPercent] = useState(0);
 
-  // Cache helpers
-  const getCached = <T,>(key: string, ttlMs: number): T | null => {
-    try {
-      const raw = localStorage.getItem(key);
-      if (!raw) return null;
-      const { data, ts } = JSON.parse(raw);
-      if (Date.now() - ts > ttlMs) { localStorage.removeItem(key); return null; }
-      return data as T;
-    } catch { return null; }
-  };
-  const setCache = (key: string, data: any) => {
-    try { localStorage.setItem(key, JSON.stringify({ data, ts: Date.now() })); } catch {}
-  };
-
   useEffect(() => {
     if (user) {
-      const cacheKey = `wardrobe_cache_${user.id}`;
-      const cached = getCached<WardrobeItem[]>(cacheKey, 48 * 60 * 60 * 1000);
+      const cached = getCache<WardrobeItem[]>(CACHE_KEYS.WARDROBE, user.id);
       if (cached) {
         setAllWardrobeItems(cached);
         setWardrobeItems(cached.slice(0, 6));
@@ -427,6 +412,7 @@ const HomeScreen = () => {
         .from("wardrobe")
         .select("id, image_url, type, name, color, material, pinned")
         .eq("user_id", user.id)
+        .is("deleted_at", null)
         .order("created_at", { ascending: false })
         .then(({ data }) => {
           const items = ((data || []) as any[]).map(i => ({ ...i, pinned: !!i.pinned })) as WardrobeItem[];
@@ -435,7 +421,7 @@ const HomeScreen = () => {
           setAllWardrobeItems(items);
           setWardrobeItems(items.slice(0, 6));
           setWardrobeCount(items.length);
-          setCache(cacheKey, items);
+          setCache(CACHE_KEYS.WARDROBE, user.id, items);
           precacheImages(items.map((i: any) => i.image_url).filter(Boolean));
         });
     }
