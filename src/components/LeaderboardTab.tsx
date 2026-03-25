@@ -291,6 +291,13 @@ const LeaderboardTab = () => {
 
   const fetchWeekly = useCallback(async (force = false) => {
     if (!user) return;
+    // Check in-memory first, then device cache
+    if (!force && !weeklyCache) {
+      const deviceCached = getCache<LeaderboardCache>(CACHE_KEYS.LEADERBOARD_WEEKLY, user.id);
+      if (deviceCached) {
+        weeklyCache = { ...deviceCached, ts: Date.now() };
+      }
+    }
     if (!force && weeklyCache && Date.now() - weeklyCache.ts < CACHE_TTL) {
       setEntries(weeklyCache.entries);
       setFriendIds(weeklyCache.friendIds);
