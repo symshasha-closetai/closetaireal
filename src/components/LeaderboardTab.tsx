@@ -235,6 +235,7 @@ const LeaderboardTab = () => {
     if (!dripData || dripData.length === 0) {
       setEntries([]); setMyRank(null); setLoading(false);
       dailyCache = { entries: [], friendIds: friends, ts: Date.now() };
+      if (user) setCache(CACHE_KEYS.LEADERBOARD_DAILY, user.id, { entries: [], friendIds: friends });
       return;
     }
 
