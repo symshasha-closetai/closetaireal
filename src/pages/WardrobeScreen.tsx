@@ -341,7 +341,7 @@ const WardrobeScreen = () => {
         return 0;
       });
       setItems(wardrobeItems);
-      syncCache(wardrobeItems);
+      itemsInitialized.current = true;
       precacheImages(wardrobeItems.flatMap((i) => [i.image_url, i.original_image_url].filter(Boolean) as string[]));
     }
     setLoading(false);
