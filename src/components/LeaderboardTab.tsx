@@ -50,8 +50,11 @@ type LeaderboardEntry = {
 
 type ViewMode = "daily" | "weekly";
 
-let dailyCache: { entries: LeaderboardEntry[]; friendIds: string[]; ts: number } | null = null;
-let weeklyCache: { entries: LeaderboardEntry[]; friendIds: string[]; ts: number } | null = null;
+import { getCache, setCache, CACHE_KEYS } from "@/lib/deviceCache";
+
+type LeaderboardCache = { entries: LeaderboardEntry[]; friendIds: string[] };
+let dailyCache: (LeaderboardCache & { ts: number }) | null = null;
+let weeklyCache: (LeaderboardCache & { ts: number }) | null = null;
 const CACHE_TTL = 48 * 60 * 60 * 1000;
 
 function getMonday(d: Date) {
@@ -63,8 +66,16 @@ function getMonday(d: Date) {
 const LeaderboardTab = () => {
   const { user } = useAuth();
   const [viewMode, setViewMode] = useState<ViewMode>("daily");
-  const [entries, setEntries] = useState<LeaderboardEntry[]>(dailyCache?.entries || []);
-  const [loading, setLoading] = useState(!dailyCache);
+  const [entries, setEntries] = useState<LeaderboardEntry[]>(() => {
+    if (dailyCache?.entries) return dailyCache.entries;
+    const cached = user ? getCache<LeaderboardCache>(CACHE_KEYS.LEADERBOARD_DAILY, user.id) : null;
+    return cached?.entries || [];
+  });
+  const [loading, setLoading] = useState(() => {
+    if (dailyCache) return false;
+    const cached = user ? getCache<LeaderboardCache>(CACHE_KEYS.LEADERBOARD_DAILY, user.id) : null;
+    return !cached;
+  });
   const [friendIds, setFriendIds] = useState<string[]>(dailyCache?.friendIds || []);
   const [myRank, setMyRank] = useState<number | null>(null);
   const [sharingId, setSharingId] = useState<string | null>(null);
@@ -194,6 +205,13 @@ const LeaderboardTab = () => {
 
   const fetchDaily = useCallback(async (force = false) => {
     if (!user) return;
+    // Check in-memory first, then device cache
+    if (!force && !dailyCache) {
+      const deviceCached = getCache<LeaderboardCache>(CACHE_KEYS.LEADERBOARD_DAILY, user.id);
+      if (deviceCached) {
+        dailyCache = { ...deviceCached, ts: Date.now() };
+      }
+    }
     if (!force && dailyCache && Date.now() - dailyCache.ts < CACHE_TTL) {
       setEntries(dailyCache.entries);
       setFriendIds(dailyCache.friendIds);
@@ -224,6 +242,7 @@ const LeaderboardTab = () => {
     if (!dripData || dripData.length === 0) {
       setEntries([]); setMyRank(null); setLoading(false);
       dailyCache = { entries: [], friendIds: friends, ts: Date.now() };
+      if (user) setCache(CACHE_KEYS.LEADERBOARD_DAILY, user.id, { entries: [], friendIds: friends });
       return;
     }
 
@@ -267,10 +286,18 @@ const LeaderboardTab = () => {
     setMyRank(idx >= 0 ? idx + 1 : null);
     setLoading(false);
     dailyCache = { entries: combined, friendIds: friends, ts: Date.now() };
+    if (user) setCache(CACHE_KEYS.LEADERBOARD_DAILY, user.id, { entries: combined, friendIds: friends });
   }, [user?.id]);
 
   const fetchWeekly = useCallback(async (force = false) => {
     if (!user) return;
+    // Check in-memory first, then device cache
+    if (!force && !weeklyCache) {
+      const deviceCached = getCache<LeaderboardCache>(CACHE_KEYS.LEADERBOARD_WEEKLY, user.id);
+      if (deviceCached) {
+        weeklyCache = { ...deviceCached, ts: Date.now() };
+      }
+    }
     if (!force && weeklyCache && Date.now() - weeklyCache.ts < CACHE_TTL) {
       setEntries(weeklyCache.entries);
       setFriendIds(weeklyCache.friendIds);
@@ -304,6 +331,7 @@ const LeaderboardTab = () => {
     if (!dripData || dripData.length === 0) {
       setEntries([]); setMyRank(null); setLoading(false);
       weeklyCache = { entries: [], friendIds: friends, ts: Date.now() };
+      if (user) setCache(CACHE_KEYS.LEADERBOARD_WEEKLY, user.id, { entries: [], friendIds: friends });
       return;
     }
 
@@ -397,6 +425,7 @@ const LeaderboardTab = () => {
     setMyRank(idx >= 0 ? idx + 1 : null);
     setLoading(false);
     weeklyCache = { entries: combined, friendIds: friends, ts: Date.now() };
+    if (user) setCache(CACHE_KEYS.LEADERBOARD_WEEKLY, user.id, { entries: combined, friendIds: friends });
   }, [user?.id]);
 
   useEffect(() => {

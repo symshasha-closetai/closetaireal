@@ -11,6 +11,7 @@ import AppHeader from "../components/AppHeader";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import ScoreRing from "../components/ScoreRing";
 import OutfitRatingCard from "../components/OutfitRatingCard";
+import { getCache, setCache, CACHE_KEYS } from "@/lib/deviceCache";
 import {
   GenderPicker,
   BodyProfileSection,
@@ -91,12 +92,8 @@ const ProfileScreen = () => {
 
   // History
   const [dripHistory, setDripHistory] = useState<DripHistoryEntry[]>([]);
-  const [savedOutfits, setSavedOutfits] = useState<any[]>(() => {
-    try { return JSON.parse(localStorage.getItem("saved-outfits") || "[]"); } catch { return []; }
-  });
-  const [savedSuggestions, setSavedSuggestions] = useState<any[]>(() => {
-    try { return JSON.parse(localStorage.getItem("saved-suggestions") || "[]"); } catch { return []; }
-  });
+  const [savedOutfits, setSavedOutfits] = useState<any[]>([]);
+  const [savedSuggestions, setSavedSuggestions] = useState<any[]>([]);
   const [historyLoading, setHistoryLoading] = useState(false);
   const [viewingCard, setViewingCard] = useState<DripHistoryEntry | null>(null);
   const [viewingSavedOutfit, setViewingSavedOutfit] = useState<any>(null);
@@ -211,6 +208,19 @@ const ProfileScreen = () => {
     loadStylePersonality();
   }, [user]);
 
+  // Load cached history data on mount
+  useEffect(() => {
+    if (!user) return;
+    const cachedHistory = getCache<DripHistoryEntry[]>(CACHE_KEYS.DRIP_HISTORY, user.id);
+    if (cachedHistory) setDripHistory(cachedHistory);
+    const cachedOutfits = getCache<any[]>(CACHE_KEYS.SAVED_OUTFITS, user.id);
+    if (cachedOutfits) setSavedOutfits(cachedOutfits);
+    const cachedSuggestions = getCache<any[]>(CACHE_KEYS.SAVED_SUGGESTIONS, user.id);
+    if (cachedSuggestions) setSavedSuggestions(cachedSuggestions);
+    // Background refresh
+    syncHistoryFromDb();
+  }, [user?.id]);
+
   useEffect(() => {
     if (profile?.name !== undefined && profile?.name !== null) {
       setName(profile.name);
@@ -291,10 +301,10 @@ const ProfileScreen = () => {
     // Also fetch deleted wardrobe items
     await fetchDeletedItems();
 
-    try {
-      localStorage.setItem("saved-outfits", JSON.stringify(outfits));
-      localStorage.setItem("saved-suggestions", JSON.stringify(suggestions));
-    } catch { /* quota */ }
+    // Write to shared device cache
+    setCache(CACHE_KEYS.SAVED_OUTFITS, user.id, outfits);
+    setCache(CACHE_KEYS.SAVED_SUGGESTIONS, user.id, suggestions);
+    setCache(CACHE_KEYS.DRIP_HISTORY, user.id, dripEntries);
     setHistoryLoading(false);
   };
 
