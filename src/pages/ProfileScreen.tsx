@@ -301,10 +301,10 @@ const ProfileScreen = () => {
     // Also fetch deleted wardrobe items
     await fetchDeletedItems();
 
-    try {
-      localStorage.setItem("saved-outfits", JSON.stringify(outfits));
-      localStorage.setItem("saved-suggestions", JSON.stringify(suggestions));
-    } catch { /* quota */ }
+    // Write to shared device cache
+    setCache(CACHE_KEYS.SAVED_OUTFITS, user.id, outfits);
+    setCache(CACHE_KEYS.SAVED_SUGGESTIONS, user.id, suggestions);
+    setCache(CACHE_KEYS.DRIP_HISTORY, user.id, dripEntries);
     setHistoryLoading(false);
   };
 
