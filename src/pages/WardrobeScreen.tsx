@@ -278,10 +278,13 @@ const WardrobeScreen = () => {
     return ["All", ...ordered];
   }, [customCategories, hiddenDefaults, categoryOrder]);
 
-  // Write-through cache helper
-  const syncCache = useCallback((updatedItems: ClothingItem[]) => {
-    if (user) setCache(CACHE_KEYS.WARDROBE, user.id, updatedItems);
-  }, [user]);
+  // Write-through: sync cache whenever items change
+  const itemsInitialized = useRef(false);
+  useEffect(() => {
+    if (user && itemsInitialized.current && items.length > 0) {
+      setCache(CACHE_KEYS.WARDROBE, user.id, items);
+    }
+  }, [items, user]);
 
   useEffect(() => {
     if (user) {
