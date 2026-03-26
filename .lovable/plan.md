@@ -1,41 +1,84 @@
 
 
-# Fix Wardrobe Deleted Items + Device-First Caching
+# Supabase Migration Plan
 
-## Problem
+## What This Migration Means
 
-**HomeScreen wardrobe query (line 428) has no `deleted_at` filter** — it fetches ALL items including soft-deleted ones, so deleted wardrobe items still show up on the Home screen.
+Your app currently runs on **Lovable Cloud**, which manages your database, authentication, edge functions, and storage behind the scenes. Migration means setting up your **own standalone Supabase project** so you fully own and control all backend infrastructure. This is necessary for deploying outside Lovable (e.g., with Capacitor for iOS/Android).
 
-WardrobeScreen correctly uses `.is("deleted_at", null)` but HomeScreen does not.
+## Current Setup (What You Have)
 
-## Changes
+| Component | Current Provider | Notes |
+|-----------|-----------------|-------|
+| Database (15 tables) | Lovable Cloud | PostgreSQL with RLS policies |
+| Auth (email + Google/Apple OAuth) | Lovable Cloud + `@lovable.dev/cloud-auth-js` | OAuth goes through Lovable's proxy |
+| Edge Functions (14 functions) | Lovable Cloud | Auto-deployed |
+| File Storage | Cloudflare R2 | Already standalone, no migration needed |
+| Secrets (16 secrets) | Lovable Cloud | Need to recreate in new project |
 
-### 1. Fix HomeScreen wardrobe query
-**File: `src/pages/HomeScreen.tsx`** (line ~428)
-- Add `.is("deleted_at", null)` to the wardrobe select query so soft-deleted items are excluded
+## Migration Steps (In Order)
 
-### 2. Create shared device cache utility
-**New file: `src/lib/deviceCache.ts`**
-- `getCache<T>(key, ttlMs)` / `setCache(key, data)` / `invalidateCache(key)` helpers
-- `CACHE_KEYS` constant with `WARDROBE = "wardrobe-items"` (appends userId at call site)
-- Standardizes the caching pattern already used inline in HomeScreen
+### Step 1: Create a Supabase Project
+- Go to [supabase.com](https://supabase.com) and create a free account
+- Create a new project (pick a region close to your users)
+- Save your **Project URL**, **anon key**, and **service role key** -- you'll need these later
 
-### 3. Add device-first caching to WardrobeScreen
-**File: `src/pages/WardrobeScreen.tsx`**
-- On mount: load from localStorage cache instantly, then fetch from DB in background to update
-- After every mutation (add, delete, pin, edit, restore, drag-reorder): write updated `items` array to cache
-- Use same cache key as HomeScreen so both screens share one source of truth
+### Step 2: Migrate Database Schema
+- Export all table definitions, functions, triggers, and RLS policies as SQL
+- I will generate a single migration SQL file containing all 15 tables, 4 functions, and all RLS policies
+- You run this SQL in your new Supabase project's SQL Editor
 
-### 4. Sync HomeScreen to shared cache
-**File: `src/pages/HomeScreen.tsx`**
-- Replace inline `getCached`/`setCache` with imports from `deviceCache.ts`
-- Use the same `CACHE_KEYS.WARDROBE` key that WardrobeScreen writes to
+### Step 3: Migrate Data
+- Export existing data from each table as CSV/SQL inserts
+- Import into the new project
+- Tables with data: `profiles`, `wardrobe`, `drip_history`, `style_profiles`, `friends`, `saved_outfits`, `saved_suggestions`, `daily_looks`, `daily_ratings`, `outfit_calendar`, `conversations`, `messages`, `conversation_participants`, `wardrobe_categories`, `user_suggestions`, `outfits`
 
-### 5. Auto-purge after 7 days
-The existing logic in `ProfileScreen.tsx` (line 224) already permanently deletes items where `deleted_at` is older than 7 days. No changes needed there — just confirming it works as described.
+### Step 4: Set Up Authentication
+- Configure email/password auth in your new Supabase project (enabled by default)
+- Set up Google OAuth: create credentials in Google Cloud Console, add to Supabase Auth settings
+- Set up Apple OAuth: create credentials in Apple Developer Console, add to Supabase Auth settings
+- Replace `lovable.auth.signInWithOAuth()` with standard `supabase.auth.signInWithOAuth()`
+- Remove the `@lovable.dev/cloud-auth-js` dependency
 
-## Files Modified
-1. `src/lib/deviceCache.ts` — New, ~25 lines
-2. `src/pages/HomeScreen.tsx` — Add `deleted_at` filter + use shared cache
-3. `src/pages/WardrobeScreen.tsx` — Add cache-first loading + write-through on mutations
+### Step 5: Migrate Edge Functions
+- Install the Supabase CLI locally (`npm install -g supabase`)
+- Copy the 14 edge function folders to your local project
+- Deploy with `supabase functions deploy`
+- Re-add all secrets via `supabase secrets set KEY=VALUE`
+
+### Step 6: Update Frontend Config
+- Replace the Supabase URL and anon key in your `.env` to point to your new project
+- Update `src/integrations/supabase/client.ts` (or just change env vars)
+- Remove `src/integrations/lovable/index.ts` dependency
+
+### Step 7: Migrate Auth Users
+- Export users from Lovable Cloud (if possible) or have users re-register
+- This is the trickiest part -- password hashes can be exported from Supabase's `auth.users` table if you have DB access
+
+### Step 8: Test Everything
+- Auth flow (sign up, sign in, OAuth)
+- Wardrobe CRUD
+- Drip rating
+- Style Me / Surprise Me
+- Messaging
+- Profile editing
+
+---
+
+## What I Can Do Right Now (Inside Lovable)
+
+I can help with Steps 2-3 immediately:
+1. **Generate the full migration SQL** -- all tables, functions, triggers, RLS policies in one file
+2. **Export your data** as CSV files you can download
+
+## What You'll Need To Do Externally
+- Create the Supabase account and project
+- Set up Google/Apple OAuth credentials
+- Deploy edge functions via CLI
+
+---
+
+## Recommended Order of Execution
+
+Let's start with **Step 2** -- I'll generate the complete database schema migration SQL that you can run in your new Supabase project. Want me to proceed?
 
