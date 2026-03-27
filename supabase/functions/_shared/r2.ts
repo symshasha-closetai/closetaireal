@@ -42,7 +42,7 @@ export async function r2Upload(path: string, body: Uint8Array | ArrayBuffer, con
   const res = await client.fetch(url, {
     method: "PUT",
     headers: { "Content-Type": contentType },
-    body,
+    body: body as BodyInit,
   });
   if (!res.ok) {
     const text = await res.text();
