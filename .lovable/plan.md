@@ -1,84 +1,98 @@
 
 
-# Supabase Migration Plan
+# Status Check & Google OAuth Fix
 
-## What This Migration Means
+## What's Done
+- Auth code uses standard `supabase.auth.signInWithOAuth` (no Lovable proxy)
+- `src/integrations/lovable/` folder deleted
+- `@lovable.dev/cloud-auth-js` removed from `package.json` (still in lockfiles, harmless)
+- Edge function TS errors fixed (`generate-outfit-calendar`)
 
-Your app currently runs on **Lovable Cloud**, which manages your database, authentication, edge functions, and storage behind the scenes. Migration means setting up your **own standalone Supabase project** so you fully own and control all backend infrastructure. This is necessary for deploying outside Lovable (e.g., with Capacitor for iOS/Android).
+## Why Google OAuth Still Shows 404
 
-## Current Setup (What You Have)
+The `.env` file has a **critical mismatch**:
+- `VITE_SUPABASE_ANON_KEY` belongs to your NEW project (`upmrumzbgwordkkpgqxb`)
+- `VITE_SUPABASE_URL` still points to the OLD Lovable project (`xtxwrvjdoexuymdkmzit`)
 
-| Component | Current Provider | Notes |
-|-----------|-----------------|-------|
-| Database (15 tables) | Lovable Cloud | PostgreSQL with RLS policies |
-| Auth (email + Google/Apple OAuth) | Lovable Cloud + `@lovable.dev/cloud-auth-js` | OAuth goes through Lovable's proxy |
-| Edge Functions (14 functions) | Lovable Cloud | Auto-deployed |
-| File Storage | Cloudflare R2 | Already standalone, no migration needed |
-| Secrets (16 secrets) | Lovable Cloud | Need to recreate in new project |
+When you click "Sign in with Google", the Supabase client sends the OAuth request to `https://xtxwrvjdoexuymdkmzit.supabase.co/auth/v1/authorize?provider=google` — but that project doesn't recognize your anon key, so it returns 404/401.
 
-## Migration Steps (In Order)
+**The Lovable preview will always have this issue** because `.env` is auto-managed. Your **Cloudflare deployment** is what matters — make sure these env vars are set in Cloudflare Pages dashboard:
 
-### Step 1: Create a Supabase Project
-- Go to [supabase.com](https://supabase.com) and create a free account
-- Create a new project (pick a region close to your users)
-- Save your **Project URL**, **anon key**, and **service role key** -- you'll need these later
+| Variable | Value |
+|----------|-------|
+| `VITE_SUPABASE_URL` | `https://upmrumzbgwordkkpgqxb.supabase.co` |
+| `VITE_SUPABASE_ANON_KEY` | Your new project's anon key |
+| `VITE_SUPABASE_PROJECT_ID` | `upmrumzbgwordkkpgqxb` |
 
-### Step 2: Migrate Database Schema
-- Export all table definitions, functions, triggers, and RLS policies as SQL
-- I will generate a single migration SQL file containing all 15 tables, 4 functions, and all RLS policies
-- You run this SQL in your new Supabase project's SQL Editor
+Also verify in your **new Supabase dashboard**:
+1. Authentication → Providers → Google is **enabled** with your Client ID and Secret
+2. Authentication → URL Configuration → Site URL = your Cloudflare domain
+3. Authentication → URL Configuration → Redirect URLs includes your Cloudflare domain
+4. Google Cloud Console → OAuth Client → Authorized redirect URIs includes `https://upmrumzbgwordkkpgqxb.supabase.co/auth/v1/callback`
 
-### Step 3: Migrate Data
-- Export existing data from each table as CSV/SQL inserts
-- Import into the new project
-- Tables with data: `profiles`, `wardrobe`, `drip_history`, `style_profiles`, `friends`, `saved_outfits`, `saved_suggestions`, `daily_looks`, `daily_ratings`, `outfit_calendar`, `conversations`, `messages`, `conversation_participants`, `wardrobe_categories`, `user_suggestions`, `outfits`
+## Remaining: Edge Function Deployment
 
-### Step 4: Set Up Authentication
-- Configure email/password auth in your new Supabase project (enabled by default)
-- Set up Google OAuth: create credentials in Google Cloud Console, add to Supabase Auth settings
-- Set up Apple OAuth: create credentials in Apple Developer Console, add to Supabase Auth settings
-- Replace `lovable.auth.signInWithOAuth()` with standard `supabase.auth.signInWithOAuth()`
-- Remove the `@lovable.dev/cloud-auth-js` dependency
+All 14 functions need to be deployed to your new Supabase project via CLI. Here's the complete list and the secrets each needs:
 
-### Step 5: Migrate Edge Functions
-- Install the Supabase CLI locally (`npm install -g supabase`)
-- Copy the 14 edge function folders to your local project
-- Deploy with `supabase functions deploy`
-- Re-add all secrets via `supabase secrets set KEY=VALUE`
+### All 14 Edge Functions
 
-### Step 6: Update Frontend Config
-- Replace the Supabase URL and anon key in your `.env` to point to your new project
-- Update `src/integrations/supabase/client.ts` (or just change env vars)
-- Remove `src/integrations/lovable/index.ts` dependency
+| # | Function | Purpose | Secrets Needed |
+|---|----------|---------|----------------|
+| 1 | `analyze-body-profile` | AI body/face analysis from photos | `GOOGLE_AI_API_KEY` |
+| 2 | `analyze-clothing` | Detect clothing items from image | `GOOGLE_AI_API_KEY` |
+| 3 | `analyze-style-personality` | Determine style personality | `GOOGLE_AI_API_KEY` |
+| 4 | `clear-option-cache` | Clear R2 cached option images | `R2_*` (all 5) |
+| 5 | `generate-clothing-image` | Generate clothing product images | `REPLICATE_API_KEY`, `R2_*` |
+| 6 | `generate-model-avatar` | Generate model avatar + face swap | `REPLICATE_API_KEY`, `R2_*` |
+| 7 | `generate-option-images` | Generate onboarding option images | `REPLICATE_API_KEY`, `R2_*` |
+| 8 | `generate-outfit-calendar` | AI weekly outfit planning | `GOOGLE_AI_API_KEY`, `GOOGLE_AI_API_KEY_2/3/4` |
+| 9 | `generate-suggestion-image` | Generate suggestion product images | `REPLICATE_API_KEY` |
+| 10 | `generate-suggestions` | AI outfit suggestions | `GOOGLE_AI_API_KEY` |
+| 11 | `r2-storage` | R2 upload/delete/list proxy | `R2_*` (all 5) |
+| 12 | `rate-outfit` | AI outfit rating/scoring | `GOOGLE_AI_API_KEY` |
+| 13 | `style-me` | AI outfit generation | `GOOGLE_AI_API_KEY` |
+| 14 | `virtual-tryon` | Virtual try-on image generation | `REPLICATE_API_KEY`, `R2_*` |
 
-### Step 7: Migrate Auth Users
-- Export users from Lovable Cloud (if possible) or have users re-register
-- This is the trickiest part -- password hashes can be exported from Supabase's `auth.users` table if you have DB access
+### Deployment Commands
 
-### Step 8: Test Everything
-- Auth flow (sign up, sign in, OAuth)
-- Wardrobe CRUD
-- Drip rating
-- Style Me / Surprise Me
-- Messaging
-- Profile editing
+```bash
+# 1. Install Supabase CLI
+npm install -g supabase
 
----
+# 2. Login
+supabase login
 
-## What I Can Do Right Now (Inside Lovable)
+# 3. Link to your new project
+supabase link --project-ref upmrumzbgwordkkpgqxb
 
-I can help with Steps 2-3 immediately:
-1. **Generate the full migration SQL** -- all tables, functions, triggers, RLS policies in one file
-2. **Export your data** as CSV files you can download
+# 4. Set ALL secrets at once
+supabase secrets set \
+  GOOGLE_AI_API_KEY=your_key \
+  GOOGLE_AI_API_KEY_2=your_key2 \
+  GOOGLE_AI_API_KEY_3=your_key3 \
+  GOOGLE_AI_API_KEY_4=your_key4 \
+  REPLICATE_API_KEY=your_key \
+  R2_ACCESS_KEY_ID=your_key \
+  R2_SECRET_ACCESS_KEY=your_key \
+  R2_ENDPOINT=https://your-account-id.r2.cloudflarestorage.com \
+  R2_BUCKET_NAME=your_bucket \
+  R2_PUBLIC_URL=https://pub-xxx.r2.dev
 
-## What You'll Need To Do Externally
-- Create the Supabase account and project
-- Set up Google/Apple OAuth credentials
-- Deploy edge functions via CLI
+# 5. Deploy all functions
+supabase functions deploy
 
----
+# 6. Verify
+supabase functions list
+```
 
-## Recommended Order of Execution
+### Config: All functions need `verify_jwt = false`
 
-Let's start with **Step 2** -- I'll generate the complete database schema migration SQL that you can run in your new Supabase project. Want me to proceed?
+Your `supabase/config.toml` already has this configured for all 14 functions. When you deploy via CLI from this repo, it will use that config automatically.
+
+## Plan to Generate Edge Functions Reference File
+
+I'll create a downloadable document listing all 14 edge functions with their full source paths, purposes, required secrets, and deployment notes — so you have a single reference for the CLI deployment.
+
+### Technical Changes
+1. Generate `/mnt/documents/edge_functions_guide.md` with complete deployment reference
 
