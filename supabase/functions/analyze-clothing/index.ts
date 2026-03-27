@@ -90,7 +90,7 @@ Return ONLY valid JSON array, no markdown, no explanation. Example:
     });
   } catch (error) {
     console.error("Error in analyze-clothing:", error);
-    return new Response(JSON.stringify({ error: error.message, retryable: true }), {
+    return new Response(JSON.stringify({ error: (error as Error).message, retryable: true }), {
       status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
   }
