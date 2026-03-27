@@ -1,9 +1,9 @@
 import { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { supabase } from "@/integrations/supabase/client";
-import { lovable } from "@/integrations/lovable/index";
 import { Mail, Lock, User, Eye, EyeOff } from "lucide-react";
 import { toast } from "sonner";
+
 const logo = "/dripd-logo-192.webp";
 
 const AuthScreen = () => {
@@ -20,7 +20,10 @@ const AuthScreen = () => {
     setLoading(true);
 
     if (isLogin) {
-      const { error } = await supabase.auth.signInWithPassword({ email, password });
+      const { error } = await supabase.auth.signInWithPassword({
+        email,
+        password,
+      });
       if (error) toast.error(error.message);
     } else {
       const { error } = await supabase.auth.signUp({
@@ -31,18 +34,25 @@ const AuthScreen = () => {
           emailRedirectTo: window.location.origin,
         },
       });
+
       if (error) toast.error(error.message);
       else toast.success("Check your email to verify your account!");
     }
+
     setLoading(false);
   };
 
+  // ✅ FIXED OAuth (NO LOVABLE)
   const handleOAuth = async (provider: "google" | "apple") => {
     setOauthLoading(provider);
     try {
-      const { error } = await lovable.auth.signInWithOAuth(provider, {
-        redirect_uri: window.location.origin,
+      const { error } = await supabase.auth.signInWithOAuth({
+        provider,
+        options: {
+          redirectTo: window.location.origin,
+        },
       });
+
       if (error) {
         toast.error(`Failed to sign in with ${provider}`);
         console.error("OAuth error:", error);
@@ -76,7 +86,9 @@ const AuthScreen = () => {
           <h1 className="font-display text-3xl font-semibold text-foreground">
             Dripd
           </h1>
-          <p className="text-sm text-muted-foreground">Your AI-powered style companion</p>
+          <p className="text-sm text-muted-foreground">
+            Your AI-powered style companion
+          </p>
         </div>
 
         {/* Tabs */}
@@ -98,6 +110,7 @@ const AuthScreen = () => {
 
         {/* Social Auth */}
         <div className="space-y-3">
+          {/* Google */}
           <button
             onClick={() => handleOAuth("google")}
             disabled={!!oauthLoading}
@@ -115,6 +128,8 @@ const AuthScreen = () => {
             )}
             Continue with Google
           </button>
+
+          {/* Apple */}
           <button
             onClick={() => handleOAuth("apple")}
             disabled={!!oauthLoading}
