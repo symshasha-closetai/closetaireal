@@ -349,8 +349,15 @@ const runAnalysis = async (file: File, userId: string | undefined, styleProfile:
     if (activeAbort?.signal.aborted) return;
     clearStageTimers();
 
-    if (error) throw error;
-    if (data?.error || !data?.result) {
+    if (error) {
+      console.error("rate-outfit error:", error);
+      toast.error("AI rating failed: " + (error.message || "Unknown error — check edge function deployment"));
+    }
+    if (error || data?.error || !data?.result) {
+      if (data?.error) {
+        console.error("rate-outfit returned error:", data.error);
+        toast.error("AI returned error: " + (typeof data.error === 'string' ? data.error : JSON.stringify(data.error)));
+      }
       const fallback = clientFallbackResult(gender);
       updateGlobal({ result: fallback, analyzing: false, progress: 0, stage: "", analysisSteps: [] });
       saveDripToHistory(globalDripState.image || "", fallback, userId, imageHash);
