@@ -590,7 +590,7 @@ navigate("/", { replace: true });
                   </motion.div>
                   <h1 className="font-display text-2xl font-semibold text-foreground text-center">You're All Set!</h1>
                   <p className="text-sm text-muted-foreground text-center max-w-xs">Your AI stylist is ready to create personalized outfit suggestions</p>
-                  <button onClick={() => { refreshProfile(); navigate("/", { replace: true }); }} className="px-8 py-4 rounded-2xl gradient-accent text-accent-foreground font-semibold text-base shadow-soft active:scale-[0.98] transition-transform flex items-center gap-2">
+                  <button async () => { await refreshProfile(); navigate("/", { replace: true }); } className="px-8 py-4 rounded-2xl gradient-accent text-accent-foreground font-semibold text-base shadow-soft active:scale-[0.98] transition-transform flex items-center gap-2">
                     <Sparkles size={20} /> Start Styling
                   </button>
                 </>
