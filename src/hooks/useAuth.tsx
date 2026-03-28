@@ -99,11 +99,17 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       }
     });
 
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      setSession(session);
-      setUser(session?.user ?? null);
-      setLoading(false);
-    });
+    supabase.auth.getSession().then(async ({ data: { session } }) => {
+  setSession(session);
+  setUser(session?.user ?? null);
+
+  if (session?.user) {
+    await fetchProfile(session.user.id);
+    await fetchStyleProfile(session.user.id);
+  }
+
+  setLoading(false);
+});
 
     return () => subscription.unsubscribe();
   }, [fetchProfile, fetchStyleProfile]);
