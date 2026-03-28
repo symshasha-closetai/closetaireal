@@ -217,18 +217,27 @@ const OnboardingScreen = () => {
     setSaving(true);
 
     try {
-      await supabase.from("style_profiles").upsert({
-        user_id: user.id,
-        gender,
-        body_type: bodyType,
-        skin_tone: skinTone,
-        face_shape: faceShape,
-        style_type: selectedStyles.join(",") || null,
-      }, { onConflict: "user_id" });
+      const { error: upsertError } = await supabase
+  .from("style_profiles")
+  .upsert({
+    user_id: user.id,
+    gender,
+    body_type: bodyType,
+    skin_tone: skinTone,
+    face_shape: faceShape,
+    style_type: selectedStyles.join(", ") || null,
+  }, { onConflict: "user_id" });
 
-      await refreshProfile();
-      toast.success("Your AI stylist is ready! 🎨");
-      navigate("/", { replace: true });
+if (upsertError) {
+  console.error("Style profile save error:", upsertError);
+  toast.error("Failed to save profile: " + upsertError.message);
+  setSaving(false);
+  return;
+}
+
+await refreshProfile();
+toast.success("Your AI stylist is ready! 🔥");
+navigate("/", { replace: true });
     } catch (err) {
       console.error(err);
       toast.error("Failed to complete setup");
