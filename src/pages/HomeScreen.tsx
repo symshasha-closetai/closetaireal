@@ -448,6 +448,8 @@ const HomeScreen = () => {
         await supabase.from("outfit_calendar" as any).upsert(row as any, { onConflict: "user_id,outfit_date" });
       }
       setCalendarOutfits(rows);
+      setCache(CACHE_KEYS.CALENDAR, user.id, rows);
+      localStorage.setItem(`dripd-calendar-last-gen-${user.id}`, String(Date.now()));
       toast.success("Weekly outfit plan generated! 📅");
     } catch (e) { console.error(e); toast.error("Failed to plan outfits"); }
     setGeneratingCalendar(false);
