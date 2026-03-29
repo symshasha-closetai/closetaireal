@@ -462,8 +462,17 @@ const HomeScreen = () => {
       const { data } = await supabase.from("outfit_calendar" as any).select("*").eq("user_id", user.id).gte("outfit_date", today).lte("outfit_date", endStr).order("outfit_date", { ascending: true });
       const items = (data || []) as unknown as CalendarOutfit[];
       setCalendarOutfits(items);
+      // Cache calendar data
+      setCache(CACHE_KEYS.CALENDAR, user.id, items);
+
+      // Only auto-generate if <3 items AND no generation in last 24h
       if (items.length < 3 && allWardrobeItems.length >= 2) {
-        generateCalendarOutfits();
+        const lastGenKey = `dripd-calendar-last-gen-${user.id}`;
+        const lastGen = localStorage.getItem(lastGenKey);
+        const cooldown = 24 * 60 * 60 * 1000; // 24 hours
+        if (!lastGen || Date.now() - Number(lastGen) > cooldown) {
+          generateCalendarOutfits();
+        }
       }
     };
     if (allWardrobeItems.length > 0) fetchCalendar();
