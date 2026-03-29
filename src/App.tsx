@@ -17,6 +17,7 @@ const OnboardingScreen = lazy(() => import("./pages/OnboardingScreen"));
 const MessagesScreen = lazy(() => import("./pages/MessagesScreen"));
 const ChatScreen = lazy(() => import("./pages/ChatScreen"));
 const NotFound = lazy(() => import("./pages/NotFound"));
+const ResetPasswordScreen = lazy(() => import("./pages/ResetPasswordScreen"));
 import BottomNav from "./components/BottomNav";
 
 const queryClient = new QueryClient();
