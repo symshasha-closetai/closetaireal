@@ -448,6 +448,8 @@ const HomeScreen = () => {
         await supabase.from("outfit_calendar" as any).upsert(row as any, { onConflict: "user_id,outfit_date" });
       }
       setCalendarOutfits(rows);
+      setCache(CACHE_KEYS.CALENDAR, user.id, rows);
+      localStorage.setItem(`dripd-calendar-last-gen-${user.id}`, String(Date.now()));
       toast.success("Weekly outfit plan generated! 📅");
     } catch (e) { console.error(e); toast.error("Failed to plan outfits"); }
     setGeneratingCalendar(false);
@@ -455,6 +457,10 @@ const HomeScreen = () => {
 
   useEffect(() => {
     if (!user) return;
+    // Restore from cache instantly
+    const cached = getCache<CalendarOutfit[]>(CACHE_KEYS.CALENDAR, user.id);
+    if (cached && cached.length > 0) setCalendarOutfits(cached);
+
     const fetchCalendar = async () => {
       const today = new Date().toISOString().split("T")[0];
       const end = new Date(); end.setDate(end.getDate() + 7);
@@ -462,8 +468,17 @@ const HomeScreen = () => {
       const { data } = await supabase.from("outfit_calendar" as any).select("*").eq("user_id", user.id).gte("outfit_date", today).lte("outfit_date", endStr).order("outfit_date", { ascending: true });
       const items = (data || []) as unknown as CalendarOutfit[];
       setCalendarOutfits(items);
+      // Cache calendar data
+      setCache(CACHE_KEYS.CALENDAR, user.id, items);
+
+      // Only auto-generate if <3 items AND no generation in last 24h
       if (items.length < 3 && allWardrobeItems.length >= 2) {
-        generateCalendarOutfits();
+        const lastGenKey = `dripd-calendar-last-gen-${user.id}`;
+        const lastGen = localStorage.getItem(lastGenKey);
+        const cooldown = 24 * 60 * 60 * 1000; // 24 hours
+        if (!lastGen || Date.now() - Number(lastGen) > cooldown) {
+          generateCalendarOutfits();
+        }
       }
     };
     if (allWardrobeItems.length > 0) fetchCalendar();

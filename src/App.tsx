@@ -17,6 +17,7 @@ const OnboardingScreen = lazy(() => import("./pages/OnboardingScreen"));
 const MessagesScreen = lazy(() => import("./pages/MessagesScreen"));
 const ChatScreen = lazy(() => import("./pages/ChatScreen"));
 const NotFound = lazy(() => import("./pages/NotFound"));
+const ResetPasswordScreen = lazy(() => import("./pages/ResetPasswordScreen"));
 import BottomNav from "./components/BottomNav";
 
 const queryClient = new QueryClient();
@@ -38,6 +39,7 @@ const AppRoutes = () => {
     <Suspense fallback={<div className="min-h-screen bg-background" />}>
       <Routes>
         <Route path="/auth" element={user ? <Navigate to="/" replace /> : <AuthScreen />} />
+        <Route path="/reset-password" element={<ResetPasswordScreen />} />
         <Route path="/onboarding" element={
           !user ? <Navigate to="/auth" replace /> :
           hasCompletedOnboarding ? <Navigate to="/" replace /> :

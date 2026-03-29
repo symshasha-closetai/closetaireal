@@ -2,6 +2,7 @@ import { createContext, useContext, useEffect, useState, ReactNode, useCallback 
 import { Session, User } from "@supabase/supabase-js";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
+import { getCache, setCache, CACHE_KEYS } from "@/lib/deviceCache";
 
 type Profile = { name: string | null; avatar_url: string | null };
 type StyleProfile = {
@@ -59,9 +60,11 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         .select("name, avatar_url")
         .single();
       setProfile(newProfile);
+      if (newProfile) setCache(CACHE_KEYS.PROFILE, userId, newProfile);
       toast("Welcome to Dripd!", { description: "Let's set up your style profile." });
     } else {
       setProfile(data);
+      setCache(CACHE_KEYS.PROFILE, userId, data);
     }
   }, []);
 
@@ -73,6 +76,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       .maybeSingle();
     setStyleProfile(data);
     setHasCompletedOnboarding(!!data);
+    if (data) setCache(CACHE_KEYS.STYLE_PROFILE, userId, data);
   }, []);
 
   const refreshProfile = useCallback(async () => {
@@ -88,6 +92,14 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       setUser(session?.user ?? null);
       setLoading(false);
       if (session?.user) {
+        // Restore from cache instantly
+        const cachedProfile = getCache<Profile>(CACHE_KEYS.PROFILE, session.user.id);
+        if (cachedProfile) setProfile(cachedProfile);
+        const cachedStyle = getCache<StyleProfile>(CACHE_KEYS.STYLE_PROFILE, session.user.id);
+        if (cachedStyle) {
+          setStyleProfile(cachedStyle);
+          setHasCompletedOnboarding(true);
+        }
         setTimeout(() => {
           fetchProfile(session.user.id);
           fetchStyleProfile(session.user.id);
@@ -104,6 +116,14 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   setUser(session?.user ?? null);
 
   if (session?.user) {
+    // Restore from cache for instant UI
+    const cachedProfile = getCache<Profile>(CACHE_KEYS.PROFILE, session.user.id);
+    if (cachedProfile) setProfile(cachedProfile);
+    const cachedStyle = getCache<StyleProfile>(CACHE_KEYS.STYLE_PROFILE, session.user.id);
+    if (cachedStyle) {
+      setStyleProfile(cachedStyle);
+      setHasCompletedOnboarding(true);
+    }
     await fetchProfile(session.user.id);
     await fetchStyleProfile(session.user.id);
   }
