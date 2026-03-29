@@ -92,6 +92,14 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       setUser(session?.user ?? null);
       setLoading(false);
       if (session?.user) {
+        // Restore from cache instantly
+        const cachedProfile = getCache<Profile>(CACHE_KEYS.PROFILE, session.user.id);
+        if (cachedProfile) setProfile(cachedProfile);
+        const cachedStyle = getCache<StyleProfile>(CACHE_KEYS.STYLE_PROFILE, session.user.id);
+        if (cachedStyle) {
+          setStyleProfile(cachedStyle);
+          setHasCompletedOnboarding(true);
+        }
         setTimeout(() => {
           fetchProfile(session.user.id);
           fetchStyleProfile(session.user.id);

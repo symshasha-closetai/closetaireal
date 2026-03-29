@@ -5,6 +5,9 @@ export const CACHE_KEYS = {
   SAVED_SUGGESTIONS: "dripd-saved-suggestions",
   LEADERBOARD_DAILY: "dripd-leaderboard-daily",
   LEADERBOARD_WEEKLY: "dripd-leaderboard-weekly",
+  CALENDAR: "dripd-calendar",
+  STYLE_PROFILE: "dripd-style-profile",
+  PROFILE: "dripd-profile",
 } as const;
 
 const DEFAULT_TTL = 48 * 60 * 60 * 1000; // 48 hours

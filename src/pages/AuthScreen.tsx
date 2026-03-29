@@ -228,6 +228,16 @@ const AuthScreen = () => {
             </button>
           </div>
 
+          {isLogin && (
+            <button
+              type="button"
+              onClick={() => { setForgotMode(true); setResetEmail(email); }}
+              className="w-full text-right text-xs text-muted-foreground hover:text-foreground transition-colors -mt-1"
+            >
+              Forgot password?
+            </button>
+          )}
+
           <button
             type="submit"
             disabled={loading}
@@ -236,6 +246,58 @@ const AuthScreen = () => {
             {loading ? "Please wait..." : isLogin ? "Sign In" : "Create Account"}
           </button>
         </form>
+
+        {/* Forgot Password Modal */}
+        <AnimatePresence>
+          {forgotMode && (
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm px-6"
+              onClick={() => setForgotMode(false)}
+            >
+              <motion.div
+                initial={{ scale: 0.95, opacity: 0 }}
+                animate={{ scale: 1, opacity: 1 }}
+                exit={{ scale: 0.95, opacity: 0 }}
+                onClick={(e) => e.stopPropagation()}
+                className="w-full max-w-sm bg-card rounded-2xl p-6 space-y-4 shadow-elevated"
+              >
+                <h2 className="font-display text-lg font-semibold text-foreground">Reset Password</h2>
+                <p className="text-xs text-muted-foreground">Enter your email and we'll send you a reset link.</p>
+                <form onSubmit={handleForgotPassword} className="space-y-3">
+                  <div className="relative">
+                    <Mail size={18} className="absolute left-4 top-1/2 -translate-y-1/2 text-muted-foreground" />
+                    <input
+                      type="email"
+                      placeholder="Email address"
+                      value={resetEmail}
+                      onChange={(e) => setResetEmail(e.target.value)}
+                      className="w-full pl-11 pr-4 py-3.5 rounded-xl bg-secondary border border-border text-foreground text-sm placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-accent/30 transition-all"
+                      required
+                      autoFocus
+                    />
+                  </div>
+                  <button
+                    type="submit"
+                    disabled={resetLoading}
+                    className="w-full py-3 rounded-xl gradient-accent text-accent-foreground font-medium text-sm shadow-soft active:scale-[0.98] transition-transform disabled:opacity-60"
+                  >
+                    {resetLoading ? "Sending..." : "Send Reset Link"}
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setForgotMode(false)}
+                    className="w-full py-2 text-xs text-muted-foreground hover:text-foreground transition-colors"
+                  >
+                    Back to sign in
+                  </button>
+                </form>
+              </motion.div>
+            </motion.div>
+          )}
+        </AnimatePresence>
       </motion.div>
     </div>
   );

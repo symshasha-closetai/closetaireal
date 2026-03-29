@@ -39,6 +39,7 @@ const AppRoutes = () => {
     <Suspense fallback={<div className="min-h-screen bg-background" />}>
       <Routes>
         <Route path="/auth" element={user ? <Navigate to="/" replace /> : <AuthScreen />} />
+        <Route path="/reset-password" element={<ResetPasswordScreen />} />
         <Route path="/onboarding" element={
           !user ? <Navigate to="/auth" replace /> :
           hasCompletedOnboarding ? <Navigate to="/" replace /> :

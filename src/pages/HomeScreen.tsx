@@ -457,6 +457,10 @@ const HomeScreen = () => {
 
   useEffect(() => {
     if (!user) return;
+    // Restore from cache instantly
+    const cached = getCache<CalendarOutfit[]>(CACHE_KEYS.CALENDAR, user.id);
+    if (cached && cached.length > 0) setCalendarOutfits(cached);
+
     const fetchCalendar = async () => {
       const today = new Date().toISOString().split("T")[0];
       const end = new Date(); end.setDate(end.getDate() + 7);
