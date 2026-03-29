@@ -76,6 +76,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       .maybeSingle();
     setStyleProfile(data);
     setHasCompletedOnboarding(!!data);
+    if (data) setCache(CACHE_KEYS.STYLE_PROFILE, userId, data);
   }, []);
 
   const refreshProfile = useCallback(async () => {
