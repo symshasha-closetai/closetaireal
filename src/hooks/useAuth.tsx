@@ -2,6 +2,7 @@ import { createContext, useContext, useEffect, useState, ReactNode, useCallback 
 import { Session, User } from "@supabase/supabase-js";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
+import { getCache, setCache, CACHE_KEYS } from "@/lib/deviceCache";
 
 type Profile = { name: string | null; avatar_url: string | null };
 type StyleProfile = {
