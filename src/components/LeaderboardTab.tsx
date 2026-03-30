@@ -249,6 +249,13 @@ const LeaderboardTab = () => {
     }
 
     const userIds = Array.from(bestByUser.keys());
+
+    // Compute bonuses only for users in the results
+    const [friendBonuses, streakBonuses] = await Promise.all([
+      fetchFriendBonuses(userIds, today),
+      fetchStreakBonuses(userIds, today),
+    ]);
+
     const { data: profiles } = await supabase
       .from("profiles")
       .select("user_id, name, username, avatar_url")
