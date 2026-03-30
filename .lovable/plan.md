@@ -1,38 +1,42 @@
-# Plan: Three Improvements
-
-## 1. Forgot Password on Sign In Page
-
-**What**: Add a "Forgot password?" link below the password field on the auth screen. When clicked, show an inline email input + submit button that calls `supabase.auth.resetPasswordForEmail()`. Also create a new `/reset-password` route with a form to set the new password via `supabase.auth.updateUser()`.
-
-**Files to change**:
-
-- `src/pages/AuthScreen.tsx` -- Add "Forgot password?" toggle, email input, and reset request logic
-- `src/pages/ResetPasswordScreen.tsx` -- New page: detect `type=recovery` from URL hash, show new password form, call `updateUser`
-- `src/App.tsx` -- Add `/reset-password` route (public, not behind ProtectedRoute)
 
 
+# Plan: Calendar Fix, Share/Download Fix, Delete Confirmations
 
-## 2. Stop Outfit Calendar Auto-Regenerating
+## Issues Identified
 
-**What**: The calendar auto-generates when `items.length < 3`, which triggers every app open if the user has fewer than 3 upcoming days. Fix by adding a cooldown check (e.g., don't regenerate if last generation was within 24 hours) using localStorage.
+1. **Calendar keeps regenerating**: The `useEffect` at line 458 has `generateCalendarOutfits` in its dependency array. Since `generateCalendarOutfits` is a `useCallback` depending on `allWardrobeItems`, it gets a new reference every time wardrobe loads (first from cache, then from DB) -- re-triggering the effect and potentially calling generate again despite the cooldown check. Fix: remove `generateCalendarOutfits` from deps, use a ref instead.
 
-**File to change**:
+2. **Share/Download not working**: The `captureCard` function loads the outfit image with `img.crossOrigin = "anonymous"`, but R2/CDN images likely don't return proper CORS headers for canvas operations, causing a tainted canvas error silently caught. Fix: fetch the image as a blob first (like `handleShareTodayLook` already does), then use `createImageBitmap` to avoid CORS tainting.
 
-- `src/pages/HomeScreen.tsx` -- Before calling `generateCalendarOutfits()`, check a localStorage timestamp. After successful generation, store the timestamp. Skip regeneration if within 24 hours.
+3. **No delete confirmation**: Wardrobe delete, message delete, and permanent delete actions fire immediately without confirmation. Fix: add `AlertDialog` confirmation before all destructive actions.
 
-## 3. Aggressive Device Caching
+## Changes
 
-**What**: Cache more data in localStorage so the app loads instantly. Currently wardrobe and leaderboard are cached. Add caching for: outfit calendar, style profile, profile data, drip history, saved outfits, and saved suggestions.
+### File: `src/pages/HomeScreen.tsx`
+- Replace the calendar `useEffect` dependency on `generateCalendarOutfits` with a ref-based approach. Use `useRef` to hold the generate function and call it via ref inside the effect, removing it from the dependency array. This prevents the infinite re-trigger cycle.
+- Add a `hasTriggeredGenRef` to ensure generation only triggers once per mount.
 
-**Files to change**:
+### File: `src/components/OutfitRatingCard.tsx`
+- Update `captureCard` to fetch the image as a blob via `fetch()` + `createImageBitmap()` instead of using `new Image()` with `crossOrigin`. This mirrors the working pattern in `handleShareTodayLook` and avoids canvas tainting.
 
-- `src/lib/deviceCache.ts` -- Add new cache keys: `CALENDAR`, `STYLE_PROFILE`, `PROFILE`
-- `src/pages/HomeScreen.tsx` -- Cache/restore calendar outfits, style profile, today's look data
-- `src/hooks/useAuth.tsx` -- Cache profile and style profile data on fetch, restore from cache on mount for instant display
-- `src/pages/ProfileScreen.tsx` -- Cache/restore drip history, saved outfits, saved suggestions from device cache
+### File: `src/pages/WardrobeScreen.tsx`
+- Add `AlertDialog` confirmation before `deleteItem` (soft delete) and `permanentlyDeleteItem`.
+- Add state for `pendingDeleteId` and `pendingPermanentDeleteId`.
+- Show "Are you sure?" dialog with cancel/confirm actions.
+
+### File: `src/pages/ChatScreen.tsx`
+- Add `AlertDialog` confirmation before `handleDelete` for messages.
+- Add state for `pendingDeleteMsgId`.
+
+### File: `src/components/MessageBubble.tsx`
+- Update the delete button's `onClick` to call `onDelete` which now triggers the confirmation in the parent (`ChatScreen`).
+
+### File: `src/pages/ProfileScreen.tsx`
+- Add `AlertDialog` confirmation before `permanentlyDeleteItem` in the history tab (deleted wardrobe items section).
 
 ## Technical Details
 
-- **Reset password flow**: Uses Supabase's built-in `resetPasswordForEmail` with `redirectTo: window.location.origin + '/reset-password'`. The reset page parses the URL hash for `type=recovery` to confirm the session before showing the password form.
-- **Calendar cooldown**: Store `dripd-calendar-last-gen-{userId}` timestamp in localStorage. Only auto-generate if >24h since last generation.
-- **Cache strategy**: All caches use existing `getCache`/`setCache` with 48h TTL. Profile/style profile use shorter reads but same pattern. On mount, read cache first (instant UI), then fetch from DB in background and update both state and cache.
+- **Calendar fix**: Using a `useRef` to hold the latest `generateCalendarOutfits` function avoids it being a useEffect dependency. A `hasTriggeredGenRef` boolean prevents duplicate triggers from cache-then-DB wardrobe loads.
+- **Share fix**: `fetch(image).then(r => r.blob()).then(createImageBitmap)` produces an `ImageBitmap` that can be drawn to canvas without CORS restrictions, since the blob is fetched outside the canvas security model.
+- **Delete confirmations**: All use the existing `AlertDialog` component from `@/components/ui/alert-dialog` (already used in LeaderboardTab). Pattern: set a pending ID in state → show dialog → on confirm execute delete → clear state.
+
