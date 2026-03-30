@@ -211,7 +211,7 @@ const OutfitRatingCard = ({ image, imageBase64, result, wardrobeItems = [],
   };
 
   const captureCard = useCallback(async (): Promise<Blob | null> => {
-    const W = 390, H_IMG = 520, H_BOTTOM = 120;
+    const W = 390, H_IMG = 520, H_BOTTOM = 190;
     const canvas = document.createElement("canvas");
     canvas.width = W * 2;
     canvas.height = (H_IMG + H_BOTTOM) * 2;
