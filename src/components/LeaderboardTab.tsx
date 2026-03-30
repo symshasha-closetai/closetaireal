@@ -226,17 +226,13 @@ const LeaderboardTab = () => {
     const relevantIds = [user.id, ...friends];
     const today = new Date().toISOString().split("T")[0];
 
-    const [dripResult, friendBonuses, streakBonuses] = await Promise.all([
-      supabase
-        .from("drip_history" as any)
-        .select("user_id, score, image_url, confidence_score, killer_tag, created_at")
-        .gte("created_at", `${today}T00:00:00`)
-        .lt("created_at", `${today}T23:59:59.999999`)
-        .in("user_id", relevantIds)
-        .order("score", { ascending: false }) as any,
-      fetchFriendBonuses(relevantIds, today),
-      fetchStreakBonuses(relevantIds, today),
-    ]);
+    // Fetch ALL users globally (RLS allows SELECT for authenticated)
+    const dripResult = await supabase
+      .from("drip_history" as any)
+      .select("user_id, score, image_url, confidence_score, killer_tag, created_at")
+      .gte("created_at", `${today}T00:00:00`)
+      .lt("created_at", `${today}T23:59:59.999999`)
+      .order("score", { ascending: false }) as any;
 
     const dripData = dripResult.data;
     if (!dripData || dripData.length === 0) {
