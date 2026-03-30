@@ -30,6 +30,7 @@ const ChatScreen = () => {
   const [sending, setSending] = useState(false);
   const [otherUser, setOtherUser] = useState<{ name: string | null; username: string | null; avatar_url: string | null } | null>(null);
   const [showBanner, setShowBanner] = useState(false);
+  const [pendingDeleteMsgId, setPendingDeleteMsgId] = useState<string | null>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
 
   // Typing & read receipts via presence
