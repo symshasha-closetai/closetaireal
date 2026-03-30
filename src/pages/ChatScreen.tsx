@@ -308,6 +308,7 @@ const ChatScreen = () => {
         </AlertDialogContent>
       </AlertDialog>
     </div>
+  );
 };
 
 export default ChatScreen;
