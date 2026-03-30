@@ -83,17 +83,7 @@ const AppHeader = () => {
             <MessageCircle size={16} className="text-muted-foreground" />
           </button>
 
-          <button
-            onClick={() => navigate("/messages")}
-            className="relative w-9 h-9 rounded-full bg-card shadow-soft flex items-center justify-center active:scale-95 transition-transform"
-          >
-            <Bell size={16} className="text-muted-foreground" />
-            {unreadMsgCount > 0 && (
-              <span className="absolute -top-0.5 -right-0.5 min-w-[16px] h-4 rounded-full bg-gold text-white text-[9px] font-bold flex items-center justify-center px-1">
-                {unreadMsgCount > 99 ? "99+" : unreadMsgCount}
-              </span>
-            )}
-          </button>
+          <NotificationDropdown onRequestHandled={refreshCounts} />
 
           <DropdownMenu>
             <DropdownMenuTrigger asChild>

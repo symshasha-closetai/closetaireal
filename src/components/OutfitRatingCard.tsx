@@ -224,56 +224,67 @@ const OutfitRatingCard = ({ image, imageBase64, result, wardrobeItems = [],
     const imgBitmap = await createImageBitmap(imgBlob);
     ctx.drawImage(imgBitmap, 0, 0, W, H_IMG);
 
-    // Gradient overlay at bottom of image
-    const grad = ctx.createLinearGradient(0, H_IMG - 120, 0, H_IMG);
+    // Subtle gradient at bottom of image for smooth transition
+    const grad = ctx.createLinearGradient(0, H_IMG - 60, 0, H_IMG);
     grad.addColorStop(0, "transparent");
-    grad.addColorStop(0.5, "rgba(26,26,26,0.9)");
     grad.addColorStop(1, "#1a1a1a");
     ctx.fillStyle = grad;
-    ctx.fillRect(0, H_IMG - 120, W, 120);
+    ctx.fillRect(0, H_IMG - 60, W, 60);
 
     // Bottom panel
     ctx.fillStyle = "#1a1a1a";
     ctx.fillRect(0, H_IMG, W, H_BOTTOM);
 
-    // Brand text
-    ctx.fillStyle = "rgba(255,255,255,0.9)";
-    ctx.font = "500 10px Inter, sans-serif";
-    ctx.letterSpacing = "5px";
-    ctx.fillText("Dripd", 18, H_IMG - 90);
+    // Brand watermark on image (top-left, subtle)
+    ctx.fillStyle = "rgba(255,255,255,0.5)";
+    ctx.font = "600 11px Inter, sans-serif";
+    ctx.letterSpacing = "4px";
+    ctx.fillText("DRIPD", 18, 28);
 
-    // Drip score
+    // === Scores in bottom panel ===
+    const panelTop = H_IMG + 20;
+
+    // Drip score (left)
     ctx.fillStyle = "#C9A96E";
-    ctx.font = "500 36px Inter, sans-serif";
-    ctx.fillText(String(result.drip_score), 24, H_IMG - 20);
+    ctx.font = "700 40px Inter, sans-serif";
+    ctx.fillText(String(result.drip_score), 28, panelTop + 30);
     ctx.fillStyle = "rgba(255,255,255,0.3)";
-    ctx.font = "400 13px Inter, sans-serif";
-    ctx.fillText("/10", 24 + ctx.measureText(String(result.drip_score)).width + 3, H_IMG - 20);
-    ctx.fillStyle = "rgba(201,169,110,0.6)";
-    ctx.font = "500 9px Inter, sans-serif";
-    ctx.fillText("DRIP", 24, H_IMG - 8);
+    ctx.font = "400 14px Inter, sans-serif";
+    ctx.fillText("/10", 28 + ctx.measureText(String(result.drip_score)).width + 3, panelTop + 30);
+    ctx.fillStyle = "rgba(201,169,110,0.7)";
+    ctx.font = "600 9px Inter, sans-serif";
+    ctx.fillText("DRIP SCORE", 28, panelTop + 44);
 
-    // Confidence score
+    // Confidence score (right)
     ctx.fillStyle = "#A8A8A8";
-    ctx.font = "500 36px Inter, sans-serif";
+    ctx.font = "700 40px Inter, sans-serif";
     const confText = String(result.confidence_rating);
     const confW = ctx.measureText(confText).width;
-    ctx.fillText(confText, W - 24 - confW, H_IMG - 20);
+    ctx.fillText(confText, W - 28 - confW, panelTop + 30);
     ctx.fillStyle = "rgba(255,255,255,0.3)";
-    ctx.font = "400 13px Inter, sans-serif";
-    ctx.fillText("/10", W - 24 - confW + ctx.measureText(confText).width + 3, H_IMG - 20);
-    ctx.fillStyle = "rgba(168,168,168,0.6)";
-    ctx.font = "500 9px Inter, sans-serif";
+    ctx.font = "400 14px Inter, sans-serif";
+    ctx.fillText("/10", W - 28 - confW + ctx.measureText(confText).width + 3, panelTop + 30);
+    ctx.fillStyle = "rgba(168,168,168,0.7)";
+    ctx.font = "600 9px Inter, sans-serif";
     const confLabel = "CONFIDENCE";
-    ctx.fillText(confLabel, W - 24 - ctx.measureText(confLabel).width, H_IMG - 8);
+    ctx.fillText(confLabel, W - 28 - ctx.measureText(confLabel).width, panelTop + 44);
 
-    // Killer tag (centered)
+    // Killer tag (centered between scores)
     if (result.killer_tag) {
-      ctx.fillStyle = "rgba(255,255,255,0.7)";
-      ctx.font = "500 11px Inter, sans-serif";
+      ctx.fillStyle = "rgba(255,255,255,0.8)";
+      ctx.font = "500 12px Inter, sans-serif";
       const tagW = ctx.measureText(result.killer_tag).width;
-      ctx.fillText(result.killer_tag, (W - tagW) / 2, H_IMG - 30);
+      ctx.fillText(result.killer_tag, (W - tagW) / 2, panelTop + 22);
     }
+
+    // Separator
+    const sepGrad = ctx.createLinearGradient(28, 0, W - 28, 0);
+    sepGrad.addColorStop(0, "transparent");
+    sepGrad.addColorStop(0.3, "rgba(201,169,110,0.25)");
+    sepGrad.addColorStop(0.7, "rgba(168,168,168,0.25)");
+    sepGrad.addColorStop(1, "transparent");
+    ctx.fillStyle = sepGrad;
+    ctx.fillRect(28, panelTop + 56, W - 56, 1);
 
     // Sub-scores
     const subScores = [
@@ -282,48 +293,39 @@ const OutfitRatingCard = ({ image, imageBase64, result, wardrobeItems = [],
       { label: "LAYERING", score: result.layering_score ?? result.fit_score ?? 0, color: "#B08B8B" },
       { label: "FACE", score: result.face_score ?? 0, color: "#7B8FA8" },
     ];
-    const subY = H_IMG + 25;
+    const subY = panelTop + 80;
     subScores.forEach((s, i) => {
       const x = W / 5 + (i * W / 5) - 5;
       ctx.fillStyle = s.color;
-      ctx.font = "600 16px Inter, sans-serif";
+      ctx.font = "700 18px Inter, sans-serif";
       const scoreStr = Number.isInteger(s.score) ? String(s.score) : s.score.toFixed(1);
       const sw = ctx.measureText(scoreStr).width;
       ctx.fillText(scoreStr, x - sw / 2, subY);
-      ctx.fillStyle = "rgba(255,255,255,0.35)";
-      ctx.font = "500 7px Inter, sans-serif";
+      ctx.fillStyle = "rgba(255,255,255,0.4)";
+      ctx.font = "600 7px Inter, sans-serif";
       const lw = ctx.measureText(s.label).width;
       ctx.fillText(s.label, x - lw / 2, subY + 14);
     });
 
-    // Separator line
-    const sepGrad = ctx.createLinearGradient(24, 0, W - 24, 0);
-    sepGrad.addColorStop(0, "transparent");
-    sepGrad.addColorStop(0.3, "rgba(201,169,110,0.2)");
-    sepGrad.addColorStop(0.7, "rgba(168,168,168,0.2)");
-    sepGrad.addColorStop(1, "transparent");
-    ctx.fillStyle = sepGrad;
-    ctx.fillRect(24, H_IMG + 45, W - 48, 1);
-
     // Praise line
     if (result.praise_line) {
-      ctx.fillStyle = "#999";
-      ctx.font = "italic 400 13px Inter, sans-serif";
+      ctx.fillStyle = "rgba(255,255,255,0.5)";
+      ctx.font = "italic 400 11px Inter, sans-serif";
       const prW = ctx.measureText(result.praise_line).width;
-      if (prW < W - 48) {
-        ctx.fillText(result.praise_line, (W - prW) / 2, H_IMG + 68);
+      const praiseY = panelTop + 112;
+      if (prW < W - 56) {
+        ctx.fillText(result.praise_line, (W - prW) / 2, praiseY);
       } else {
-        // Word wrap
         const words = result.praise_line.split(" ");
         let line = "";
-        let y = H_IMG + 65;
+        let y = praiseY;
         words.forEach(word => {
           const test = line + word + " ";
-          if (ctx.measureText(test).width > W - 48) {
+          if (ctx.measureText(test).width > W - 56) {
             const lw2 = ctx.measureText(line).width;
             ctx.fillText(line.trim(), (W - lw2) / 2, y);
             line = word + " ";
-            y += 16;
+            y += 14;
           } else {
             line = test;
           }
@@ -336,11 +338,11 @@ const OutfitRatingCard = ({ image, imageBase64, result, wardrobeItems = [],
     }
 
     // CTA
-    ctx.fillStyle = "rgba(255,255,255,0.55)";
+    ctx.fillStyle = "rgba(255,255,255,0.45)";
     ctx.font = "500 10px Inter, sans-serif";
     const cta = "DRIPD.APP";
     const ctaW = ctx.measureText(cta).width;
-    ctx.fillText(cta, (W - ctaW) / 2, H_IMG + H_BOTTOM - 10);
+    ctx.fillText(cta, (W - ctaW) / 2, H_IMG + H_BOTTOM - 12);
 
     return await new Promise<Blob | null>(resolve => canvas.toBlob(resolve, "image/png", 1));
   }, [image, result]);
