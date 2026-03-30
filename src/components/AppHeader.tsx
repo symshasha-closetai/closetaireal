@@ -1,12 +1,13 @@
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "../hooks/useAuth";
-import { Sun, Moon, MessageCircle, Bell, Plus, UserPlus, Clock, Users } from "lucide-react";
+import { Sun, Moon, MessageCircle, Plus, UserPlus, Clock, Users } from "lucide-react";
 import { useTheme } from "next-themes";
 import { supabase } from "@/integrations/supabase/client";
 import AddFriendDialog from "./AddFriendDialog";
 import FriendRequestsDialog from "./FriendRequestsDialog";
 import FriendsListDialog from "./FriendsListDialog";
+import NotificationDropdown from "./NotificationDropdown";
 import {
   DropdownMenu,
   DropdownMenuContent,
