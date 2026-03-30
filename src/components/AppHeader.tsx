@@ -20,7 +20,6 @@ const AppHeader = () => {
   const { user } = useAuth();
   const { theme, setTheme } = useTheme();
   const [pendingCount, setPendingCount] = useState(0);
-  const [unreadMsgCount, setUnreadMsgCount] = useState(0);
   const [showAddFriend, setShowAddFriend] = useState(false);
   const [showRequests, setShowRequests] = useState(false);
   const [showFriendsList, setShowFriendsList] = useState(false);
