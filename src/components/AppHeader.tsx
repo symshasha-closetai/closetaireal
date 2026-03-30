@@ -45,44 +45,8 @@ const AppHeader = () => {
         f.user_id === user.id ? f.friend_id : f.user_id
       ));
     };
-    const fetchUnreadMessages = async () => {
-      const { data: participations } = await supabase
-        .from("conversation_participants")
-        .select("conversation_id")
-        .eq("user_id", user.id);
-      if (!participations || participations.length === 0) {
-        setUnreadMsgCount(0);
-        return;
-      }
-      const convIds = participations.map(p => p.conversation_id);
-      const since = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString();
-      const { count } = await supabase
-        .from("messages")
-        .select("*", { count: "exact", head: true })
-        .in("conversation_id", convIds)
-        .neq("sender_id", user.id)
-        .gte("created_at", since);
-      setUnreadMsgCount(count || 0);
-    };
-
     fetchPending();
     fetchFriends();
-    fetchUnreadMessages();
-
-    const channel = supabase
-      .channel("header-unread-msgs")
-      .on("postgres_changes", {
-        event: "INSERT",
-        schema: "public",
-        table: "messages",
-      }, (payload: any) => {
-        if (payload.new?.sender_id !== user.id) {
-          setUnreadMsgCount(prev => prev + 1);
-        }
-      })
-      .subscribe();
-
-    return () => { supabase.removeChannel(channel); };
   }, [user?.id]);
 
   const refreshCounts = () => {
