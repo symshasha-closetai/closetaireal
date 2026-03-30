@@ -1450,6 +1450,32 @@ const WardrobeScreen = () => {
         content={sendFriendItem?.name || ""}
         metadata={sendFriendItem ? { image_url: sendFriendItem.image_url, name: sendFriendItem.name, type: sendFriendItem.type } : undefined}
       />
+
+      <AlertDialog open={!!pendingDeleteId} onOpenChange={(open) => { if (!open) setPendingDeleteId(null); }}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete item?</AlertDialogTitle>
+            <AlertDialogDescription>This will move the item to your history. You can restore it within 7 days.</AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction onClick={confirmDeleteItem} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">Delete</AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      <AlertDialog open={!!pendingPermanentDeleteId} onOpenChange={(open) => { if (!open) setPendingPermanentDeleteId(null); }}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete permanently?</AlertDialogTitle>
+            <AlertDialogDescription>This action cannot be undone. The item will be permanently removed.</AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction onClick={confirmPermanentDelete} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">Delete Forever</AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 };

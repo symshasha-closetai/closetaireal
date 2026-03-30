@@ -181,6 +181,13 @@ const ChatScreen = () => {
   };
 
   const handleDelete = async (msgId: string) => {
+    setPendingDeleteMsgId(msgId);
+  };
+
+  const confirmDeleteMsg = async () => {
+    if (!pendingDeleteMsgId) return;
+    const msgId = pendingDeleteMsgId;
+    setPendingDeleteMsgId(null);
     await supabase.from("messages" as any).delete().eq("id", msgId);
     setMessages(prev => prev.filter(m => m.id !== msgId));
   };
