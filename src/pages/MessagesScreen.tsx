@@ -184,8 +184,10 @@ const MessagesScreen = () => {
       conversationId = newConvo.id;
 
       // Sequential inserts to satisfy RLS
-      await supabase.from("conversation_participants" as any).insert({ conversation_id: conversationId, user_id: user.id } as any);
-      await supabase.from("conversation_participants" as any).insert({ conversation_id: conversationId, user_id: friendId } as any);
+      const { error: selfErr } = await supabase.from("conversation_participants" as any).insert({ conversation_id: conversationId, user_id: user.id } as any) as any;
+      if (selfErr) { console.error("Failed to add self as participant:", selfErr); toast.error("Failed to create conversation: " + selfErr.message); setCreating(null); return; }
+      const { error: friendErr } = await supabase.from("conversation_participants" as any).insert({ conversation_id: conversationId, user_id: friendId } as any) as any;
+      if (friendErr) { console.error("Failed to add friend as participant:", friendErr); toast.error("Failed to add friend: " + friendErr.message); setCreating(null); return; }
     }
 
     setCreating(null);

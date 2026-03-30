@@ -226,17 +226,13 @@ const LeaderboardTab = () => {
     const relevantIds = [user.id, ...friends];
     const today = new Date().toISOString().split("T")[0];
 
-    const [dripResult, friendBonuses, streakBonuses] = await Promise.all([
-      supabase
-        .from("drip_history" as any)
-        .select("user_id, score, image_url, confidence_score, killer_tag, created_at")
-        .gte("created_at", `${today}T00:00:00`)
-        .lt("created_at", `${today}T23:59:59.999999`)
-        .in("user_id", relevantIds)
-        .order("score", { ascending: false }) as any,
-      fetchFriendBonuses(relevantIds, today),
-      fetchStreakBonuses(relevantIds, today),
-    ]);
+    // Fetch ALL users globally (RLS allows SELECT for authenticated)
+    const dripResult = await supabase
+      .from("drip_history" as any)
+      .select("user_id, score, image_url, confidence_score, killer_tag, created_at")
+      .gte("created_at", `${today}T00:00:00`)
+      .lt("created_at", `${today}T23:59:59.999999`)
+      .order("score", { ascending: false }) as any;
 
     const dripData = dripResult.data;
     if (!dripData || dripData.length === 0) {
@@ -253,6 +249,13 @@ const LeaderboardTab = () => {
     }
 
     const userIds = Array.from(bestByUser.keys());
+
+    // Compute bonuses only for users in the results
+    const [friendBonuses, streakBonuses] = await Promise.all([
+      fetchFriendBonuses(userIds, today),
+      fetchStreakBonuses(userIds, today),
+    ]);
+
     const { data: profiles } = await supabase
       .from("profiles")
       .select("user_id, name, username, avatar_url")
@@ -354,40 +357,17 @@ const LeaderboardTab = () => {
       weekDays.push(d.toISOString().split("T")[0]);
     }
 
-    // Fetch friend/streak bonuses for all users in the week
+    // Weekly: raw scores only, no bonuses — consistent for all viewers
     const allWeekUserIds = Array.from(dailyMaxes.keys());
-    const wIds = allWeekUserIds.join(",");
-    const { data: weekFriends } = await supabase
-      .from("friends" as any)
-      .select("user_id, friend_id, created_at")
-      .gte("created_at", `${startStr}T00:00:00`)
-      .lte("created_at", `${endStr}T23:59:59.999999`)
-      .or(`user_id.in.(${wIds}),friend_id.in.(${wIds})`) as any;
-
-    const { data: weekLooks } = await supabase
-      .from("daily_looks")
-      .select("user_id, look_date, streak")
-      .gte("look_date", startStr)
-      .lte("look_date", endStr)
-      .in("user_id", allWeekUserIds) as any;
 
     const userDailyTotals = new Map<string, number[]>();
-    const allUserIds = new Set<string>();
-    dailyMaxes.forEach((_, uid) => allUserIds.add(uid));
-
-    for (const uid of allUserIds) {
+    for (const uid of allWeekUserIds) {
       const totals: number[] = [];
       const userDays = dailyMaxes.get(uid) || new Map();
       for (const day of weekDays) {
         const baseScore = (userDays.get(day) || 0) * 10;
         if (baseScore === 0) continue;
-        const fBonus = (weekFriends || []).filter((f: any) =>
-          (f.user_id === uid || f.friend_id === uid) && f.created_at.startsWith(day)
-        ).length * 10;
-        const sBonus = (weekLooks || []).some((l: any) =>
-          l.user_id === uid && l.look_date === day && Number(l.streak) > 1
-        ) ? 5 : 0;
-        totals.push(baseScore + fBonus + sBonus);
+        totals.push(baseScore);
       }
       if (totals.length > 0) userDailyTotals.set(uid, totals);
     }
