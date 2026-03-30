@@ -1,4 +1,5 @@
 import React, { useState, useRef, useEffect, useCallback, useMemo } from "react";
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { getCache, setCache, CACHE_KEYS } from "@/lib/deviceCache";
 import { motion, AnimatePresence } from "framer-motion";
 import { Plus, Trash2, X, Loader2, Camera, Upload, Sparkles, Pencil, Save, Share2, CheckSquare, Square, SlidersHorizontal, RefreshCw, Pin, GripVertical, RotateCcw, Eye, Send } from "lucide-react";
@@ -458,7 +459,17 @@ const WardrobeScreen = () => {
     if (data) setDeletedItems(data as any[]);
   };
 
+  const [pendingDeleteId, setPendingDeleteId] = useState<string | null>(null);
+  const [pendingPermanentDeleteId, setPendingPermanentDeleteId] = useState<string | null>(null);
+
   const deleteItem = async (id: string) => {
+    setPendingDeleteId(id);
+  };
+
+  const confirmDeleteItem = async () => {
+    if (!pendingDeleteId) return;
+    const id = pendingDeleteId;
+    setPendingDeleteId(null);
     const { error } = await supabase.from("wardrobe").update({ deleted_at: new Date().toISOString() } as any).eq("id", id);
     if (error) toast.error("Failed to delete item");
     else {
@@ -481,6 +492,13 @@ const WardrobeScreen = () => {
   };
 
   const permanentlyDeleteItem = async (id: string) => {
+    setPendingPermanentDeleteId(id);
+  };
+
+  const confirmPermanentDelete = async () => {
+    if (!pendingPermanentDeleteId) return;
+    const id = pendingPermanentDeleteId;
+    setPendingPermanentDeleteId(null);
     const { error } = await supabase.from("wardrobe").delete().eq("id", id);
     if (error) toast.error("Failed to delete permanently");
     else {
@@ -1432,6 +1450,32 @@ const WardrobeScreen = () => {
         content={sendFriendItem?.name || ""}
         metadata={sendFriendItem ? { image_url: sendFriendItem.image_url, name: sendFriendItem.name, type: sendFriendItem.type } : undefined}
       />
+
+      <AlertDialog open={!!pendingDeleteId} onOpenChange={(open) => { if (!open) setPendingDeleteId(null); }}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete item?</AlertDialogTitle>
+            <AlertDialogDescription>This will move the item to your history. You can restore it within 7 days.</AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction onClick={confirmDeleteItem} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">Delete</AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      <AlertDialog open={!!pendingPermanentDeleteId} onOpenChange={(open) => { if (!open) setPendingPermanentDeleteId(null); }}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete permanently?</AlertDialogTitle>
+            <AlertDialogDescription>This action cannot be undone. The item will be permanently removed.</AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction onClick={confirmPermanentDelete} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">Delete Forever</AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 };

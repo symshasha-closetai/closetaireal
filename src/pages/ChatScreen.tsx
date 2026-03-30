@@ -6,6 +6,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { toast } from "sonner";
 import MessageBubble from "@/components/MessageBubble";
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 
 type Message = {
   id: string;
@@ -29,6 +30,7 @@ const ChatScreen = () => {
   const [sending, setSending] = useState(false);
   const [otherUser, setOtherUser] = useState<{ name: string | null; username: string | null; avatar_url: string | null } | null>(null);
   const [showBanner, setShowBanner] = useState(false);
+  const [pendingDeleteMsgId, setPendingDeleteMsgId] = useState<string | null>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
 
   // Typing & read receipts via presence
@@ -179,6 +181,13 @@ const ChatScreen = () => {
   };
 
   const handleDelete = async (msgId: string) => {
+    setPendingDeleteMsgId(msgId);
+  };
+
+  const confirmDeleteMsg = async () => {
+    if (!pendingDeleteMsgId) return;
+    const msgId = pendingDeleteMsgId;
+    setPendingDeleteMsgId(null);
     await supabase.from("messages" as any).delete().eq("id", msgId);
     setMessages(prev => prev.filter(m => m.id !== msgId));
   };
@@ -285,6 +294,19 @@ const ChatScreen = () => {
           </button>
         </div>
       </div>
+
+      <AlertDialog open={!!pendingDeleteMsgId} onOpenChange={(open) => { if (!open) setPendingDeleteMsgId(null); }}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete message?</AlertDialogTitle>
+            <AlertDialogDescription>This message will be permanently deleted.</AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction onClick={confirmDeleteMsg} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">Delete</AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 };

@@ -1,4 +1,5 @@
 import { useState, useRef, useEffect } from "react";
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { motion, AnimatePresence } from "framer-motion";
 import { ArrowLeft, Camera, LogOut, User, Save, Trash2, AlertTriangle, Loader2, Lock, X, Share2, Download, RefreshCw, RotateCcw, Clock, Sparkles, Shield, Send, MessageSquare, Bookmark, Heart, ShoppingBag, Palette, Briefcase, Leaf, Droplet, Shirt, Smile, Sun, ChevronRight, ChevronLeft } from "lucide-react";
 import { useNavigate } from "react-router-dom";
@@ -251,7 +252,16 @@ const ProfileScreen = () => {
     }
   };
 
+  const [pendingPermanentDeleteId, setPendingPermanentDeleteId] = useState<string | null>(null);
+
   const permanentlyDeleteItem = async (id: string) => {
+    setPendingPermanentDeleteId(id);
+  };
+
+  const confirmPermanentDelete = async () => {
+    if (!pendingPermanentDeleteId) return;
+    const id = pendingPermanentDeleteId;
+    setPendingPermanentDeleteId(null);
     const { error } = await supabase.from("wardrobe").delete().eq("id", id);
     if (error) toast.error("Failed to delete permanently");
     else {
@@ -1252,6 +1262,18 @@ const ProfileScreen = () => {
         )}
 
       </div>
+      <AlertDialog open={!!pendingPermanentDeleteId} onOpenChange={(open) => { if (!open) setPendingPermanentDeleteId(null); }}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete permanently?</AlertDialogTitle>
+            <AlertDialogDescription>This action cannot be undone. The item will be permanently removed.</AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction onClick={confirmPermanentDelete} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">Delete Forever</AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 };

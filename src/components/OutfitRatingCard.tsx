@@ -218,15 +218,11 @@ const OutfitRatingCard = ({ image, imageBase64, result, wardrobeItems = [],
     const ctx = canvas.getContext("2d")!;
     ctx.scale(2, 2);
 
-    // Draw outfit image
-    const img = new Image();
-    img.crossOrigin = "anonymous";
-    await new Promise<void>((resolve, reject) => {
-      img.onload = () => resolve();
-      img.onerror = () => reject(new Error("Image load failed"));
-      img.src = image;
-    });
-    ctx.drawImage(img, 0, 0, W, H_IMG);
+    // Draw outfit image — fetch as blob to avoid CORS canvas tainting
+    const imgResponse = await fetch(image);
+    const imgBlob = await imgResponse.blob();
+    const imgBitmap = await createImageBitmap(imgBlob);
+    ctx.drawImage(imgBitmap, 0, 0, W, H_IMG);
 
     // Gradient overlay at bottom of image
     const grad = ctx.createLinearGradient(0, H_IMG - 120, 0, H_IMG);

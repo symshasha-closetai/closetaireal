@@ -455,6 +455,10 @@ const HomeScreen = () => {
     setGeneratingCalendar(false);
   }, [user, allWardrobeItems]);
 
+  const generateCalendarRef = useRef(generateCalendarOutfits);
+  useEffect(() => { generateCalendarRef.current = generateCalendarOutfits; }, [generateCalendarOutfits]);
+  const hasTriggeredGenRef = useRef(false);
+
   useEffect(() => {
     if (!user) return;
     // Restore from cache instantly
@@ -468,21 +472,21 @@ const HomeScreen = () => {
       const { data } = await supabase.from("outfit_calendar" as any).select("*").eq("user_id", user.id).gte("outfit_date", today).lte("outfit_date", endStr).order("outfit_date", { ascending: true });
       const items = (data || []) as unknown as CalendarOutfit[];
       setCalendarOutfits(items);
-      // Cache calendar data
       setCache(CACHE_KEYS.CALENDAR, user.id, items);
 
-      // Only auto-generate if <3 items AND no generation in last 24h
-      if (items.length < 3 && allWardrobeItems.length >= 2) {
+      // Only auto-generate if <3 items AND no generation in last 24h AND hasn't triggered this mount
+      if (items.length < 3 && allWardrobeItems.length >= 2 && !hasTriggeredGenRef.current) {
         const lastGenKey = `dripd-calendar-last-gen-${user.id}`;
         const lastGen = localStorage.getItem(lastGenKey);
-        const cooldown = 24 * 60 * 60 * 1000; // 24 hours
+        const cooldown = 24 * 60 * 60 * 1000;
         if (!lastGen || Date.now() - Number(lastGen) > cooldown) {
-          generateCalendarOutfits();
+          hasTriggeredGenRef.current = true;
+          generateCalendarRef.current();
         }
       }
     };
     if (allWardrobeItems.length > 0) fetchCalendar();
-  }, [user, allWardrobeItems, generateCalendarOutfits]);
+  }, [user, allWardrobeItems]);
 
   useEffect(() => {
     if (!user || !showCalendarAll) return;
