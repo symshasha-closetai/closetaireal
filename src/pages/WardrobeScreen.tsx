@@ -458,7 +458,17 @@ const WardrobeScreen = () => {
     if (data) setDeletedItems(data as any[]);
   };
 
+  const [pendingDeleteId, setPendingDeleteId] = useState<string | null>(null);
+  const [pendingPermanentDeleteId, setPendingPermanentDeleteId] = useState<string | null>(null);
+
   const deleteItem = async (id: string) => {
+    setPendingDeleteId(id);
+  };
+
+  const confirmDeleteItem = async () => {
+    if (!pendingDeleteId) return;
+    const id = pendingDeleteId;
+    setPendingDeleteId(null);
     const { error } = await supabase.from("wardrobe").update({ deleted_at: new Date().toISOString() } as any).eq("id", id);
     if (error) toast.error("Failed to delete item");
     else {
