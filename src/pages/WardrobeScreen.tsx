@@ -491,6 +491,13 @@ const WardrobeScreen = () => {
   };
 
   const permanentlyDeleteItem = async (id: string) => {
+    setPendingPermanentDeleteId(id);
+  };
+
+  const confirmPermanentDelete = async () => {
+    if (!pendingPermanentDeleteId) return;
+    const id = pendingPermanentDeleteId;
+    setPendingPermanentDeleteId(null);
     const { error } = await supabase.from("wardrobe").delete().eq("id", id);
     if (error) toast.error("Failed to delete permanently");
     else {
