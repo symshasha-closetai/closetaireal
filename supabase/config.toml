@@ -41,3 +41,6 @@ verify_jwt = false
 
 [functions.generate-outfit-calendar]
 verify_jwt = false
+
+[functions.send-notifications]
+verify_jwt = false
