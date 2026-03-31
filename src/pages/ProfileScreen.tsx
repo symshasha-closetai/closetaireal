@@ -1,7 +1,7 @@
 import { useState, useRef, useEffect } from "react";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { motion, AnimatePresence } from "framer-motion";
-import { ArrowLeft, Camera, LogOut, User, Save, Trash2, AlertTriangle, Loader2, Lock, X, Share2, Download, RefreshCw, RotateCcw, Clock, Sparkles, Shield, Send, MessageSquare, Bookmark, Heart, ShoppingBag, Palette, Briefcase, Leaf, Droplet, Shirt, Smile, Sun, ChevronRight, ChevronLeft, Bell } from "lucide-react";
+import { ArrowLeft, Camera, LogOut, User, Save, Trash2, AlertTriangle, Loader2, Lock, X, Share2, Download, RefreshCw, RotateCcw, Clock, Sparkles, Send, MessageSquare, Bookmark, Heart, ShoppingBag, Palette, Briefcase, Leaf, Droplet, Shirt, Smile, Sun, ChevronRight, ChevronLeft, Bell } from "lucide-react";
 import { Switch } from "@/components/ui/switch";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "../hooks/useAuth";
@@ -850,13 +850,6 @@ const ProfileScreen = () => {
             {/* Push Notifications Toggle */}
             <NotificationToggle userId={user?.id} />
 
-            {/* Privacy Notice */}
-            <div className="flex items-start gap-2.5 bg-secondary/30 border border-border/20 rounded-xl p-3">
-              <Shield size={14} className="text-muted-foreground mt-0.5 flex-shrink-0" />
-              <p className="text-[10px] text-muted-foreground leading-relaxed">
-                Your drip check photos & outfit ratings are stored <span className="font-semibold text-foreground/70">locally on your device only</span>. They are never uploaded to our servers.
-              </p>
-            </div>
 
             {/* Suggest Me */}
             <SuggestMeSection userId={user?.id} />

@@ -162,7 +162,7 @@ const HomeScreen = () => {
 
     // Fetch from DB (source of truth)
     const fetchDailyLook = async () => {
-      const today = new Date().toISOString().split("T")[0]; // YYYY-MM-DD
+      const today = new Date().toLocaleDateString('en-CA'); // YYYY-MM-DD local
       const { data } = await supabase
         .from("daily_looks")
         .select("image_url, streak")
@@ -177,7 +177,7 @@ const HomeScreen = () => {
         localStorage.setItem(`streak-${user.id}`, JSON.stringify({ count: data.streak, lastDate: new Date().toDateString() }));
       } else {
         // No DB entry for today — compute streak from yesterday
-        const yesterday = new Date(Date.now() - 86400000).toISOString().split("T")[0];
+        const yesterday = new Date(Date.now() - 86400000).toLocaleDateString('en-CA');
         const { data: yesterdayData } = await supabase
           .from("daily_looks")
           .select("streak")
@@ -222,7 +222,8 @@ const HomeScreen = () => {
       if (uploadError) throw uploadError;
 
       // Calculate streak from DB
-      const yesterday = new Date(Date.now() - 86400000).toISOString().split("T")[0];
+      const yesterdayDate = new Date(Date.now() - 86400000);
+      const yesterday = yesterdayDate.toLocaleDateString('en-CA');
       const { data: yesterdayData } = await supabase
         .from("daily_looks")
         .select("streak")
@@ -230,7 +231,7 @@ const HomeScreen = () => {
         .eq("look_date", yesterday)
         .maybeSingle();
 
-      const today = new Date().toISOString().split("T")[0];
+      const today = new Date().toLocaleDateString('en-CA');
       // Check if we already have today's entry
       const { data: todayData } = await supabase
         .from("daily_looks")
@@ -266,8 +267,9 @@ const HomeScreen = () => {
       localStorage.setItem(`today-look-${user.id}`, JSON.stringify({ url: publicUrl, date: new Date().toDateString() }));
       localStorage.setItem(`streak-${user.id}`, JSON.stringify({ count: newStreak, lastDate: new Date().toDateString() }));
       toast.success("Looking great! 🔥");
-    } catch {
-      toast.error("Failed to upload photo");
+    } catch (err: any) {
+      console.error("Today's look upload failed:", err);
+      toast.error(err?.message || "Failed to upload photo");
     }
     setUploadingPhoto(false);
   };
@@ -276,10 +278,21 @@ const HomeScreen = () => {
     if (!todayPhoto) return;
     setSharingLook(true);
     try {
-      // Load image directly as blob to avoid cross-origin html2canvas issues
-      const response = await fetch(todayPhoto);
-      const imgBlob = await response.blob();
-      const img = await createImageBitmap(imgBlob);
+      // Load image — try fetch blob first, fallback to Image element for CORS
+      let img: ImageBitmap | HTMLImageElement;
+      try {
+        const response = await fetch(todayPhoto);
+        const imgBlob = await response.blob();
+        img = await createImageBitmap(imgBlob);
+      } catch {
+        img = await new Promise<HTMLImageElement>((resolve, reject) => {
+          const el = new Image();
+          el.crossOrigin = "anonymous";
+          el.onload = () => resolve(el);
+          el.onerror = () => reject(new Error("Image load failed"));
+          el.src = todayPhoto;
+        });
+      }
 
       const W = 720;
       const H = W * (5 / 4); // 4:5 aspect
@@ -355,8 +368,8 @@ const HomeScreen = () => {
         }
         setSharingLook(false);
       }, "image/png");
-    } catch {
-      toast.info("Couldn't share");
+    } catch (e: any) {
+      if (e?.name !== "AbortError") toast.info("Couldn't share — try again");
       setSharingLook(false);
     }
   };

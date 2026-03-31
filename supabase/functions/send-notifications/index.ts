@@ -121,7 +121,7 @@ Deno.serve(async (req: Request) => {
     // Get all users with active push subscriptions
     const { data: subscriptions, error: subError } = await supabase
       .from("push_subscriptions")
-      .select("user_id, subscription");
+      .select("user_id, subscription, preferences");
 
     if (subError || !subscriptions?.length) {
       console.log("No push subscriptions found:", subError?.message);
@@ -137,6 +137,7 @@ Deno.serve(async (req: Request) => {
 
     for (const sub of subscriptions) {
       const userId = sub.user_id;
+      const prefs = (sub as any).preferences || { streak: true, competition: true, progression: true, social: true };
       const candidates: NotificationCandidate[] = [];
 
       // --- COOLDOWN CHECK ---
@@ -353,12 +354,19 @@ Deno.serve(async (req: Request) => {
         console.error(`Social trigger error for ${userId}:`, e);
       }
 
-      // --- SELECT BEST CANDIDATE ---
-      if (candidates.length === 0) continue;
+      // --- SELECT BEST CANDIDATE (filtered by user preferences) ---
+      const filteredCandidates = candidates.filter(c => {
+        if (c.type === "streak" && !prefs.streak) return false;
+        if (c.type === "competition" && !prefs.competition) return false;
+        if (c.type === "progression" && !prefs.progression) return false;
+        if (c.type === "social" && !prefs.social) return false;
+        return true;
+      });
+      if (filteredCandidates.length === 0) continue;
 
       // Sort by priority (lower = higher priority)
-      candidates.sort((a, b) => a.priority - b.priority);
-      const best = candidates[0];
+      filteredCandidates.sort((a, b) => a.priority - b.priority);
+      const best = filteredCandidates[0];
 
       // Time-of-day filtering
       const isValidTime = (

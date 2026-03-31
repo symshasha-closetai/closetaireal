@@ -87,7 +87,7 @@ const LeaderboardTab = () => {
     if (!user) return;
     setOptOutLoading(true);
     try {
-      const today = new Date().toISOString().split("T")[0];
+      const today = new Date().toLocaleDateString('en-CA');
       await supabase
         .from("drip_history")
         .delete()
@@ -110,7 +110,7 @@ const LeaderboardTab = () => {
     if (!user) return;
     setOptOutLoading(true);
     try {
-      const today = new Date().toISOString().split("T")[0];
+      const today = new Date().toLocaleDateString('en-CA');
       // Delete today's entries
       await supabase
         .from("drip_history")
@@ -224,7 +224,7 @@ const LeaderboardTab = () => {
     setLoading(true);
     const friends = await fetchFriends();
     const relevantIds = [user.id, ...friends];
-    const today = new Date().toISOString().split("T")[0];
+    const today = new Date().toLocaleDateString('en-CA');
 
     // Fetch ALL users globally (RLS allows SELECT for authenticated)
     const dripResult = await supabase
@@ -443,7 +443,7 @@ const LeaderboardTab = () => {
         URL.revokeObjectURL(url);
         toast.success("Image saved!");
       }
-    } catch { toast.info("Couldn't share"); }
+    } catch (e: any) { if (e?.name !== "AbortError") toast.info("Couldn't share"); }
     setSharingId(null);
   };
 
