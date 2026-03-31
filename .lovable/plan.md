@@ -1,151 +1,62 @@
-# Plan: Smart Push Notification System for Dripd
+# Plan: Fix Sharing, Leaderboard, Upload, Cropper, Privacy Line, Notification Preferences
 
-## Overview
+## Issues Identified
 
-Build a Web Push notification system with behavior-triggered alerts driven by competition, streaks, social activity, and progression. The system uses the existing service worker, new database tables, and a scheduled edge function that evaluates trigger conditions per-user.
+1. **Sharing fails / shares without photo**: The `captureCard` function fetches the R2 image via `fetch(image)` which fails CORS on some browsers. The Today's Look share also has the same issue. When `fetch` throws, the catch shows "Couldn't share" — and in some cases the share API is invoked with a text-only share (no file) as a fallback that wasn't implemented properly.
+2. **Leaderboard empty**: The daily query filters by `today` using UTC (`new Date().toISOString().split("T")[0]`). If the user is in IST (UTC+5:30), a drip check done at e.g. 11pm IST = 5:30pm UTC same day works fine, but the date mismatch means the leaderboard may show "today" as a different calendar day than the user's local day. More importantly — **there are simply no drip_history entries for today** (latest is March 26). The user likely did a drip check but the result may not have been saved, or the leaderboard isn't refreshing.
+3. **Today's look not uploading**: Only 1 entry exists in `daily_looks` (March 19). The upsert now throws on error (from previous fix), so the user should see "Failed to upload photo" toast. If they don't see it, the upload might be failing at the R2 stage or the cropper isn't producing a blob. Need to add more granular error feedback.
+4. **Cropper is basic**: Current cropper uses `react-easy-crop` which already supports pinch-to-zoom natively, but the UI is basic — slider-based zoom with small buttons. Need to modernize with a cleaner, more mobile-native design.
+5. **Privacy line**: Line at Profile > Personal tab says "Your drip check photos & outfit ratings are stored locally on your device only. They are never uploaded to our servers." — this is **false** (data IS stored in Supabase). Remove it.
+  &nbsp;
 
-## Architecture
+---
 
-```text
-┌─────────────┐    ┌──────────────────┐    ┌─────────────────────┐
-│  Frontend   │───▶│  push_subscriptions │   │  notification_log   │
-│  (subscribe)│    │  (user_id, sub)   │   │  (user_id, type,    │
-└─────────────┘    └──────────────────┘    │   sent_at, copy)    │
-                                           └─────────────────────┘
-                          ▲                          ▲
-                          │                          │
-                   ┌──────┴──────────────────────────┴──┐
-                   │  Edge Function: send-notifications  │
-                   │  (scheduled via pg_cron every 30m)  │
-                   │                                     │
-                   │  1. Evaluate triggers per user       │
-                   │  2. Check cooldowns (max 3/day)      │
-                   │  3. Send web-push via Web Push API   │
-                   │  4. Log to notification_log          │
-                   └─────────────────────────────────────┘
-```
+## Changes
 
-## Database Changes (2 new tables)
+### 1. Fix Sharing (OutfitRatingCard + HomeScreen)
 
-### `push_subscriptions`
+**Files**: `src/components/OutfitRatingCard.tsx`, `src/pages/HomeScreen.tsx`
 
-- `id` uuid PK
-- `user_id` uuid NOT NULL
-- `subscription` jsonb NOT NULL (browser PushSubscription object)
-- `created_at` timestamptz
-- RLS: users can CRUD own rows
+- In `captureCard()`: wrap the `fetch(image)` in a try-catch. If CORS fails, fallback to loading image via `<img>` element with `crossOrigin="anonymous"` and drawing from that. If that also fails, create a canvas with just the scores panel (no photo) so sharing still works.
+- In `handleShareTodayLook()`: same fix — add CORS fallback for the R2 image fetch.
+- Ensure the `navigator.share` call properly catches `AbortError` (user cancelled) vs real errors.
 
-### `notification_log`
+### 2. Fix Leaderboard Date Filtering
 
-- `id` uuid PK
-- `user_id` uuid NOT NULL
-- `type` text NOT NULL (competition, progression, streak, social, viral)
-- `subtype` text NOT NULL (rank_dropped, score_beaten, streak_warning, etc.)
-- `title` text
-- `body` text
-- `sent_at` timestamptz DEFAULT now()
-- RLS: users can SELECT own rows
+**File**: `src/components/LeaderboardTab.tsx`
 
-## Frontend Changes
+- Change the daily query date from UTC-based to **local date**: use `new Date().toLocaleDateString('en-CA')` (returns YYYY-MM-DD in local timezone) instead of `new Date().toISOString().split("T")[0]`.
+- Same fix for the streak bonus date query.
+- Add a manual refresh button or auto-refresh when the tab becomes visible, so after a drip check the leaderboard updates.
 
-### 1. Push Permission & Subscription (`src/lib/pushNotifications.ts`)
+### 3. Fix Today's Look Upload
 
-- `requestPushPermission()`: calls `Notification.requestPermission()`, then `registration.pushManager.subscribe()` with VAPID public key
-- `savePushSubscription(userId, subscription)`: upserts to `push_subscriptions`
-- Called after login/onboarding completion
+**File**: `src/pages/HomeScreen.tsx`
 
-### 2. Service Worker Push Handler (`public/sw.js`)
+- Add more granular error handling in `handleCroppedPhoto`: separate toast messages for R2 upload failure vs DB upsert failure.
+- Add `console.error` logging for each step so failures are diagnosable.
+- Ensure the `catch` block shows the specific error message.
 
-- Add `push` event listener: parse payload, show notification with icon/badge
-- Add `notificationclick` handler: open app to relevant route (leaderboard, messages, camera)
+### 4. Modernize Image Cropper
 
-### 3. Notification Settings (`src/pages/ProfileScreen.tsx`)
+**File**: `src/components/ImageCropper.tsx`
 
-- Add toggle in profile settings to enable/disable push notifications
-- Toggle controls whether subscription is active
+- Redesign UI: full-screen overlay instead of dialog, dark background, minimal controls.
+- `react-easy-crop` already supports pinch-to-zoom and drag — just need to expose it properly by removing the dialog wrapper constraints.
+- Replace the slider with a more subtle bottom bar. Keep rotate button minimal.
+- Use a floating action bar at bottom with Cancel / Use Photo buttons styled as pills.
+- Remove the zoom slider labels (ZoomIn/ZoomOut icons) — pinch-to-zoom is the primary interaction on mobile.
 
-## Edge Function: `send-notifications`
+### 5. Remove Privacy Line
 
-Scheduled every 30 minutes via pg_cron. For each user with an active push subscription:
+**File**: `src/pages/ProfileScreen.tsx`
 
-### Trigger Evaluation Logic
+- Remove the entire privacy notice block (lines 853-859) that says "Your drip check photos & outfit ratings are stored locally on your device only."
+  &nbsp;
 
-**Competition (priority 1)**
+## Technical Details
 
-- Query `drip_history` for today: compare user's current rank vs cached previous rank in `notification_log`
-- If rank dropped by 2+: send "You dropped from #X to #Y 🔥"
-- If someone beat their best score today: send "Someone just scored higher than you 😳"
-
-**Streak (priority 2)**
-
-- Query `daily_looks`: if user has streak > 1 AND no entry for today AND current time > 6pm local: send "Your X-day streak is about to break ⚠️"
-
-**Progression (priority 3)**
-
-- After drip check, if score is personal best: send "New personal best! X/100 🎯"
-
-**Social (priority 4)**
-
-- New friend request accepted: send "X accepted your friend request 🤝"
-- New friend joined (matched from contacts): send "Your friend X just joined Dripd 👀"
-
-### Cooldown Logic
-
-- Query `notification_log` for user in last 24h
-- If count >= 3: skip all non-critical notifications
-- Minimum 2h gap between notifications of same type
-- Competition alerts bypass cooldown (max 1 extra)
-
-### Time-of-Day Rules
-
-- 7-10am: streak reminders, outfit planning nudges
-- 5-8pm: leaderboard updates, progression
-- 8-11pm: competition alerts (rank drops)
-- Outside these windows: only critical (streak about to break)
-
-### Personalization
-
-- High scorers (avg > 80): more competition notifications
-- Low scorers (avg < 50): encouragement ("You're improving! Up 5 points this week")
-- New users (< 7 days): curiosity ("See how you rank against others 👀")
-
-## VAPID Keys
-
-Web Push requires a VAPID key pair. Will generate and store:
-
-- `VAPID_PUBLIC_KEY` (hardcoded in frontend)
-- `VAPID_PRIVATE_KEY` (stored as edge function secret)
-- `VAPID_EMAIL` (stored as edge function secret)
-
-The edge function uses the `web-push` npm package (available in Deno via npm specifier).
-
-## Sample Notification Copy
-
-
-| Trigger         | Title                         | Body                                                |
-| --------------- | ----------------------------- | --------------------------------------------------- |
-| Rank drop       | "You just got dethroned 👑"   | "You dropped from #2 to #5. Time to fight back?"    |
-| Score beaten    | "Someone's coming for you 😳" | "{Name} just scored 87 — that's higher than yours"  |
-| Streak warning  | "Don't lose your fire 🔥"     | "Your 5-day streak breaks at midnight. Upload now!" |
-| Personal best   | "New record! 💎"              | "You just hit 91/100 — your best ever"              |
-| Tier up         | "GOLD tier unlocked 🥇"       | "You've reached Gold. Only 15% of users get here"   |
-| Friend accepted | "New rival added 🤝"          | "{Name} accepted — check their score"               |
-
-
-## Files to Create/Edit
-
-1. **Create** `supabase/functions/send-notifications/index.ts` — main trigger evaluation + web-push sending
-2. **Create** `src/lib/pushNotifications.ts` — permission request, subscription management
-3. **Edit** `public/sw.js` — add push + notificationclick handlers
-4. **Edit** `src/hooks/useAuth.tsx` — trigger push subscription after auth
-5. **Edit** `src/pages/ProfileScreen.tsx` — add notification toggle
-6. **Migration** — create `push_subscriptions` and `notification_log` tables
-7. **Cron job** — schedule edge function every 30 minutes
-8. **Secrets** — add VAPID_PRIVATE_KEY, VAPID_EMAIL
-
-## Secrets Required
-
-Need to generate VAPID keys and add:
-
-- `VAPID_PRIVATE_KEY` — generated once, stored as secret
-- `VAPID_EMAIL` — contact email for push service (e.g. mailto:[support@dripd.app](mailto:support@dripd.app))
+- The CORS sharing fix uses `createImageBitmap(blob)` from a fetch response, falling back to an `Image()` element with `crossOrigin`. The fallback handles R2's CORS configuration which may not allow `fetch` from all origins.
+- The cropper redesign keeps `react-easy-crop` (which handles pinch-to-zoom natively) but changes the container from a `Dialog` to a fixed full-screen overlay for a more native feel.
+- The notification preferences are stored alongside the subscription to avoid an extra table, and default to all-enabled so existing users aren't affected.
+- Leaderboard date fix ensures the user's local midnight-to-midnight is used for "today", matching their expectation of what "today's" leaderboard means.
