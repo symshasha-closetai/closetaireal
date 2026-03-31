@@ -121,7 +121,7 @@ Deno.serve(async (req: Request) => {
     // Get all users with active push subscriptions
     const { data: subscriptions, error: subError } = await supabase
       .from("push_subscriptions")
-      .select("user_id, subscription");
+      .select("user_id, subscription, preferences");
 
     if (subError || !subscriptions?.length) {
       console.log("No push subscriptions found:", subError?.message);
