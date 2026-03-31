@@ -443,7 +443,7 @@ const LeaderboardTab = () => {
         URL.revokeObjectURL(url);
         toast.success("Image saved!");
       }
-    } catch { toast.info("Couldn't share"); }
+    } catch (e: any) { if (e?.name !== "AbortError") toast.info("Couldn't share"); }
     setSharingId(null);
   };
 
