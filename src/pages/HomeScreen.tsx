@@ -222,7 +222,8 @@ const HomeScreen = () => {
       if (uploadError) throw uploadError;
 
       // Calculate streak from DB
-      const yesterday = new Date(Date.now() - 86400000).toISOString().split("T")[0];
+      const yesterdayDate = new Date(Date.now() - 86400000);
+      const yesterday = yesterdayDate.toLocaleDateString('en-CA');
       const { data: yesterdayData } = await supabase
         .from("daily_looks")
         .select("streak")
