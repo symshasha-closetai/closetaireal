@@ -231,7 +231,7 @@ const HomeScreen = () => {
         .eq("look_date", yesterday)
         .maybeSingle();
 
-      const today = new Date().toISOString().split("T")[0];
+      const today = new Date().toLocaleDateString('en-CA');
       // Check if we already have today's entry
       const { data: todayData } = await supabase
         .from("daily_looks")
