@@ -366,8 +366,8 @@ const HomeScreen = () => {
         }
         setSharingLook(false);
       }, "image/png");
-    } catch {
-      toast.info("Couldn't share");
+    } catch (e: any) {
+      if (e?.name !== "AbortError") toast.info("Couldn't share — try again");
       setSharingLook(false);
     }
   };
