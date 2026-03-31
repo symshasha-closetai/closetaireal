@@ -256,7 +256,10 @@ const HomeScreen = () => {
           { user_id: user.id, image_url: publicUrl, look_date: today, streak: newStreak },
           { onConflict: "user_id,look_date" }
         );
-      if (upsertError) console.error("Failed to save daily look:", upsertError);
+      if (upsertError) {
+        console.error("Failed to save daily look:", upsertError, "publicUrl:", publicUrl);
+        throw new Error(`DB save failed: ${upsertError.message}`);
+      }
 
       setTodayPhoto(publicUrl);
       setStreak(newStreak);
