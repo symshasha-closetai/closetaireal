@@ -266,8 +266,9 @@ const HomeScreen = () => {
       localStorage.setItem(`today-look-${user.id}`, JSON.stringify({ url: publicUrl, date: new Date().toDateString() }));
       localStorage.setItem(`streak-${user.id}`, JSON.stringify({ count: newStreak, lastDate: new Date().toDateString() }));
       toast.success("Looking great! 🔥");
-    } catch {
-      toast.error("Failed to upload photo");
+    } catch (err: any) {
+      console.error("Today's look upload failed:", err);
+      toast.error(err?.message || "Failed to upload photo");
     }
     setUploadingPhoto(false);
   };
