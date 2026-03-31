@@ -1,7 +1,8 @@
 import { useState, useRef, useEffect } from "react";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { motion, AnimatePresence } from "framer-motion";
-import { ArrowLeft, Camera, LogOut, User, Save, Trash2, AlertTriangle, Loader2, Lock, X, Share2, Download, RefreshCw, RotateCcw, Clock, Sparkles, Shield, Send, MessageSquare, Bookmark, Heart, ShoppingBag, Palette, Briefcase, Leaf, Droplet, Shirt, Smile, Sun, ChevronRight, ChevronLeft } from "lucide-react";
+import { ArrowLeft, Camera, LogOut, User, Save, Trash2, AlertTriangle, Loader2, Lock, X, Share2, Download, RefreshCw, RotateCcw, Clock, Sparkles, Shield, Send, MessageSquare, Bookmark, Heart, ShoppingBag, Palette, Briefcase, Leaf, Droplet, Shirt, Smile, Sun, ChevronRight, ChevronLeft, Bell } from "lucide-react";
+import { Switch } from "@/components/ui/switch";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "../hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
@@ -13,6 +14,7 @@ import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import ScoreRing from "../components/ScoreRing";
 import OutfitRatingCard from "../components/OutfitRatingCard";
 import { getCache, setCache, CACHE_KEYS } from "@/lib/deviceCache";
+import { subscribeToPush, unsubscribeFromPush, isPushSubscribed } from "@/lib/pushNotifications";
 import {
   GenderPicker,
   BodyProfileSection,
@@ -65,6 +67,52 @@ const SuggestMeSection = ({ userId }: { userId?: string }) => {
         <Send size={14} />
         {sending ? "Sending..." : "Send Suggestion"}
       </button>
+    </div>
+  );
+};
+
+const NotificationToggle = ({ userId }: { userId?: string }) => {
+  const [enabled, setEnabled] = useState(false);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    if (!userId) return;
+    isPushSubscribed(userId).then(v => { setEnabled(v); setLoading(false); });
+  }, [userId]);
+
+  const handleToggle = async (checked: boolean) => {
+    if (!userId) return;
+    setLoading(true);
+    try {
+      if (checked) {
+        const success = await subscribeToPush(userId);
+        if (success) {
+          setEnabled(true);
+          toast.success("Push notifications enabled! 🔔");
+        } else {
+          toast.error("Could not enable notifications. Check browser permissions.");
+        }
+      } else {
+        await unsubscribeFromPush(userId);
+        setEnabled(false);
+        toast("Push notifications disabled");
+      }
+    } catch {
+      toast.error("Something went wrong");
+    }
+    setLoading(false);
+  };
+
+  return (
+    <div className="glass-card-elevated p-4 flex items-center justify-between">
+      <div className="flex items-center gap-3">
+        <Bell size={16} className="text-primary" />
+        <div>
+          <p className="text-sm font-medium text-foreground">Push Notifications</p>
+          <p className="text-[10px] text-muted-foreground">Streak alerts, rank drops, personal bests</p>
+        </div>
+      </div>
+      <Switch checked={enabled} onCheckedChange={handleToggle} disabled={loading} />
     </div>
   );
 };
@@ -798,6 +846,9 @@ const ProfileScreen = () => {
                 {saving ? "Saving..." : "Save Changes"}
               </button>
             </div>
+
+            {/* Push Notifications Toggle */}
+            <NotificationToggle userId={user?.id} />
 
             {/* Privacy Notice */}
             <div className="flex items-start gap-2.5 bg-secondary/30 border border-border/20 rounded-xl p-3">
