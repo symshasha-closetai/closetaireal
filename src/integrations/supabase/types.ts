@@ -371,18 +371,21 @@ export type Database = {
         Row: {
           created_at: string
           id: string
+          preferences: Json
           subscription: Json
           user_id: string
         }
         Insert: {
           created_at?: string
           id?: string
+          preferences?: Json
           subscription: Json
           user_id: string
         }
         Update: {
           created_at?: string
           id?: string
+          preferences?: Json
           subscription?: Json
           user_id?: string
         }
