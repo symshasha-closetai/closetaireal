@@ -30,6 +30,60 @@ self.addEventListener('activate', (event) => {
   self.clients.claim();
 });
 
+// Push notification handler
+self.addEventListener('push', (event) => {
+  let data = { title: 'Dripd', body: 'You have a new update', url: '/' };
+  
+  try {
+    if (event.data) {
+      data = event.data.json();
+    }
+  } catch (e) {
+    if (event.data) {
+      data.body = event.data.text();
+    }
+  }
+
+  const options = {
+    body: data.body,
+    icon: data.icon || '/dripd-logo-192.webp',
+    badge: '/dripd-logo-192.webp',
+    vibrate: [100, 50, 100],
+    data: { url: data.url || '/' },
+    actions: [
+      { action: 'open', title: 'Open' },
+      { action: 'dismiss', title: 'Dismiss' },
+    ],
+  };
+
+  event.waitUntil(
+    self.registration.showNotification(data.title, options)
+  );
+});
+
+// Notification click handler
+self.addEventListener('notificationclick', (event) => {
+  event.notification.close();
+
+  if (event.action === 'dismiss') return;
+
+  const url = event.notification.data?.url || '/';
+  
+  event.waitUntil(
+    clients.matchAll({ type: 'window', includeUncontrolled: true }).then((windowClients) => {
+      // Focus existing window if available
+      for (const client of windowClients) {
+        if (client.url.includes(self.location.origin) && 'focus' in client) {
+          client.navigate(url);
+          return client.focus();
+        }
+      }
+      // Open new window
+      return clients.openWindow(url);
+    })
+  );
+});
+
 // Fetch: cache-first for images & static assets, network-first for API
 self.addEventListener('fetch', (event) => {
   const url = new URL(event.request.url);
