@@ -801,6 +801,9 @@ const ProfileScreen = () => {
               </button>
             </div>
 
+            {/* Push Notifications Toggle */}
+            <NotificationToggle userId={user?.id} />
+
             {/* Privacy Notice */}
             <div className="flex items-start gap-2.5 bg-secondary/30 border border-border/20 rounded-xl p-3">
               <Shield size={14} className="text-muted-foreground mt-0.5 flex-shrink-0" />
