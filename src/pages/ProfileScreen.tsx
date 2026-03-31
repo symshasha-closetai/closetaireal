@@ -71,6 +71,52 @@ const SuggestMeSection = ({ userId }: { userId?: string }) => {
   );
 };
 
+const NotificationToggle = ({ userId }: { userId?: string }) => {
+  const [enabled, setEnabled] = useState(false);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    if (!userId) return;
+    isPushSubscribed(userId).then(v => { setEnabled(v); setLoading(false); });
+  }, [userId]);
+
+  const handleToggle = async (checked: boolean) => {
+    if (!userId) return;
+    setLoading(true);
+    try {
+      if (checked) {
+        const success = await subscribeToPush(userId);
+        if (success) {
+          setEnabled(true);
+          toast.success("Push notifications enabled! 🔔");
+        } else {
+          toast.error("Could not enable notifications. Check browser permissions.");
+        }
+      } else {
+        await unsubscribeFromPush(userId);
+        setEnabled(false);
+        toast("Push notifications disabled");
+      }
+    } catch {
+      toast.error("Something went wrong");
+    }
+    setLoading(false);
+  };
+
+  return (
+    <div className="glass-card-elevated p-4 flex items-center justify-between">
+      <div className="flex items-center gap-3">
+        <Bell size={16} className="text-primary" />
+        <div>
+          <p className="text-sm font-medium text-foreground">Push Notifications</p>
+          <p className="text-[10px] text-muted-foreground">Streak alerts, rank drops, personal bests</p>
+        </div>
+      </div>
+      <Switch checked={enabled} onCheckedChange={handleToggle} disabled={loading} />
+    </div>
+  );
+};
+
 const ProfileScreen = () => {
   const { user, profile, signOut, refreshProfile } = useAuth();
   const navigate = useNavigate();
