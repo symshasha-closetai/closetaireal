@@ -1,9 +1,7 @@
 import React, { useState, useCallback } from "react";
 import Cropper, { Area } from "react-easy-crop";
-import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
-import { Slider } from "@/components/ui/slider";
-import { ZoomIn, ZoomOut, RotateCw, Check, X } from "lucide-react";
+import { RotateCw, Check, X } from "lucide-react";
 
 interface ImageCropperProps {
   imageSrc: string;
@@ -95,76 +93,69 @@ const ImageCropper: React.FC<ImageCropperProps> = ({
     setProcessing(false);
   };
 
+  if (!open) return null;
+
   return (
-    <Dialog open={open} onOpenChange={(v) => !v && onCancel()}>
-      <DialogContent className="max-w-[95vw] sm:max-w-md p-0 gap-0 overflow-hidden rounded-2xl border-border/50 bg-background" aria-describedby={undefined}>
-        <DialogTitle className="sr-only">Crop Photo</DialogTitle>
-        {/* Crop area */}
-        <div className="relative w-full h-[60vh] sm:h-[50vh] bg-black">
-          <Cropper
-            image={imageSrc}
-            crop={crop}
-            zoom={zoom}
-            rotation={rotation}
-            aspect={aspectRatio}
-            onCropChange={setCrop}
-            onZoomChange={setZoom}
-            onRotationChange={setRotation}
-            onCropComplete={onCropComplete}
-            cropShape="rect"
-            showGrid
-            style={{
-              containerStyle: { borderRadius: 0 },
-              cropAreaStyle: { border: "2px solid hsl(var(--primary))" },
-            }}
-          />
-        </div>
+    <div className="fixed inset-0 z-[100] bg-black flex flex-col">
+      {/* Crop area — fills screen */}
+      <div className="relative flex-1">
+        <Cropper
+          image={imageSrc}
+          crop={crop}
+          zoom={zoom}
+          rotation={rotation}
+          aspect={aspectRatio}
+          onCropChange={setCrop}
+          onZoomChange={setZoom}
+          onRotationChange={setRotation}
+          onCropComplete={onCropComplete}
+          cropShape="rect"
+          showGrid={false}
+          style={{
+            containerStyle: { background: "#000" },
+            cropAreaStyle: {
+              border: "2px solid rgba(255,255,255,0.6)",
+              borderRadius: "12px",
+            },
+          }}
+        />
+      </div>
 
-        {/* Controls */}
-        <div className="px-4 py-3 space-y-3">
-          {/* Zoom slider */}
-          <div className="flex items-center gap-3">
-            <ZoomOut className="h-4 w-4 text-muted-foreground shrink-0" />
-            <Slider
-              value={[zoom]}
-              min={1}
-              max={3}
-              step={0.05}
-              onValueChange={([v]) => setZoom(v)}
-              className="flex-1"
-            />
-            <ZoomIn className="h-4 w-4 text-muted-foreground shrink-0" />
-          </div>
+      {/* Floating bottom bar */}
+      <div className="absolute bottom-0 left-0 right-0 pb-[env(safe-area-inset-bottom,16px)] px-4 pt-3 pb-5 bg-gradient-to-t from-black/90 via-black/60 to-transparent">
+        <p className="text-center text-white/40 text-[11px] mb-3 tracking-wide">
+          Pinch to zoom · Drag to move
+        </p>
+        <div className="flex items-center justify-between gap-3">
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={onCancel}
+            className="text-white/70 hover:text-white hover:bg-white/10 rounded-full px-5 h-10"
+          >
+            <X className="h-4 w-4 mr-1.5" />
+            Cancel
+          </Button>
 
-          {/* Actions */}
-          <div className="flex items-center justify-between gap-2">
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={() => setRotation((r) => (r + 90) % 360)}
-              className="text-muted-foreground"
-            >
-              <RotateCw className="h-4 w-4 mr-1" />
-              Rotate
-            </Button>
-            <div className="flex gap-2">
-              <Button variant="outline" size="sm" onClick={onCancel}>
-                <X className="h-4 w-4 mr-1" />
-                Cancel
-              </Button>
-              <Button
-                size="sm"
-                onClick={handleConfirm}
-                disabled={processing}
-              >
-                <Check className="h-4 w-4 mr-1" />
-                {processing ? "Cropping…" : "Use Photo"}
-              </Button>
-            </div>
-          </div>
+          <button
+            onClick={() => setRotation((r) => (r + 90) % 360)}
+            className="w-10 h-10 rounded-full bg-white/10 flex items-center justify-center active:scale-90 transition-transform"
+          >
+            <RotateCw className="h-4 w-4 text-white/70" />
+          </button>
+
+          <Button
+            size="sm"
+            onClick={handleConfirm}
+            disabled={processing}
+            className="rounded-full px-6 h-10 bg-primary hover:bg-primary/90 text-primary-foreground font-medium"
+          >
+            <Check className="h-4 w-4 mr-1.5" />
+            {processing ? "Cropping…" : "Use Photo"}
+          </Button>
         </div>
-      </DialogContent>
-    </Dialog>
+      </div>
+    </div>
   );
 };
 
