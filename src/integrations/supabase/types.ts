@@ -225,6 +225,36 @@ export type Database = {
           },
         ]
       }
+      notification_log: {
+        Row: {
+          body: string | null
+          id: string
+          sent_at: string
+          subtype: string
+          title: string | null
+          type: string
+          user_id: string
+        }
+        Insert: {
+          body?: string | null
+          id?: string
+          sent_at?: string
+          subtype: string
+          title?: string | null
+          type: string
+          user_id: string
+        }
+        Update: {
+          body?: string | null
+          id?: string
+          sent_at?: string
+          subtype?: string
+          title?: string | null
+          type?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       outfit_calendar: {
         Row: {
           created_at: string
@@ -334,6 +364,27 @@ export type Database = {
           updated_at?: string
           user_id?: string
           username?: string | null
+        }
+        Relationships: []
+      }
+      push_subscriptions: {
+        Row: {
+          created_at: string
+          id: string
+          subscription: Json
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          subscription: Json
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          subscription?: Json
+          user_id?: string
         }
         Relationships: []
       }
