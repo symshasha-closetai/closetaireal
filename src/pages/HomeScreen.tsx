@@ -177,7 +177,7 @@ const HomeScreen = () => {
         localStorage.setItem(`streak-${user.id}`, JSON.stringify({ count: data.streak, lastDate: new Date().toDateString() }));
       } else {
         // No DB entry for today — compute streak from yesterday
-        const yesterday = new Date(Date.now() - 86400000).toISOString().split("T")[0];
+        const yesterday = new Date(Date.now() - 86400000).toLocaleDateString('en-CA');
         const { data: yesterdayData } = await supabase
           .from("daily_looks")
           .select("streak")

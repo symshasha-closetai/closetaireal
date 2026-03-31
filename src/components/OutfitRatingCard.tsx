@@ -218,10 +218,22 @@ const OutfitRatingCard = ({ image, imageBase64, result, wardrobeItems = [],
     const ctx = canvas.getContext("2d")!;
     ctx.scale(2, 2);
 
-    // Draw outfit image — fetch as blob to avoid CORS canvas tainting
-    const imgResponse = await fetch(image);
-    const imgBlob = await imgResponse.blob();
-    const imgBitmap = await createImageBitmap(imgBlob);
+    // Draw outfit image — try fetch blob first, fallback to Image element for CORS
+    let imgBitmap: ImageBitmap | HTMLImageElement;
+    try {
+      const imgResponse = await fetch(image);
+      const imgBlob = await imgResponse.blob();
+      imgBitmap = await createImageBitmap(imgBlob);
+    } catch {
+      // CORS fallback: load via Image element
+      imgBitmap = await new Promise<HTMLImageElement>((resolve, reject) => {
+        const img = new Image();
+        img.crossOrigin = "anonymous";
+        img.onload = () => resolve(img);
+        img.onerror = () => reject(new Error("Image load failed"));
+        img.src = image;
+      });
+    }
     ctx.drawImage(imgBitmap, 0, 0, W, H_IMG);
 
     // Subtle gradient at bottom of image for smooth transition
