@@ -354,12 +354,19 @@ Deno.serve(async (req: Request) => {
         console.error(`Social trigger error for ${userId}:`, e);
       }
 
-      // --- SELECT BEST CANDIDATE ---
-      if (candidates.length === 0) continue;
+      // --- SELECT BEST CANDIDATE (filtered by user preferences) ---
+      const filteredCandidates = candidates.filter(c => {
+        if (c.type === "streak" && !prefs.streak) return false;
+        if (c.type === "competition" && !prefs.competition) return false;
+        if (c.type === "progression" && !prefs.progression) return false;
+        if (c.type === "social" && !prefs.social) return false;
+        return true;
+      });
+      if (filteredCandidates.length === 0) continue;
 
       // Sort by priority (lower = higher priority)
-      candidates.sort((a, b) => a.priority - b.priority);
-      const best = candidates[0];
+      filteredCandidates.sort((a, b) => a.priority - b.priority);
+      const best = filteredCandidates[0];
 
       // Time-of-day filtering
       const isValidTime = (
