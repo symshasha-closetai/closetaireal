@@ -105,6 +105,11 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         setTimeout(() => {
           fetchProfile(session.user.id);
           fetchStyleProfile(session.user.id);
+          // Auto-subscribe to push silently
+          if (!pushAttemptedRef.current && "Notification" in window && Notification.permission !== "denied") {
+            pushAttemptedRef.current = true;
+            subscribeToPush(session.user.id).catch(() => {});
+          }
         }, 0);
       } else {
         setProfile(null);
