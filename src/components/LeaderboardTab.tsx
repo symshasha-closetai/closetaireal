@@ -224,7 +224,7 @@ const LeaderboardTab = () => {
     setLoading(true);
     const friends = await fetchFriends();
     const relevantIds = [user.id, ...friends];
-    const today = new Date().toISOString().split("T")[0];
+    const today = new Date().toLocaleDateString('en-CA');
 
     // Fetch ALL users globally (RLS allows SELECT for authenticated)
     const dripResult = await supabase
