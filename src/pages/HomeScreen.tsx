@@ -162,7 +162,7 @@ const HomeScreen = () => {
 
     // Fetch from DB (source of truth)
     const fetchDailyLook = async () => {
-      const today = new Date().toISOString().split("T")[0]; // YYYY-MM-DD
+      const today = new Date().toLocaleDateString('en-CA'); // YYYY-MM-DD local
       const { data } = await supabase
         .from("daily_looks")
         .select("image_url, streak")
