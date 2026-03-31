@@ -87,7 +87,7 @@ const LeaderboardTab = () => {
     if (!user) return;
     setOptOutLoading(true);
     try {
-      const today = new Date().toISOString().split("T")[0];
+      const today = new Date().toLocaleDateString('en-CA');
       await supabase
         .from("drip_history")
         .delete()
