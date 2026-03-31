@@ -741,7 +741,7 @@ const ProfileScreen = () => {
         </motion.div>
 
         <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.05 }} className="flex items-center gap-3">
-          <button onClick={() => navigate(-1)} className="w-9 h-9 rounded-full bg-secondary flex items-center justify-center">
+          <button onClick={() => navigate("/")} className="w-9 h-9 rounded-full bg-secondary flex items-center justify-center">
             <ArrowLeft size={18} className="text-foreground" />
           </button>
           <h1 className="font-display text-2xl font-semibold text-foreground">Profile</h1>
