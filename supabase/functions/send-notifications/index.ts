@@ -137,6 +137,7 @@ Deno.serve(async (req: Request) => {
 
     for (const sub of subscriptions) {
       const userId = sub.user_id;
+      const prefs = (sub as any).preferences || { streak: true, competition: true, progression: true, social: true };
       const candidates: NotificationCandidate[] = [];
 
       // --- COOLDOWN CHECK ---
