@@ -276,10 +276,21 @@ const HomeScreen = () => {
     if (!todayPhoto) return;
     setSharingLook(true);
     try {
-      // Load image directly as blob to avoid cross-origin html2canvas issues
-      const response = await fetch(todayPhoto);
-      const imgBlob = await response.blob();
-      const img = await createImageBitmap(imgBlob);
+      // Load image — try fetch blob first, fallback to Image element for CORS
+      let img: ImageBitmap | HTMLImageElement;
+      try {
+        const response = await fetch(todayPhoto);
+        const imgBlob = await response.blob();
+        img = await createImageBitmap(imgBlob);
+      } catch {
+        img = await new Promise<HTMLImageElement>((resolve, reject) => {
+          const el = new Image();
+          el.crossOrigin = "anonymous";
+          el.onload = () => resolve(el);
+          el.onerror = () => reject(new Error("Image load failed"));
+          el.src = todayPhoto;
+        });
+      }
 
       const W = 720;
       const H = W * (5 / 4); // 4:5 aspect
