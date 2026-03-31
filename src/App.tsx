@@ -7,8 +7,9 @@ import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import { ThemeProvider } from "next-themes";
 import { AuthProvider, useAuth } from "./hooks/useAuth";
 import SplashScreen from "./components/SplashScreen";
+import PageSkeleton from "./components/PageSkeleton";
 
-import HomeScreen from "./pages/HomeScreen";
+const HomeScreen = lazy(() => import("./pages/HomeScreen"));
 const CameraScreen = lazy(() => import("./pages/CameraScreen"));
 const WardrobeScreen = lazy(() => import("./pages/WardrobeScreen"));
 import AuthScreen from "./pages/AuthScreen";
@@ -24,7 +25,7 @@ const queryClient = new QueryClient();
 
 const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
   const { user, loading, hasCompletedOnboarding } = useAuth();
-  if (loading) return <div className="min-h-screen bg-background" />;
+  if (loading) return <PageSkeleton />;
   if (!user) return <Navigate to="/auth" replace />;
   if (hasCompletedOnboarding === false) return <Navigate to="/onboarding" replace />;
   return <>{children}</>;
@@ -33,10 +34,10 @@ const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
 const AppRoutes = () => {
   const { user, loading, hasCompletedOnboarding } = useAuth();
 
-  if (loading) return null;
+  if (loading) return <PageSkeleton />;
 
   return (
-    <Suspense fallback={<div className="min-h-screen bg-background" />}>
+    <Suspense fallback={<PageSkeleton />}>
       <Routes>
         <Route path="/auth" element={user ? <Navigate to="/" replace /> : <AuthScreen />} />
         <Route path="/reset-password" element={<ResetPasswordScreen />} />
@@ -45,8 +46,9 @@ const AppRoutes = () => {
           hasCompletedOnboarding ? <Navigate to="/" replace /> :
           <OnboardingScreen />
         } />
-        <Route path="/" element={<ProtectedRoute><HomeScreen /></ProtectedRoute>} />
-        <Route path="/camera" element={<ProtectedRoute><CameraScreen /></ProtectedRoute>} />
+        <Route path="/" element={<ProtectedRoute><CameraScreen /></ProtectedRoute>} />
+        <Route path="/home" element={<ProtectedRoute><HomeScreen /></ProtectedRoute>} />
+        <Route path="/camera" element={<Navigate to="/" replace />} />
         <Route path="/wardrobe" element={<ProtectedRoute><WardrobeScreen /></ProtectedRoute>} />
         <Route path="/profile" element={<ProtectedRoute><ProfileScreen /></ProtectedRoute>} />
         <Route path="/messages" element={<ProtectedRoute><MessagesScreen /></ProtectedRoute>} />

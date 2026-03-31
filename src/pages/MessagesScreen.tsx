@@ -175,19 +175,9 @@ const MessagesScreen = () => {
     }
 
     if (!conversationId) {
-      const { data: newConvo, error: convoErr } = await supabase
-        .from("conversations" as any)
-        .insert({} as any)
-        .select("id")
-        .single() as any;
-      if (convoErr || !newConvo) { toast.error("Failed to create conversation"); setCreating(null); return; }
-      conversationId = newConvo.id;
-
-      // Sequential inserts to satisfy RLS
-      const { error: selfErr } = await supabase.from("conversation_participants" as any).insert({ conversation_id: conversationId, user_id: user.id } as any) as any;
-      if (selfErr) { console.error("Failed to add self as participant:", selfErr); toast.error("Failed to create conversation: " + selfErr.message); setCreating(null); return; }
-      const { error: friendErr } = await supabase.from("conversation_participants" as any).insert({ conversation_id: conversationId, user_id: friendId } as any) as any;
-      if (friendErr) { console.error("Failed to add friend as participant:", friendErr); toast.error("Failed to add friend: " + friendErr.message); setCreating(null); return; }
+      const { data: rpcData, error: rpcErr } = await supabase.rpc("create_conversation_with_participants", { friend_id: friendId }) as any;
+      if (rpcErr || !rpcData) { toast.error("Failed to create conversation"); setCreating(null); return; }
+      conversationId = rpcData;
     }
 
     setCreating(null);

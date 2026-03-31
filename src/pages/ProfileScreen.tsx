@@ -74,9 +74,16 @@ const SuggestMeSection = ({ userId }: { userId?: string }) => {
 const NotificationToggle = ({ userId }: { userId?: string }) => {
   const [enabled, setEnabled] = useState(false);
   const [loading, setLoading] = useState(true);
+  const [browserBlocked, setBrowserBlocked] = useState(false);
 
   useEffect(() => {
     if (!userId) return;
+    // Check browser permission state
+    if ("Notification" in window && Notification.permission === "denied") {
+      setBrowserBlocked(true);
+      setLoading(false);
+      return;
+    }
     isPushSubscribed(userId).then(v => { setEnabled(v); setLoading(false); });
   }, [userId]);
 
@@ -90,7 +97,12 @@ const NotificationToggle = ({ userId }: { userId?: string }) => {
           setEnabled(true);
           toast.success("Push notifications enabled! 🔔");
         } else {
-          toast.error("Could not enable notifications. Check browser permissions.");
+          if ("Notification" in window && Notification.permission === "denied") {
+            setBrowserBlocked(true);
+            toast.error("Notifications blocked by browser. Enable in your browser settings.");
+          } else {
+            toast.error("Could not enable notifications.");
+          }
         }
       } else {
         await unsubscribeFromPush(userId);
@@ -109,10 +121,12 @@ const NotificationToggle = ({ userId }: { userId?: string }) => {
         <Bell size={16} className="text-primary" />
         <div>
           <p className="text-sm font-medium text-foreground">Push Notifications</p>
-          <p className="text-[10px] text-muted-foreground">Streak alerts, rank drops, personal bests</p>
+          <p className="text-[10px] text-muted-foreground">
+            {browserBlocked ? "Blocked by browser — enable in settings" : "Streak alerts, rank drops, personal bests"}
+          </p>
         </div>
       </div>
-      <Switch checked={enabled} onCheckedChange={handleToggle} disabled={loading} />
+      <Switch checked={enabled} onCheckedChange={handleToggle} disabled={loading || browserBlocked} />
     </div>
   );
 };

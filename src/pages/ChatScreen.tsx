@@ -205,7 +205,7 @@ const ChatScreen = () => {
     <div className="min-h-screen flex flex-col bg-background">
       {/* Header */}
       <div className="flex items-center gap-3 px-4 py-3 border-b border-border/30 bg-card/80 backdrop-blur-sm">
-        <button onClick={() => navigate(-1)} className="w-8 h-8 rounded-full bg-secondary flex items-center justify-center">
+        <button onClick={() => navigate("/messages")} className="w-8 h-8 rounded-full bg-secondary flex items-center justify-center">
           <ArrowLeft size={16} className="text-foreground" />
         </button>
         <div className="w-8 h-8 rounded-full bg-muted overflow-hidden flex items-center justify-center">
