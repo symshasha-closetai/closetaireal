@@ -85,18 +85,9 @@ const SendToFriendPicker = ({ open, onOpenChange, contentType, content = "", met
     }
 
     if (!conversationId) {
-      // Create new conversation
-      const { data: newConvo, error: convoErr } = await supabase
-        .from("conversations" as any)
-        .insert({} as any)
-        .select("id")
-        .single() as any;
-      if (convoErr || !newConvo) { toast.error("Failed to create conversation"); setSending(null); return; }
-      conversationId = newConvo.id;
-
-      // Add both participants sequentially (RLS requires current user first)
-      await supabase.from("conversation_participants" as any).insert({ conversation_id: conversationId, user_id: user.id } as any);
-      await supabase.from("conversation_participants" as any).insert({ conversation_id: conversationId, user_id: friendId } as any);
+      const { data: rpcData, error: rpcErr } = await supabase.rpc("create_conversation_with_participants", { friend_id: friendId }) as any;
+      if (rpcErr || !rpcData) { toast.error("Failed to create conversation"); setSending(null); return; }
+      conversationId = rpcData;
     }
 
     // Send message

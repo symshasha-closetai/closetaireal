@@ -1,8 +1,9 @@
-import { createContext, useContext, useEffect, useState, ReactNode, useCallback } from "react";
+import { createContext, useContext, useEffect, useState, ReactNode, useCallback, useRef } from "react";
 import { Session, User } from "@supabase/supabase-js";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { getCache, setCache, CACHE_KEYS } from "@/lib/deviceCache";
+import { subscribeToPush } from "@/lib/pushNotifications";
 
 type Profile = { name: string | null; avatar_url: string | null };
 type StyleProfile = {
@@ -39,6 +40,7 @@ const AuthContext = createContext<AuthContextType>({
 });
 
 export const AuthProvider = ({ children }: { children: ReactNode }) => {
+  const pushAttemptedRef = useRef(false);
   const [session, setSession] = useState<Session | null>(null);
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
@@ -103,6 +105,11 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         setTimeout(() => {
           fetchProfile(session.user.id);
           fetchStyleProfile(session.user.id);
+          // Auto-subscribe to push silently
+          if (!pushAttemptedRef.current && "Notification" in window && Notification.permission !== "denied") {
+            pushAttemptedRef.current = true;
+            subscribeToPush(session.user.id).catch(() => {});
+          }
         }, 0);
       } else {
         setProfile(null);

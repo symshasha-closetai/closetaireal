@@ -294,8 +294,8 @@ const HomeScreen = () => {
         });
       }
 
-      const W = 720;
-      const H = W * (5 / 4); // 4:5 aspect
+      const W = 540;
+      const H = 960; // 9:16 story format
       const canvas = document.createElement("canvas");
       canvas.width = W;
       canvas.height = H;
