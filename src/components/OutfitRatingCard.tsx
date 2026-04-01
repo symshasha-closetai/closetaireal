@@ -276,15 +276,22 @@ const OutfitRatingCard = ({ image, imageBase64, result, wardrobeItems = [],
     // === Bottom panel content ===
     const panelY = IMG_H + 10;
 
-    // Drip Score — large display
+    // Drip Score — large display with gold glow
     ctx.textBaseline = "alphabetic";
     const scoreStr = String(result.drip_score);
+    const scoreX = 28;
+    const scoreBaseY = panelY + 52;
+
+    // Gold glow effect
+    ctx.save();
+    ctx.shadowColor = "rgba(201,169,110,0.6)";
+    ctx.shadowBlur = 24;
     ctx.fillStyle = "#C9A96E";
     ctx.font = "800 56px 'Inter', 'Helvetica', sans-serif";
     const scoreMetrics = ctx.measureText(scoreStr);
-    const scoreX = 28;
-    const scoreBaseY = panelY + 52;
     ctx.fillText(scoreStr, scoreX, scoreBaseY);
+    ctx.fillText(scoreStr, scoreX, scoreBaseY); // double-draw for stronger glow
+    ctx.restore();
 
     // "/10" next to score
     ctx.fillStyle = "rgba(255,255,255,0.3)";
