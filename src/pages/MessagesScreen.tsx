@@ -40,9 +40,9 @@ const MessagesScreen = () => {
     setLoading(true);
 
     const { data: myParticipations } = await supabase
-      .from("conversation_participants" as any)
+      .from("conversation_participants")
       .select("conversation_id")
-      .eq("user_id", user.id) as any;
+      .eq("user_id", user.id);
 
     if (!myParticipations || myParticipations.length === 0) {
       setConversations([]);
@@ -50,22 +50,22 @@ const MessagesScreen = () => {
       return;
     }
 
-    const convoIds = myParticipations.map((p: any) => p.conversation_id);
+    const convoIds = myParticipations.map((p) => p.conversation_id);
 
     const { data: allParticipants } = await supabase
-      .from("conversation_participants" as any)
+      .from("conversation_participants")
       .select("conversation_id, user_id")
       .in("conversation_id", convoIds)
-      .neq("user_id", user.id) as any;
+      .neq("user_id", user.id);
 
     const otherByConvo = new Map<string, string>();
-    (allParticipants || []).forEach((p: any) => otherByConvo.set(p.conversation_id, p.user_id));
+    (allParticipants || []).forEach((p) => otherByConvo.set(p.conversation_id, p.user_id));
 
     const otherIds = Array.from(new Set(otherByConvo.values()));
     const { data: profiles } = await supabase
       .from("profiles")
       .select("user_id, name, username, avatar_url")
-      .in("user_id", otherIds) as any;
+      .in("user_id", otherIds);
 
     const profileMap = new Map<string, any>();
     (profiles || []).forEach((p: any) => profileMap.set(p.user_id, p));
@@ -76,12 +76,11 @@ const MessagesScreen = () => {
       if (!otherId) continue;
 
       const { data: msgs } = await supabase
-        .from("messages" as any)
+        .from("messages")
         .select("content, content_type, created_at")
         .eq("conversation_id", convoId)
-        .or("expires_at.is.null,expires_at.gt.now(),kept.eq.true")
         .order("created_at", { ascending: false })
-        .limit(1) as any;
+        .limit(1);
 
       const prof = profileMap.get(otherId);
       const lastMsg = msgs?.[0];
@@ -122,12 +121,12 @@ const MessagesScreen = () => {
     const fetchFriends = async () => {
       setFriendsLoading(true);
       const { data: friendRows } = await supabase
-        .from("friends" as any)
+        .from("friends")
         .select("user_id, friend_id")
         .or(`user_id.eq.${user.id},friend_id.eq.${user.id}`)
-        .eq("status", "accepted") as any;
+        .eq("status", "accepted");
 
-      const ids = (friendRows || []).map((f: any) =>
+      const ids = (friendRows || []).map((f) =>
         f.user_id === user.id ? f.friend_id : f.user_id
       );
       if (ids.length === 0) { setFriends([]); setFriendsLoading(false); return; }
@@ -135,7 +134,7 @@ const MessagesScreen = () => {
       const { data: profiles } = await supabase
         .from("profiles")
         .select("user_id, name, username, avatar_url")
-        .in("user_id", ids) as any;
+        .in("user_id", ids);
 
       setFriends((profiles || []).filter((p: any) => p.username || p.name));
       setFriendsLoading(false);
@@ -147,42 +146,17 @@ const MessagesScreen = () => {
     if (!user) return;
     setCreating(friendId);
 
-    // Find existing 1:1 conversation
-    const { data: existingConvos } = await supabase
-      .from("conversation_participants" as any)
-      .select("conversation_id")
-      .eq("user_id", user.id) as any;
-
-    let conversationId: string | null = null;
-
-    if (existingConvos && existingConvos.length > 0) {
-      const convoIds = existingConvos.map((c: any) => c.conversation_id);
-      const { data: friendInConvo } = await supabase
-        .from("conversation_participants" as any)
-        .select("conversation_id")
-        .eq("user_id", friendId)
-        .in("conversation_id", convoIds) as any;
-
-      if (friendInConvo && friendInConvo.length > 0) {
-        for (const fc of friendInConvo) {
-          const { count } = await supabase
-            .from("conversation_participants" as any)
-            .select("*", { count: "exact", head: true })
-            .eq("conversation_id", fc.conversation_id) as any;
-          if (count === 2) { conversationId = fc.conversation_id; break; }
-        }
-      }
-    }
-
-    if (!conversationId) {
-      const { data: rpcData, error: rpcErr } = await supabase.rpc("create_conversation_with_participants", { friend_id: friendId }) as any;
-      if (rpcErr || !rpcData) { toast.error("Failed to create conversation"); setCreating(null); return; }
-      conversationId = rpcData;
+    const { data: convoId, error } = await supabase.rpc("find_or_create_conversation", { friend_id: friendId });
+    if (error || !convoId) {
+      console.error("find_or_create_conversation error:", error);
+      toast.error("Failed to start conversation");
+      setCreating(null);
+      return;
     }
 
     setCreating(null);
     setShowNewChat(false);
-    navigate(`/chat/${conversationId}`);
+    navigate(`/chat/${convoId}`);
   };
 
   const formatTime = (dateStr: string) => {

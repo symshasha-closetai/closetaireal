@@ -276,15 +276,22 @@ const OutfitRatingCard = ({ image, imageBase64, result, wardrobeItems = [],
     // === Bottom panel content ===
     const panelY = IMG_H + 10;
 
-    // Drip Score — large display
+    // Drip Score — large display with gold glow
     ctx.textBaseline = "alphabetic";
     const scoreStr = String(result.drip_score);
+    const scoreX = 28;
+    const scoreBaseY = panelY + 52;
+
+    // Gold glow effect
+    ctx.save();
+    ctx.shadowColor = "rgba(201,169,110,0.6)";
+    ctx.shadowBlur = 24;
     ctx.fillStyle = "#C9A96E";
     ctx.font = "800 56px 'Inter', 'Helvetica', sans-serif";
     const scoreMetrics = ctx.measureText(scoreStr);
-    const scoreX = 28;
-    const scoreBaseY = panelY + 52;
     ctx.fillText(scoreStr, scoreX, scoreBaseY);
+    ctx.fillText(scoreStr, scoreX, scoreBaseY); // double-draw for stronger glow
+    ctx.restore();
 
     // "/10" next to score
     ctx.fillStyle = "rgba(255,255,255,0.3)";
@@ -298,9 +305,8 @@ const OutfitRatingCard = ({ image, imageBase64, result, wardrobeItems = [],
     ctx.fillText("DRIP SCORE", scoreX, scoreBaseY + 18);
     ctx.letterSpacing = "0px";
 
-    // Confidence Score — right aligned
+    // Confidence Score — right aligned with silver glow
     const confStr = String(result.confidence_rating);
-    ctx.fillStyle = "#A0A0A0";
     ctx.font = "800 56px 'Inter', 'Helvetica', sans-serif";
     const confMetrics = ctx.measureText(confStr);
     ctx.font = "400 20px 'Inter', 'Helvetica', sans-serif";
@@ -308,9 +314,16 @@ const OutfitRatingCard = ({ image, imageBase64, result, wardrobeItems = [],
     const confBlockW = confMetrics.width + 4 + slashMetrics.width;
     const confX = W - 28 - confBlockW;
 
+    // Silver glow effect
+    ctx.save();
+    ctx.shadowColor = "rgba(180,180,200,0.5)";
+    ctx.shadowBlur = 20;
     ctx.fillStyle = "#A0A0A0";
     ctx.font = "800 56px 'Inter', 'Helvetica', sans-serif";
     ctx.fillText(confStr, confX, scoreBaseY);
+    ctx.fillText(confStr, confX, scoreBaseY); // double-draw for stronger glow
+    ctx.restore();
+
     ctx.fillStyle = "rgba(255,255,255,0.3)";
     ctx.font = "400 20px 'Inter', 'Helvetica', sans-serif";
     ctx.fillText("/10", confX + confMetrics.width + 4, scoreBaseY);
@@ -355,10 +368,15 @@ const OutfitRatingCard = ({ image, imageBase64, result, wardrobeItems = [],
       const cx = 28 + colW * i + colW / 2;
       const scoreVal = Number.isInteger(s.score) ? String(s.score) : s.score.toFixed(1);
       
+      // Subtle glow on sub-scores
+      ctx.save();
+      ctx.shadowColor = s.color + "80";
+      ctx.shadowBlur = 10;
       ctx.fillStyle = s.color;
       ctx.font = "700 24px 'Inter', 'Helvetica', sans-serif";
       const sW = ctx.measureText(scoreVal).width;
       ctx.fillText(scoreVal, cx - sW / 2, subY);
+      ctx.restore();
 
       ctx.fillStyle = "rgba(255,255,255,0.35)";
       ctx.font = "600 8px 'Inter', 'Helvetica', sans-serif";
