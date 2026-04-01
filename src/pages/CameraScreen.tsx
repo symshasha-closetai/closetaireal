@@ -231,7 +231,7 @@ const saveDripToHistory = async (image: string, result: RatingResult, userId?: s
         }
       } catch { /* storage upload failed, continue without image */ }
 
-      await supabase.from("drip_history" as any).insert({
+      const { error: dbErr } = await supabase.from("drip_history").insert({
         user_id: userId,
         image_url: imageUrl,
         score: result.drip_score,
@@ -240,9 +240,17 @@ const saveDripToHistory = async (image: string, result: RatingResult, userId?: s
         full_result: result as any,
         image_hash: imageHash || null,
         confidence_score: result.confidence_rating || null,
-      } as any);
+      });
+      if (dbErr) {
+        console.error("Failed to save drip to DB:", dbErr);
+        toast.error("Score saved locally but failed to sync to leaderboard");
+      } else {
+        // Invalidate leaderboard cache so it re-fetches
+        try { localStorage.removeItem("leaderboard-daily-cache"); } catch {}
+      }
     } catch (err) {
       console.error("Failed to save drip to DB:", err);
+      toast.error("Score saved locally but failed to sync");
     }
   }
 };

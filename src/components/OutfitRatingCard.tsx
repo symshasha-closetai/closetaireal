@@ -368,10 +368,15 @@ const OutfitRatingCard = ({ image, imageBase64, result, wardrobeItems = [],
       const cx = 28 + colW * i + colW / 2;
       const scoreVal = Number.isInteger(s.score) ? String(s.score) : s.score.toFixed(1);
       
+      // Subtle glow on sub-scores
+      ctx.save();
+      ctx.shadowColor = s.color + "80";
+      ctx.shadowBlur = 10;
       ctx.fillStyle = s.color;
       ctx.font = "700 24px 'Inter', 'Helvetica', sans-serif";
       const sW = ctx.measureText(scoreVal).width;
       ctx.fillText(scoreVal, cx - sW / 2, subY);
+      ctx.restore();
 
       ctx.fillStyle = "rgba(255,255,255,0.35)";
       ctx.font = "600 8px 'Inter', 'Helvetica', sans-serif";

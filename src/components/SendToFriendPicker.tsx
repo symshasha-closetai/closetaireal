@@ -31,12 +31,12 @@ const SendToFriendPicker = ({ open, onOpenChange, contentType, content = "", met
     const fetchFriends = async () => {
       setLoading(true);
       const { data: friendRows } = await supabase
-        .from("friends" as any)
+        .from("friends")
         .select("user_id, friend_id")
         .or(`user_id.eq.${user.id},friend_id.eq.${user.id}`)
-        .eq("status", "accepted") as any;
+        .eq("status", "accepted");
 
-      const ids = (friendRows || []).map((f: any) =>
+      const ids = (friendRows || []).map((f) =>
         f.user_id === user.id ? f.friend_id : f.user_id
       );
       if (ids.length === 0) { setFriends([]); setLoading(false); return; }
@@ -44,7 +44,7 @@ const SendToFriendPicker = ({ open, onOpenChange, contentType, content = "", met
       const { data: profiles } = await supabase
         .from("profiles")
         .select("user_id, name, username, avatar_url")
-        .in("user_id", ids) as any;
+        .in("user_id", ids);
 
       setFriends((profiles || []).filter((p: any) => p.username || p.name));
       setLoading(false);
@@ -56,51 +56,31 @@ const SendToFriendPicker = ({ open, onOpenChange, contentType, content = "", met
     if (!user) return;
     setSending(friendId);
 
-    // Find or create conversation between user and friend
-    const { data: existingConvos } = await supabase
-      .from("conversation_participants" as any)
-      .select("conversation_id")
-      .eq("user_id", user.id) as any;
-
-    let conversationId: string | null = null;
-
-    if (existingConvos && existingConvos.length > 0) {
-      const convoIds = existingConvos.map((c: any) => c.conversation_id);
-      const { data: friendInConvo } = await supabase
-        .from("conversation_participants" as any)
-        .select("conversation_id")
-        .eq("user_id", friendId)
-        .in("conversation_id", convoIds) as any;
-
-      if (friendInConvo && friendInConvo.length > 0) {
-        // Check it's a 1:1 (only 2 participants)
-        for (const fc of friendInConvo) {
-          const { count } = await supabase
-            .from("conversation_participants" as any)
-            .select("*", { count: "exact", head: true })
-            .eq("conversation_id", fc.conversation_id) as any;
-          if (count === 2) { conversationId = fc.conversation_id; break; }
-        }
-      }
-    }
-
-    if (!conversationId) {
-      const { data: rpcData, error: rpcErr } = await supabase.rpc("create_conversation_with_participants", { friend_id: friendId }) as any;
-      if (rpcErr || !rpcData) { toast.error("Failed to create conversation"); setSending(null); return; }
-      conversationId = rpcData;
+    // Use atomic RPC to find or create conversation
+    const { data: conversationId, error: convoErr } = await supabase.rpc("find_or_create_conversation", { friend_id: friendId });
+    if (convoErr || !conversationId) {
+      console.error("find_or_create_conversation error:", convoErr);
+      toast.error("Failed to send");
+      setSending(null);
+      return;
     }
 
     // Send message
-    const { error } = await supabase.from("messages" as any).insert({
+    const { error } = await supabase.from("messages").insert({
       conversation_id: conversationId,
       sender_id: user.id,
       content: content || "",
       content_type: contentType,
       metadata: metadata || null,
-    } as any);
+    });
 
-    if (error) toast.error("Failed to send");
-    else { toast.success("Sent! 💬"); onOpenChange(false); }
+    if (error) {
+      console.error("Message insert error:", error);
+      toast.error("Failed to send");
+    } else {
+      toast.success("Sent! 💬");
+      onOpenChange(false);
+    }
     setSending(null);
   };
 
