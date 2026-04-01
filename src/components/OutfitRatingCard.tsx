@@ -305,9 +305,8 @@ const OutfitRatingCard = ({ image, imageBase64, result, wardrobeItems = [],
     ctx.fillText("DRIP SCORE", scoreX, scoreBaseY + 18);
     ctx.letterSpacing = "0px";
 
-    // Confidence Score — right aligned
+    // Confidence Score — right aligned with silver glow
     const confStr = String(result.confidence_rating);
-    ctx.fillStyle = "#A0A0A0";
     ctx.font = "800 56px 'Inter', 'Helvetica', sans-serif";
     const confMetrics = ctx.measureText(confStr);
     ctx.font = "400 20px 'Inter', 'Helvetica', sans-serif";
@@ -315,9 +314,16 @@ const OutfitRatingCard = ({ image, imageBase64, result, wardrobeItems = [],
     const confBlockW = confMetrics.width + 4 + slashMetrics.width;
     const confX = W - 28 - confBlockW;
 
+    // Silver glow effect
+    ctx.save();
+    ctx.shadowColor = "rgba(180,180,200,0.5)";
+    ctx.shadowBlur = 20;
     ctx.fillStyle = "#A0A0A0";
     ctx.font = "800 56px 'Inter', 'Helvetica', sans-serif";
     ctx.fillText(confStr, confX, scoreBaseY);
+    ctx.fillText(confStr, confX, scoreBaseY); // double-draw for stronger glow
+    ctx.restore();
+
     ctx.fillStyle = "rgba(255,255,255,0.3)";
     ctx.font = "400 20px 'Inter', 'Helvetica', sans-serif";
     ctx.fillText("/10", confX + confMetrics.width + 4, scoreBaseY);
