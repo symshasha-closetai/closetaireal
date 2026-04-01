@@ -1,105 +1,78 @@
-# Plan: Loading Skeletons, Navigation Fixes, Conversation Bug, Notifications Auto-Enable, Share Card Revamp
+# Plan: Fix Messaging, Leaderboard, Share-to-Friend & Share Card Glow
 
-## Issues Identified
+## Root Cause Analysis
 
-1. **No loading skeleton**: Pages show blank white or a spinner. Need proper skeleton screens.
-2. **Back button goes to wrong page**: `navigate(-1)` pops browser history, which can go to camera or exit app. Should navigate to a known parent route.
-3. **App opens on Home, not Camera**: Default route is `/`, user wants Camera as landing page.
-4. **Conversations always fail**: The `conversations` INSERT uses `.insert({}).select("id").single()` — the SELECT policy requires `is_conversation_participant(auth.uid(), id)`, but no participant exists yet at SELECT time. The `.select()` after `.insert()` runs under the SELECT RLS policy, which fails. Fix: use `.insert({}).select("id").single()` with a modified RLS policy, or split into two queries (insert without select, then get the id differently). Best fix: add a RETURNING-friendly SELECT policy or use a DB function.
-5. **Notification toggle fails**: The error "Could not enable notifications. Check browser permissions." appears because `subscribeToPush` calls `pushManager.subscribe()` which requires a valid VAPID key AND a properly registered service worker. The VAPID key may be invalid (randomly generated). Also, notifications should auto-enable on first login, not require manual toggle.
-6. **Share card layout broken**: Font spacing issues, "DRIPD" too far, scores overlapping (4.5 above /10), text separation. Need complete revamp with proper text measurement. Also change aspect ratio to 9:16 (1080x1920) for Instagram/WhatsApp stories.
+**Messaging always fails**: The `create_conversation_with_participants` RPC exists in the DB and looks correct. However, the client code in `MessagesScreen` and `SendToFriendPicker` does complex multi-query conversation-finding logic before calling the RPC. Any failure in those intermediate queries (which query `conversation_participants` under RLS) can cause the whole flow to fail silently. There are 0 conversations and 0 messages in the entire database, confirming the RPC has never succeeded from the client. The fix is to create a single atomic `find_or_create_conversation` RPC that handles everything server-side, and simplify client code to just call that.
 
----
+**Leaderboard empty despite drip check**: The last `drip_history` entry is March 26. The user did a drip check today but `saveDripToHistory` silently swallows DB insert errors (`catch` block just logs to console). The result is saved to localStorage but never reaches the DB. The leaderboard queries the DB, so it shows empty. Fix: add proper error handling to `saveDripToHistory` and force-refresh the leaderboard after a drip check.
+
+**Send drip to friend fails**: Uses the same broken conversation creation logic as messaging.
+
+**Share card glow**: Canvas drawing needs gradient/glow effects around score numbers.
 
 ## Changes
 
-### 1. Loading Skeleton Component + Integration
+### 1. New Atomic RPC: `find_or_create_conversation`
 
-**Create** `src/components/PageSkeleton.tsx`
+**Migration**: Replace the existing `create_conversation_with_participants` with a smarter `find_or_create_conversation(friend_id uuid)` function (SECURITY DEFINER) that:
 
-- Reusable skeleton screen with shimmer animations matching the app's warm cream/gold theme
-- Variants for Home, Camera, Wardrobe, Profile, Messages screens
-- Use the existing `Skeleton` component from `src/components/ui/skeleton.tsx`
+1. Finds existing 1:1 conversation between the two users (via a JOIN on `conversation_participants`)
+2. If found, returns that conversation ID
+3. If not found, creates conversation + both participants atomically, returns new ID
 
-**Edit** `src/App.tsx`
+This eliminates all fragile client-side multi-query logic.
 
-- Replace `<div className="min-h-screen bg-background" />` Suspense fallback with `<PageSkeleton />`
-- Replace the blank loading state in `ProtectedRoute` with skeleton
+### 2. Simplify MessagesScreen
 
-### 2. Fix Back Button Navigation
+**File**: `src/pages/MessagesScreen.tsx`
 
-**Edit** `src/pages/ProfileScreen.tsx` — change `navigate(-1)` to `navigate("/")`
-**Edit** `src/pages/MessagesScreen.tsx` — change `navigate(-1)` to `navigate("/")`
-**Edit** `src/pages/ChatScreen.tsx` — change `navigate(-1)` to `navigate("/messages")`
+Replace the entire `handleStartChat` function body with a single RPC call:
 
-### 3. Default Route to Camera
+```typescript
+const { data: convoId, error } = await supabase.rpc("find_or_create_conversation", { friend_id: friendId });
+if (error || !convoId) { toast.error("Failed to start conversation"); return; }
+navigate(`/chat/${convoId}`);
+```
 
-**Edit** `src/App.tsx`
+### 3. Simplify SendToFriendPicker
 
-- Change default route from `<HomeScreen />` at `/` to redirect to `/camera`
-- OR swap: make `/camera` the index route and `/home` for Home
-- Simpler approach: keep routes as-is but change `ProtectedRoute` to redirect to `/camera` on first load.
-  &nbsp;
+**File**: `src/components/SendToFriendPicker.tsx`
 
-### 4. Fix Conversation Creation (RLS Bug)
+Replace the conversation-finding + creation logic with the same single RPC call, then insert the message.
 
-**Database migration**: The problem is that after inserting into `conversations`, the `.select("id")` fails because the SELECT RLS policy checks `is_conversation_participant` but no participants exist yet.
+### 4. Fix saveDripToHistory (Leaderboard Fix)
 
-Fix options:
+**File**: `src/pages/CameraScreen.tsx`
 
-- **Option A (best)**: Create a `create_conversation` DB function (SECURITY DEFINER) that creates the conversation + adds both participants atomically, returns the conversation ID.
-- **Option B**: Modify the SELECT policy on `conversations` to also allow selecting rows the user just created (add `OR auth.uid() = created_by` — but table has no `created_by` column).
+In `saveDripToHistory`, the DB insert failure is silently caught. Change to:
 
-Going with **Option A**: Create a `create_conversation_with_participants(friend_id uuid)` function that:
+- Show a toast warning when DB insert fails: `toast.error("Score saved locally but failed to sync"), and add to db in the background using localstorage`
+- Log the full error
+- This ensures the user knows their score didn't reach the leaderboard
 
-1. Inserts into `conversations`, gets the id
-2. Inserts self as participant
-3. Inserts friend as participant
-4. Returns the conversation id
+Also: After a successful drip check, invalidate the leaderboard cache (`dailyCache = null`) so the leaderboard re-fetches when the user switches to that tab.
 
-**Edit** `src/pages/MessagesScreen.tsx` — call the RPC function instead of manual inserts
-**Edit** `src/components/SendToFriendPicker.tsx` — same fix for conversation creation there
+### 5. Share Card Glow Effect
 
-### 5. Fix Notification Auto-Enable
+**File**: `src/components/OutfitRatingCard.tsx`
 
-**Edit** `src/lib/pushNotifications.ts`
+In `captureCard`, add:
 
-- The `subscribeToPush` function is correct in structure. The issue is likely that the service worker isn't registering the push manager properly, or the VAPID key format is wrong. Add better error logging.
-- Auto-subscribe: after successful login/onboarding, automatically call `subscribeToPush` silently. If browser blocks, just skip — no error toast.
-
-**Edit** `src/hooks/useAuth.tsx`
-
-- After auth state confirms logged-in user, attempt `subscribeToPush` silently (no toast on failure — user can enable later)
-
-**Edit** `src/pages/ProfileScreen.tsx` — `NotificationToggle` should also check the browser's `Notification.permission` state and show appropriate messaging
-
-### 6. Revamp Share Card (OutfitRatingCard `captureCard`)
-
-**Edit** `src/components/OutfitRatingCard.tsx`
-
-Complete rewrite of the `captureCard` canvas drawing:
-
-- **Aspect ratio**: Change from 390x710 (roughly 4:5) to **1080x1920** (9:16 story format) for Instagram/WhatsApp/Snapchat
-- **Layout**: 
-  - Photo fills top ~70% with gradient overlay
-  - "DRIPD" watermark: top-left, letter-spacing 3px, closer to edge (16px margin)
-  - Drip Score: large left-aligned with "/10" properly positioned using `measureText` to prevent overlap
-  - Confidence: right-aligned, same treatment
-  - Killer tag: centered between scores
-  - Sub-scores: evenly spaced with proper column width calculation
-  - Praise line: word-wrapped with proper line height
-  - "Beat My Drip" CTA at bottom center
-- **Font rendering**: Use consistent font stack, proper `textBaseline = "alphabetic"`, and `measureText` for all positioning
-- **Score text**: Render score number and "/10" as separate draws with explicit x-offset from `measureText` — prevents the overlap where "4.5" runs into "/10"
-
-Also fix `handleShareTodayLook` in HomeScreen with same 9:16 ratio.
-
----
+- Gold radial gradient glow behind the drip score number (`ctx.shadowColor = "rgba(201,169,110,0.6)"`, `ctx.shadowBlur = 20`)
+- Silver glow behind confidence score
+- Subtle glow behind sub-score numbers
+- Reset `ctx.shadowBlur = 0` after each glow draw to prevent bleeding
 
 ## Technical Details
 
-- The conversation RLS fix is the most critical — it's a fundamental blocker preventing any messaging.
-- The skeleton uses `animate-pulse` with `bg-muted` matching the app's warm theme.
-- Share card at 1080x1920 produces crisp images on all social platforms (Instagram stories, WhatsApp status, Snapchat).
-- The canvas uses 2x scaling (`canvas.width = W * 2`, `ctx.scale(2, 2)`) for Retina sharpness.
-- Auto-subscribing to push uses `Notification.permission === "default"` check — only prompts if user hasn't decided yet. If already "denied", skips silently.
+- The `find_or_create_conversation` RPC uses `SECURITY DEFINER` to bypass RLS, and a subquery joining `conversation_participants` twice (once for each user) with a `HAVING count(*) = 2` check to find existing 1:1 convos.
+- The leaderboard cache invalidation uses the existing module-level `dailyCache` variable, setting it to `null` after `saveDripToHistory` succeeds.
+- Canvas glow uses `ctx.shadowColor` + `ctx.shadowBlur` which is well-supported and creates a natural glow effect around text.
+
+## Files to Create/Edit
+
+1. **Migration** — new `find_or_create_conversation` RPC function
+2. `**src/pages/MessagesScreen.tsx**` — simplify handleStartChat
+3. `**src/components/SendToFriendPicker.tsx**` — simplify handleSend
+4. `**src/pages/CameraScreen.tsx**` — fix saveDripToHistory error handling + cache invalidation
+5. `**src/components/OutfitRatingCard.tsx**` — add glow effects to share card canvas
