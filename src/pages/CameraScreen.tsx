@@ -52,6 +52,9 @@ export type RatingResult = {
   face_reason?: string;
   advice: string;
   praise_line?: string;
+  // Roast mode fields (no human detected)
+  error?: string;
+  roast_line?: string;
   // Legacy fields for backward compat with old results
   style_score?: number;
   style_reason?: string;
