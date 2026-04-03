@@ -245,8 +245,19 @@ const saveDripToHistory = async (image: string, result: RatingResult, userId?: s
         console.error("Failed to save drip to DB:", dbErr);
         toast.error("Score saved locally but failed to sync to leaderboard");
       } else {
-        // Invalidate leaderboard cache so it re-fetches
-        try { localStorage.removeItem("leaderboard-daily-cache"); } catch {}
+        // Invalidate all leaderboard caches (device + module)
+        try {
+          localStorage.removeItem("leaderboard-daily-cache");
+          // Clear device cache entries for leaderboard
+          const keys = Object.keys(localStorage);
+          for (const key of keys) {
+            if (key.startsWith("dripd_leaderboard")) {
+              localStorage.removeItem(key);
+            }
+          }
+        } catch {}
+        // Signal to LeaderboardTab to force refresh
+        window.dispatchEvent(new CustomEvent("drip-saved"));
       }
     } catch (err) {
       console.error("Failed to save drip to DB:", err);

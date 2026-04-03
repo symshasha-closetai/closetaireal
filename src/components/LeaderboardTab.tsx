@@ -413,6 +413,18 @@ const LeaderboardTab = () => {
     else fetchWeekly();
   }, [user?.id, viewMode]);
 
+  // Listen for drip-saved events to force refresh
+  useEffect(() => {
+    const handler = () => {
+      dailyCache = null;
+      weeklyCache = null;
+      if (viewMode === "daily") fetchDaily(true);
+      else fetchWeekly(true);
+    };
+    window.addEventListener("drip-saved", handler);
+    return () => window.removeEventListener("drip-saved", handler);
+  }, [viewMode, fetchDaily, fetchWeekly]);
+
   const handleShare = async (entry: LeaderboardEntry, rank: number) => {
     setSharingId(entry.user_id);
     await new Promise((r) => setTimeout(r, 100));

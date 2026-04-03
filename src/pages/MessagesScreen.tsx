@@ -149,7 +149,12 @@ const MessagesScreen = () => {
     const { data: convoId, error } = await supabase.rpc("find_or_create_conversation", { friend_id: friendId });
     if (error || !convoId) {
       console.error("find_or_create_conversation error:", error);
-      toast.error("Failed to start conversation");
+      const msg = error?.message || "Failed to start conversation";
+      if (msg.includes("friends")) {
+        toast.error("You must be friends to start a conversation");
+      } else {
+        toast.error(msg);
+      }
       setCreating(null);
       return;
     }

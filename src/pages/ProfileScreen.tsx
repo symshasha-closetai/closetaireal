@@ -14,7 +14,7 @@ import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import ScoreRing from "../components/ScoreRing";
 import OutfitRatingCard from "../components/OutfitRatingCard";
 import { getCache, setCache, CACHE_KEYS } from "@/lib/deviceCache";
-import { subscribeToPush, unsubscribeFromPush, isPushSubscribed } from "@/lib/pushNotifications";
+import { subscribeToPush, unsubscribeFromPush, isPushSubscribed, type PushResult } from "@/lib/pushNotifications";
 import {
   GenderPicker,
   BodyProfileSection,
@@ -92,16 +92,33 @@ const NotificationToggle = ({ userId }: { userId?: string }) => {
     setLoading(true);
     try {
       if (checked) {
-        const success = await subscribeToPush(userId);
-        if (success) {
+        const result: PushResult = await subscribeToPush(userId);
+        if (result.success) {
           setEnabled(true);
           toast.success("Push notifications enabled! 🔔");
         } else {
-          if ("Notification" in window && Notification.permission === "denied") {
-            setBrowserBlocked(true);
-            toast.error("Notifications blocked by browser. Enable in your browser settings.");
-          } else {
-            toast.error("Could not enable notifications.");
+          switch (result.reason) {
+            case "not_supported":
+              toast.error("Push notifications are not supported on this browser.");
+              break;
+            case "permission_denied":
+              setBrowserBlocked(true);
+              toast.error("Notifications blocked by browser. Enable in your browser settings.");
+              break;
+            case "permission_dismissed":
+              toast.error("Permission dismissed. Tap the toggle to try again.");
+              break;
+            case "sw_unavailable":
+              toast.error("Service worker not available. Try refreshing the page.");
+              break;
+            case "subscribe_failed":
+              toast.error("Failed to set up push subscription. Try again.");
+              break;
+            case "db_failed":
+              toast.error("Enabled locally but failed to save. Try again.");
+              break;
+            default:
+              toast.error("Could not enable notifications.");
           }
         }
       } else {

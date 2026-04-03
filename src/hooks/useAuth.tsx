@@ -3,7 +3,7 @@ import { Session, User } from "@supabase/supabase-js";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { getCache, setCache, CACHE_KEYS } from "@/lib/deviceCache";
-import { subscribeToPush } from "@/lib/pushNotifications";
+import { ensurePushSubscription } from "@/lib/pushNotifications";
 
 type Profile = { name: string | null; avatar_url: string | null };
 type StyleProfile = {
@@ -105,10 +105,10 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         setTimeout(() => {
           fetchProfile(session.user.id);
           fetchStyleProfile(session.user.id);
-          // Auto-subscribe to push silently
-          if (!pushAttemptedRef.current && "Notification" in window && Notification.permission !== "denied") {
+          // Silently ensure push subscription if permission already granted
+          if (!pushAttemptedRef.current) {
             pushAttemptedRef.current = true;
-            subscribeToPush(session.user.id).catch(() => {});
+            ensurePushSubscription(session.user.id).catch(() => {});
           }
         }, 0);
       } else {
