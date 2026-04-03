@@ -430,54 +430,86 @@ const OutfitRatingCard = ({ image, imageBase64, result, wardrobeItems = [],
     return await new Promise<Blob | null>(resolve => canvas.toBlob(resolve, "image/png", 1));
   }, [image, result]);
 
+  const downloadBlob = useCallback((blob: Blob, filename: string) => {
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = filename;
+    a.style.display = "none";
+    document.body.appendChild(a);
+    // Use setTimeout to ensure the click registers on all browsers/mobile
+    setTimeout(() => {
+      a.click();
+      setTimeout(() => {
+        document.body.removeChild(a);
+        URL.revokeObjectURL(url);
+      }, 200);
+    }, 100);
+  }, []);
+
   const handleShare = useCallback(async () => {
     if (sharing) return;
     setSharing(true);
     try {
       const blob = await captureCard();
-      if (!blob) throw new Error("Failed to create image");
-      const file = new File([blob], "dripd-result.png", { type: "image/png" });
-      if (navigator.share && navigator.canShare?.({ files: [file] })) {
-        await navigator.share({ title: "My Style Analysis — Dripd", files: [file] });
-      } else {
-        const url = URL.createObjectURL(blob);
-        const a = document.createElement("a");
-        a.href = url;
-        a.download = "dripd-result.png";
-        document.body.appendChild(a);
-        a.click();
-        document.body.removeChild(a);
-        URL.revokeObjectURL(url);
-        toast.success("Image saved!");
+      if (!blob) {
+        toast.error("Could not generate image — try again");
+        return;
       }
+      const file = new File([blob], "dripd-result.png", { type: "image/png" });
+      
+      // Check Web Share API support with file sharing
+      if (typeof navigator.share === "function") {
+        try {
+          const canShare = navigator.canShare?.({ files: [file] });
+          if (canShare) {
+            await navigator.share({ title: "My Style Analysis — Dripd", files: [file] });
+            return;
+          }
+        } catch {
+          // canShare threw or share failed — fall through to download
+        }
+      }
+      
+      // Fallback: download the file
+      downloadBlob(blob, "dripd-result.png");
+      toast.success("Image saved!");
     } catch (e: any) {
-      if (e?.name !== "AbortError") toast.info("Couldn't share — try again");
+      if (e?.name === "AbortError") return; // user cancelled share sheet
+      // Final fallback: try download
+      try {
+        const blob = await captureCard();
+        if (blob) {
+          downloadBlob(blob, "dripd-result.png");
+          toast.success("Image saved!");
+        } else {
+          toast.error("Couldn't share — try again");
+        }
+      } catch {
+        toast.error("Couldn't share — try again");
+      }
     } finally {
       setSharing(false);
     }
-  }, [sharing, captureCard]);
+  }, [sharing, captureCard, downloadBlob]);
 
   const handleDownload = useCallback(async () => {
     if (downloading) return;
     setDownloading(true);
     try {
       const blob = await captureCard();
-      if (!blob) throw new Error("Failed to create image");
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement("a");
-      a.href = url;
-      a.download = "dripd-result.png";
-      document.body.appendChild(a);
-      a.click();
-      document.body.removeChild(a);
-      URL.revokeObjectURL(url);
+      if (!blob) {
+        toast.error("Could not generate image — try again");
+        return;
+      }
+      downloadBlob(blob, "dripd-result.png");
       toast.success("Result saved! 📸");
     } catch {
-      toast.info("Couldn't download — try again");
+      toast.error("Couldn't download — try again");
     } finally {
       setDownloading(false);
     }
-  }, [downloading, captureCard]);
+  }, [downloading, captureCard, downloadBlob]);
 
   const toggleTooltip = (key: string) => {
     setActiveTooltip(prev => prev === key ? null : key);
