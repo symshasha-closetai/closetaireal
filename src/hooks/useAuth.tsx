@@ -3,7 +3,7 @@ import { Session, User } from "@supabase/supabase-js";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { getCache, setCache, CACHE_KEYS } from "@/lib/deviceCache";
-import { subscribeToPush } from "@/lib/pushNotifications";
+import { ensurePushSubscription } from "@/lib/pushNotifications";
 
 type Profile = { name: string | null; avatar_url: string | null };
 type StyleProfile = {
