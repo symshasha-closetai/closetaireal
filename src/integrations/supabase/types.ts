@@ -653,7 +653,7 @@ export type Database = {
         Returns: string
       }
       find_or_create_conversation: {
-        Args: { friend_id: string }
+        Args: { target_friend_id: string }
         Returns: string
       }
       is_conversation_participant: {

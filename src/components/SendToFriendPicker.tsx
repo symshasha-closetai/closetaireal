@@ -57,7 +57,7 @@ const SendToFriendPicker = ({ open, onOpenChange, contentType, content = "", met
     setSending(friendId);
 
     // Use atomic RPC to find or create conversation
-    const { data: conversationId, error: convoErr } = await supabase.rpc("find_or_create_conversation", { friend_id: friendId });
+    const { data: conversationId, error: convoErr } = await supabase.rpc("find_or_create_conversation", { target_friend_id: friendId });
     if (convoErr || !conversationId) {
       console.error("find_or_create_conversation error:", convoErr);
       const msg = convoErr?.message || "Failed to send";

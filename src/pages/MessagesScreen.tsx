@@ -146,7 +146,7 @@ const MessagesScreen = () => {
     if (!user) return;
     setCreating(friendId);
 
-    const { data: convoId, error } = await supabase.rpc("find_or_create_conversation", { friend_id: friendId });
+    const { data: convoId, error } = await supabase.rpc("find_or_create_conversation", { target_friend_id: friendId });
     if (error || !convoId) {
       console.error("find_or_create_conversation error:", error);
       const msg = error?.message || "Failed to start conversation";
