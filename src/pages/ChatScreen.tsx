@@ -237,6 +237,14 @@ const ChatScreen = () => {
       </div>
 
       {/* Messages */}
+      {chatError ? (
+        <div className="flex-1 flex flex-col items-center justify-center px-6 gap-4">
+          <p className="text-sm text-muted-foreground text-center">{chatError}</p>
+          <button onClick={() => navigate("/messages")} className="px-4 py-2 rounded-xl bg-primary text-primary-foreground text-sm font-medium">
+            Back to Messages
+          </button>
+        </div>
+      ) : (
       <div ref={scrollRef} className="flex-1 overflow-y-auto px-4 py-3 space-y-1">
         {showBanner && (
           <motion.div initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }}
