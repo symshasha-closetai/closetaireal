@@ -311,6 +311,17 @@ const runAnalysis = async (file: File, userId: string | undefined, styleProfile:
       console.error("rate-outfit error:", error);
       toast.error("AI rating failed: " + (error.message || "Unknown error — check edge function deployment"));
     }
+
+    // Handle roast mode (no human detected)
+    if (data?.result?.error === "roast" && data?.result?.roast_line) {
+      toast("No drip detected 😅", {
+        description: data.result.roast_line,
+        duration: 5000,
+      });
+      updateGlobal({ result: null, analyzing: false, progress: 0, stage: "", analysisSteps: [], image: null, imageBase64: null });
+      return;
+    }
+
     if (error || data?.error || !data?.result) {
       if (data?.error) {
         console.error("rate-outfit returned error:", data.error);
