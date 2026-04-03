@@ -94,7 +94,7 @@ export async function subscribeToPush(userId: string): Promise<PushResult> {
       try {
         subscription = await registration.pushManager.subscribe({
           userVisibleOnly: true,
-          applicationServerKey: urlBase64ToUint8Array(VAPID_PUBLIC_KEY),
+          applicationServerKey: urlBase64ToUint8Array(VAPID_PUBLIC_KEY).buffer as ArrayBuffer,
         });
       } catch {
         return { success: false, reason: "subscribe_failed" };
