@@ -39,23 +39,34 @@ const ChatScreen = () => {
   const channelRef = useRef<any>(null);
   const typingTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
+  const [chatError, setChatError] = useState<string | null>(null);
+
   // Fetch other user info
   useEffect(() => {
     if (!conversationId || !user) return;
     const fetchOther = async () => {
-      const { data: participants } = await supabase
+      const { data: participants, error: partErr } = await supabase
         .from("conversation_participants" as any)
         .select("user_id")
         .eq("conversation_id", conversationId)
         .neq("user_id", user.id) as any;
-      if (participants?.[0]) {
-        const { data: prof } = await supabase
-          .from("profiles")
-          .select("name, username, avatar_url")
-          .eq("user_id", participants[0].user_id)
-          .maybeSingle() as any;
-        setOtherUser(prof);
+      if (partErr) {
+        console.error("Failed to load conversation participants:", partErr);
+        setChatError("Could not load this conversation. It may not exist or you don't have access.");
+        setLoading(false);
+        return;
       }
+      if (!participants || participants.length === 0) {
+        setChatError("This conversation could not be found.");
+        setLoading(false);
+        return;
+      }
+      const { data: prof } = await supabase
+        .from("profiles")
+        .select("name, username, avatar_url")
+        .eq("user_id", participants[0].user_id)
+        .maybeSingle() as any;
+      setOtherUser(prof);
     };
     fetchOther();
   }, [conversationId, user?.id]);
