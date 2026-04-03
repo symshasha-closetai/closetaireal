@@ -10,78 +10,14 @@ import { useAuth } from "@/hooks/useAuth";
 import { toast } from "sonner";
 import { compressImage } from "@/lib/imageCompression";
 
-const CLIENT_KILLER_TAGS_MALE = [
-  "Urban Samurai 🗡️✨", "Silent Billionaire 💰🖤", "Street Alpha 🔥👑", "Midnight Artist 🎨🌙",
-  "Campus CEO 💼🎓", "Velvet Operator 🎭✨", "Neon Maverick 💜⚡", "Shadow Stylist 🖤🕶️",
-  "Minimal King 👑✨", "Dark Academia Don 📚🖤", "Chrome Heart Drip 💎🔗", "Sunset Sovereign 🌅👑",
-  "Retro Royalty 👑🪩", "Ice Cold Flex ❄️💎", "Golden Hour Glow ☀️✨", "Main Character Mode 🎬✨",
-  "Quiet Luxury King 🤫👑", "Concrete Runway 🏙️💫", "Denim Dynasty 👖👑", "Monochrome Monarch 🖤🤍",
-  "Drip Architect 🏛️💧", "Phantom Flex 👻💪", "Zen Drip Master 🧘💧", "Royal Misfit 👑🃏",
-  "Twilight Baron 🌆🎩", "Ivory Tower King 🏰👑", "Digital Nomad Drip 💻🌍", "Obsidian Oracle 🖤🔮",
-  "Champagne Casualty 🥂💫", "Cosmic Drifter 🌌✨", "Vintage Voltage ⚡🪩", "Luxe Outlaw 🤠💎",
-  "Sapphire Sovereign 💙👑", "Arctic Aristocrat 🧊👑", "Jade Emperor 🟢👑", "Onyx Operator 🖤🎯",
-  "Gilded Rebel ✨🔥", "Marble Mood 🤍🏛️", "Boulevard Boss 🛣️👔", "Polo Club Captain 🏇✨",
-  "Night Shift Drip 🌃💧", "Stealth Drip 🥷💧", "Grunge Royalty 🎸👑", "Silk Road Style 🧣✨",
-  "Electric Elegance ⚡✨", "Crimson Catalyst ❤️‍🔥⚡",
+const FALLBACK_TAGS = ["Clean Fit", "Solid Look", "Got Potential", "Quiet Flex", "Vibe Check"];
+const FALLBACK_PRAISE = [
+  "you showed up and that's already half the battle",
+  "this fit has more going for it than you think",
+  "not bad at all — keep building on this energy",
 ];
 
-const CLIENT_KILLER_TAGS_FEMALE = [
-  "Main Character Energy 🎬✨", "Silent Luxury Queen 💰👑", "Street Goddess 🔥💫", "Midnight Muse 🎨🌙",
-  "Campus Queen 💼🎓", "Soft Power Femme 🌸⚡", "Velvet Vixen 🎭✨", "Neon Empress 💜⚡",
-  "Shadow Siren 🖤🕶️", "Minimal Goddess 👑✨", "Dark Academia Diva 📚🖤", "Chrome Heart Queen 💎🔗",
-  "Sunset Empress 🌅👑", "Retro Diva 👑🪩", "Ice Cold Elegance ❄️💎", "Golden Hour Goddess ☀️✨",
-  "Quiet Luxury Queen 🤫👑", "Concrete Runway Diva 🏙️💫", "Denim Diva 👖✨", "Monochrome Muse 🖤🤍",
-  "Drip Duchess 🏛️💧", "Phantom Femme 👻💅", "Vogue Empress 🦹✨", "Zen Drip Queen 🧘💧",
-  "Royal Rebel 👑🃏", "Twilight Duchess 🌆👑", "Ivory Empress 🏰👑", "Digital Diva 💻🌍",
-  "Obsidian Goddess 🖤🔮", "Champagne Royalty 🥂💫", "Cosmic Diva 🌌✨", "Vintage Vibe Queen ⚡🪩",
-  "Luxe Siren 💎🌹", "Sapphire Empress 💙👑", "Crimson Queen ❤️‍🔥👑", "Arctic Empress 🧊👑",
-  "Jade Goddess 🟢✨", "Onyx Enchantress 🖤🎯", "Gilded Femme ✨🔥", "Marble Muse 🤍🏛️",
-  "Boulevard Diva 🛣️👠", "Polo Club Princess 🏇✨", "Night Shift Glam 🌃💅", "Stealth Siren 🥷💧",
-  "Grunge Goddess 🎸👑", "Silk Dream Diva 🧣✨", "Electric Empress ⚡✨", "Pastel Powerhouse 🍬💪",
-];
-
-const CLIENT_KILLER_TAGS_NEUTRAL = [
-  "Main Character Mode 🎬✨", "Silent Luxury 💰🖤", "Street Icon 🔥💫", "Midnight Artist 🎨🌙",
-  "Campus Legend 💼🎓", "Soft Rebel 🌸⚡", "Velvet Vision 🎭✨", "Neon Maverick 💜⚡",
-  "Shadow Stylist 🖤🕶️", "Minimal Icon 👑✨", "Dark Academia Vibe 📚🖤", "Chrome Heart Drip 💎🔗",
-  "Sunset Sovereign 🌅👑", "Retro Royalty 👑🪩", "Ice Cold Flex ❄️💎", "Golden Hour Glow ☀️✨",
-  "Cosmic Drifter 🌌✨", "Vintage Voltage ⚡🪩", "Gilded Rebel ✨🔥", "Marble Mood 🤍🏛️",
-];
-
-function getClientKillerTags(gender?: string | null) {
-  if (gender === "female") return CLIENT_KILLER_TAGS_FEMALE;
-  if (gender === "male") return CLIENT_KILLER_TAGS_MALE;
-  return CLIENT_KILLER_TAGS_NEUTRAL;
-}
-
-const CLIENT_PRAISE_LINES = [
-  "You walked in and the room stopped scrolling 📱✨",
-  "This fit said 'I woke up and chose excellence' 💅🔥",
-  "You're already dressed like the main character 🎬👑",
-  "Serving looks that need their own zip code 📍💫",
-  "You're not dressed, you're ARMED 🗡️✨",
-  "This outfit just made someone rethink their whole wardrobe 👀🔥",
-  "Walking mood board energy — everything just clicks 🎨👑",
-  "The mirror called, it said thank you 🪞✨",
-  "Outfit so clean it should come with a warning label ⚠️✨",
-  "You're giving 'I don't try, I just arrive' energy 💅👑",
-  "You're dressed like success is your default setting 💼✨",
-  "This fit just broke the algorithm 📈🔥",
-  "You look like you own the playlist AND the venue 🎶👑",
-  "This outfit has more range than your favorite artist 🎤✨",
-  "You're giving 'walked in, owned it, left' energy 🚶‍♂️💨",
-  "This look just unlocked a new level of drip 🎮✨",
-  "You're dressed like the universe owes you a runway 🌌💃",
-  "You look like you came with a soundtrack 🎧👑",
-  "This outfit just won an award it didn't even enter 🏆✨",
-  "You're giving 'effortlessly iconic' and it's working 💫👑",
-  "You're dressed like your future self sent instructions 🔮🔥",
-  "This fit has more personality than most people 🎭💎",
-  "Styled like the internet's best-kept secret 🤫✨",
-  "This outfit just made gravity optional — you're floating 🫧👑",
-];
-
-function clientFallbackResult(gender?: string | null): RatingResult {
+function clientFallbackResult(_gender?: string | null): RatingResult {
   const r = (min: number, max: number) => Math.round((Math.random() * (max - min) + min) * 10) / 10;
   const pick = <T,>(a: T[]) => a[Math.floor(Math.random() * a.length)];
   const color = r(7, 9.5), posture = r(7, 9.5), layering = r(7, 9.5), face = r(7, 9.5);
@@ -90,13 +26,13 @@ function clientFallbackResult(gender?: string | null): RatingResult {
     drip_reason: "Great color coordination that creates visual harmony",
     confidence_rating: r(7.5, 9.5),
     confidence_reason: "This look shows intentional styling choices",
-    killer_tag: pick(getClientKillerTags(gender)),
+    killer_tag: pick(FALLBACK_TAGS),
     color_score: color, color_reason: "Colors complement each other beautifully",
     posture_score: posture, posture_reason: "Strong stance that conveys confidence",
     layering_score: layering, layering_reason: "Well-layered with complementary accessories",
     face_score: face, face_reason: "Great expression that ties the look together",
     advice: "Keep experimenting with your personal style — you're on the right track!",
-    praise_line: pick(CLIENT_PRAISE_LINES),
+    praise_line: pick(FALLBACK_PRAISE),
   };
 }
 
@@ -116,6 +52,9 @@ export type RatingResult = {
   face_reason?: string;
   advice: string;
   praise_line?: string;
+  // Roast mode fields (no human detected)
+  error?: string;
+  roast_line?: string;
   // Legacy fields for backward compat with old results
   style_score?: number;
   style_reason?: string;
@@ -372,6 +311,17 @@ const runAnalysis = async (file: File, userId: string | undefined, styleProfile:
       console.error("rate-outfit error:", error);
       toast.error("AI rating failed: " + (error.message || "Unknown error — check edge function deployment"));
     }
+
+    // Handle roast mode (no human detected)
+    if (data?.result?.error === "roast" && data?.result?.roast_line) {
+      toast("No drip detected 😅", {
+        description: data.result.roast_line,
+        duration: 5000,
+      });
+      updateGlobal({ result: null, analyzing: false, progress: 0, stage: "", analysisSteps: [], image: null, imageBase64: null });
+      return;
+    }
+
     if (error || data?.error || !data?.result) {
       if (data?.error) {
         console.error("rate-outfit returned error:", data.error);
