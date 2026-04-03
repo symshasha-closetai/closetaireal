@@ -1,11 +1,12 @@
 import { useState, useEffect, useRef, useCallback } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { motion } from "framer-motion";
-import { ArrowLeft, Send, Loader2, Info, CheckCheck } from "lucide-react";
+import { ArrowLeft, Send, Loader2, Info, CheckCheck, Smile } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { toast } from "sonner";
 import MessageBubble from "@/components/MessageBubble";
+import EmojiPicker from "@/components/EmojiPicker";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 
 type Message = {
@@ -31,7 +32,9 @@ const ChatScreen = () => {
   const [otherUser, setOtherUser] = useState<{ name: string | null; username: string | null; avatar_url: string | null } | null>(null);
   const [showBanner, setShowBanner] = useState(false);
   const [pendingDeleteMsgId, setPendingDeleteMsgId] = useState<string | null>(null);
+  const [showEmoji, setShowEmoji] = useState(false);
   const scrollRef = useRef<HTMLDivElement>(null);
+  const inputRef = useRef<HTMLInputElement>(null);
 
   // Typing & read receipts via presence
   const [otherTyping, setOtherTyping] = useState(false);
@@ -46,10 +49,10 @@ const ChatScreen = () => {
     if (!conversationId || !user) return;
     const fetchOther = async () => {
       const { data: participants, error: partErr } = await supabase
-        .from("conversation_participants" as any)
+        .from("conversation_participants")
         .select("user_id")
         .eq("conversation_id", conversationId)
-        .neq("user_id", user.id) as any;
+        .neq("user_id", user.id);
       if (partErr) {
         console.error("Failed to load conversation participants:", partErr);
         setChatError("Could not load this conversation. It may not exist or you don't have access.");
@@ -65,45 +68,34 @@ const ChatScreen = () => {
         .from("profiles")
         .select("name, username, avatar_url")
         .eq("user_id", participants[0].user_id)
-        .maybeSingle() as any;
+        .maybeSingle();
       setOtherUser(prof);
     };
     fetchOther();
   }, [conversationId, user?.id]);
 
   // Fetch messages
-  const fetchMessages = async () => {
+  const fetchMessages = useCallback(async () => {
     if (!conversationId) return;
     setLoading(true);
     const { data } = await supabase
-      .from("messages" as any)
+      .from("messages")
       .select("*")
       .eq("conversation_id", conversationId)
       .or("expires_at.is.null,expires_at.gt.now(),kept.eq.true")
-      .order("created_at", { ascending: true }) as any;
+      .order("created_at", { ascending: true });
 
     const msgs = (data || []) as Message[];
     setMessages(msgs);
     setLoading(false);
     if (msgs.length === 0) setShowBanner(true);
-
-    try {
-      localStorage.setItem(`chat-${conversationId}`, JSON.stringify({ msgs, ts: Date.now() }));
-    } catch {}
-  };
-
-  useEffect(() => {
-    try {
-      const cached = JSON.parse(localStorage.getItem(`chat-${conversationId}`) || "null");
-      if (cached && Date.now() - cached.ts < 7 * 24 * 60 * 60 * 1000) {
-        setMessages(cached.msgs);
-        setLoading(false);
-      }
-    } catch {}
-    fetchMessages();
   }, [conversationId]);
 
-  // Realtime subscription + Presence
+  useEffect(() => {
+    fetchMessages();
+  }, [fetchMessages]);
+
+  // Realtime subscription + Presence — deduplicate incoming messages
   useEffect(() => {
     if (!conversationId || !user) return;
     const channel = supabase.channel(`chat-${conversationId}`, {
@@ -117,11 +109,35 @@ const ChatScreen = () => {
         table: "messages",
         filter: `conversation_id=eq.${conversationId}`,
       }, (payload) => {
-        setMessages((prev) => [...prev, payload.new as Message]);
+        const newMsg = payload.new as Message;
+        setMessages((prev) => {
+          // Deduplicate — skip if already in list (optimistic or duplicate event)
+          if (prev.some(m => m.id === newMsg.id)) return prev;
+          return [...prev, newMsg];
+        });
+      })
+      .on("postgres_changes", {
+        event: "DELETE",
+        schema: "public",
+        table: "messages",
+        filter: `conversation_id=eq.${conversationId}`,
+      }, (payload) => {
+        const deletedId = (payload.old as any)?.id;
+        if (deletedId) {
+          setMessages((prev) => prev.filter(m => m.id !== deletedId));
+        }
+      })
+      .on("postgres_changes", {
+        event: "UPDATE",
+        schema: "public",
+        table: "messages",
+        filter: `conversation_id=eq.${conversationId}`,
+      }, (payload) => {
+        const updated = payload.new as Message;
+        setMessages((prev) => prev.map(m => m.id === updated.id ? updated : m));
       })
       .on("presence", { event: "sync" }, () => {
         const state = channel.presenceState();
-        // Check other users' presence
         for (const [key, presences] of Object.entries(state)) {
           if (key !== user.id && Array.isArray(presences) && presences.length > 0) {
             const p = presences[0] as any;
@@ -169,24 +185,59 @@ const ChatScreen = () => {
 
   const handleSend = async () => {
     if (!text.trim() || !user || !conversationId) return;
+    const msgText = text.trim();
+    setText("");
+    setShowEmoji(false);
     setSending(true);
     if (typingTimeoutRef.current) clearTimeout(typingTimeoutRef.current);
     channelRef.current?.track({ typing: false, last_read: otherLastRead });
 
-    const { error } = await supabase.from("messages" as any).insert({
+    // Optimistic add
+    const optimisticId = crypto.randomUUID();
+    const optimisticMsg: Message = {
+      id: optimisticId,
       conversation_id: conversationId,
       sender_id: user.id,
-      content: text.trim(),
+      content: msgText,
       content_type: "text",
-    } as any);
-    if (error) toast.error("Failed to send");
-    else setText("");
-    setSending(false);
+      metadata: null,
+      kept: false,
+      expires_at: null,
+      created_at: new Date().toISOString(),
+    };
+    setMessages(prev => [...prev, optimisticMsg]);
     setShowBanner(false);
+
+    const { data, error } = await supabase.from("messages").insert({
+      conversation_id: conversationId,
+      sender_id: user.id,
+      content: msgText,
+      content_type: "text",
+    }).select().single();
+
+    if (error) {
+      // Remove optimistic message on failure
+      setMessages(prev => prev.filter(m => m.id !== optimisticId));
+      toast.error("Failed to send");
+    } else if (data) {
+      // Replace optimistic with real message
+      setMessages(prev => {
+        const withoutOptimistic = prev.filter(m => m.id !== optimisticId);
+        // Deduplicate in case realtime already delivered it
+        if (withoutOptimistic.some(m => m.id === data.id)) return withoutOptimistic;
+        return [...withoutOptimistic, data as Message];
+      });
+    }
+    setSending(false);
+  };
+
+  const handleEmojiSelect = (emoji: string) => {
+    setText(prev => prev + emoji);
+    inputRef.current?.focus();
   };
 
   const handleKeep = async (msgId: string) => {
-    await supabase.from("messages" as any).update({ kept: true, expires_at: null } as any).eq("id", msgId);
+    await supabase.from("messages").update({ kept: true, expires_at: null } as any).eq("id", msgId);
     setMessages(prev => prev.map(m => m.id === msgId ? { ...m, kept: true, expires_at: null } : m));
     toast.success("Message kept forever ✨");
   };
@@ -199,11 +250,10 @@ const ChatScreen = () => {
     if (!pendingDeleteMsgId) return;
     const msgId = pendingDeleteMsgId;
     setPendingDeleteMsgId(null);
-    await supabase.from("messages" as any).delete().eq("id", msgId);
+    await supabase.from("messages").delete().eq("id", msgId);
     setMessages(prev => prev.filter(m => m.id !== msgId));
   };
 
-  // Check if a message has been read by other user
   const isRead = (msg: Message) => {
     if (msg.sender_id !== user?.id) return false;
     if (!otherLastRead) return false;
@@ -245,7 +295,7 @@ const ChatScreen = () => {
           </button>
         </div>
       ) : (
-      <div ref={scrollRef} className="flex-1 overflow-y-auto px-4 py-3 space-y-1">
+      <div ref={scrollRef} className="flex-1 overflow-y-auto px-4 py-3 space-y-1" onClick={() => showEmoji && setShowEmoji(false)}>
         {showBanner && (
           <motion.div initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }}
             className="flex items-center gap-2 p-3 rounded-xl bg-secondary/50 mb-4">
@@ -282,7 +332,6 @@ const ChatScreen = () => {
             );
           })
         )}
-        {/* Typing indicator */}
         {otherTyping && (
           <motion.div initial={{ opacity: 0, y: 5 }} animate={{ opacity: 1, y: 0 }} className="flex items-center gap-1.5 py-1 px-2">
             <div className="flex gap-1">
@@ -295,13 +344,24 @@ const ChatScreen = () => {
       </div>
       )}
 
+      {/* Emoji Picker */}
+      <EmojiPicker open={showEmoji} onSelect={handleEmojiSelect} onClose={() => setShowEmoji(false)} />
+
       {/* Input */}
       <div className="px-4 py-3 border-t border-border/30 bg-card/80 backdrop-blur-sm safe-bottom">
         <div className="flex gap-2 items-end max-w-lg mx-auto">
+          <button
+            onClick={() => setShowEmoji(prev => !prev)}
+            className="w-10 h-10 rounded-full bg-secondary flex items-center justify-center flex-shrink-0"
+          >
+            <Smile size={18} className={`transition-colors ${showEmoji ? "text-primary" : "text-muted-foreground"}`} />
+          </button>
           <input
+            ref={inputRef}
             value={text}
             onChange={(e) => handleTyping(e.target.value)}
             onKeyDown={(e) => e.key === "Enter" && !e.shiftKey && handleSend()}
+            onFocus={() => setShowEmoji(false)}
             placeholder="Message..."
             className="flex-1 px-4 py-2.5 rounded-full bg-secondary border border-border text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/30"
           />
