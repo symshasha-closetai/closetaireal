@@ -293,6 +293,7 @@ const ChatScreen = () => {
           </motion.div>
         )}
       </div>
+      )}
 
       {/* Input */}
       <div className="px-4 py-3 border-t border-border/30 bg-card/80 backdrop-blur-sm safe-bottom">

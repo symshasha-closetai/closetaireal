@@ -60,7 +60,12 @@ const SendToFriendPicker = ({ open, onOpenChange, contentType, content = "", met
     const { data: conversationId, error: convoErr } = await supabase.rpc("find_or_create_conversation", { friend_id: friendId });
     if (convoErr || !conversationId) {
       console.error("find_or_create_conversation error:", convoErr);
-      toast.error("Failed to send");
+      const msg = convoErr?.message || "Failed to send";
+      if (msg.includes("friends")) {
+        toast.error("You must be friends to send messages");
+      } else {
+        toast.error(msg);
+      }
       setSending(null);
       return;
     }
