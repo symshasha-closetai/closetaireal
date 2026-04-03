@@ -14,7 +14,7 @@ import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import ScoreRing from "../components/ScoreRing";
 import OutfitRatingCard from "../components/OutfitRatingCard";
 import { getCache, setCache, CACHE_KEYS } from "@/lib/deviceCache";
-import { subscribeToPush, unsubscribeFromPush, isPushSubscribed } from "@/lib/pushNotifications";
+import { subscribeToPush, unsubscribeFromPush, isPushSubscribed, type PushResult } from "@/lib/pushNotifications";
 import {
   GenderPicker,
   BodyProfileSection,
