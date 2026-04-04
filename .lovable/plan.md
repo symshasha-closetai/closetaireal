@@ -1,52 +1,37 @@
 
 
-## Fix Drip Check — Prompt Restructure + Deploy
+## Fix Notification Button + Message Badge + Push Notifications
 
-### Root cause
+### Problems
 
-The current prompt has a structural conflict that confuses the AI model:
-
-1. **Contradictory instructions**: The prompt says "DO NOT proceed to any other step. Output only the error JSON above." for the no-human case, but then immediately continues with scoring instructions. The model reads the entire prompt before responding, so it gets mixed signals about what to prioritize.
-
-2. **Score-first, tag-second ordering**: The prompt asks for scores AND killer tag/praise line in one JSON, but the scoring instructions dominate the output structure. The model treats tags as just another field rather than the primary creative output.
-
-3. **The function may not be deployed**: Edge function logs show zero entries for `rate-outfit`, meaning the latest code changes likely weren't deployed.
+1. **Notification bell badge includes unread messages** — the `totalBadge` combines friend requests + unread message count. Messages should only show on the message button.
+2. **Message button has no badge** — unread count is tracked inside `NotificationDropdown` but never exposed to the message button in `AppHeader`.
+3. **Unread messages show inside the notification dropdown** — they shouldn't; notifications = friend requests/accepts only.
+4. **Badge doesn't vanish on view** — opening the dropdown doesn't mark notifications as "seen."
+5. **No push notifications received** — the `push_subscriptions` table is empty. Users haven't been prompted to enable push. The toggle exists only buried in profile settings. Need to prompt users to enable push after sign-up or on first app load.
 
 ### Implementation
 
-**1. Deploy the edge function**
+**1. Remove message count from NotificationDropdown (`src/components/NotificationDropdown.tsx`)**
 
-The function needs to be explicitly deployed. This is likely why drip check "isn't working" — the deployed version may still be running old code.
+- Remove `fetchUnreadMessages`, `unreadMsgCount` state, the realtime `messages` channel subscription, and the unread messages UI row
+- Change `totalBadge` to only count `friend_request` notifications
+- Add a `seen` state — when dropdown opens, mark all current notifications as "seen" so badge clears. Store seen IDs in a `useRef` set (session-only, no DB needed)
 
-**2. Restructure `supabase/functions/rate-outfit/index.ts` with a two-phase prompt**
+**2. Add unread badge to message button (`src/components/AppHeader.tsx`)**
 
-Split the prompt into a clear system message + user message pattern:
+- Add `unreadMsgCount` state and fetch logic (moved from NotificationDropdown)
+- Add realtime subscription for new messages
+- Show badge on the message button (MessageCircle icon)
+- Clear the badge when user navigates to `/messages` (use a simple approach: reset count when navigating)
 
-- **System message**: Set the DRIPD AI persona, voice rules, and the two JSON output formats (human vs roast). Keep this concise and authoritative.
-- **User message**: The actual analysis request with the image.
+**3. Auto-prompt push notification permission (`src/hooks/useAuth.tsx` or `src/components/AppHeader.tsx`)**
 
-Key changes to the prompt:
-- Remove the contradictory "DO NOT proceed" language — instead frame it as "IF/ELSE" clearly
-- Put killer_tag and praise_line rules FIRST in the output spec
-- Move scoring rules to a secondary "also include these fields" section
-- Add explicit instruction: "The drip_score is calculated from the sub-scores. Use the drip_score YOU calculate to determine the tone of killer_tag and praise_line."
-- Keep temperature at 0.9
+- After first successful login, if `Notification.permission === "default"`, show a one-time in-app prompt (not the browser prompt directly) asking "Enable notifications to stay in the loop?"
+- On accept, call `subscribeToPush(userId)` which triggers the browser permission prompt and saves to `push_subscriptions`
+- Store a flag in localStorage so the prompt only shows once per device
 
-**3. Use system + user message split in the API call**
-
-```
-messages: [
-  { role: "system", content: systemPrompt },
-  { role: "user", content: [
-    { type: "text", text: "Analyze this outfit photo." },
-    { type: "image_url", image_url: { url: `data:image/jpeg;base64,...` } }
-  ]}
-]
-```
-
-This gives the model clearer separation between instructions and the task.
-
-### Files
-- `supabase/functions/rate-outfit/index.ts` — restructured prompt with system/user split
-- Deploy the function after editing
+### Files to edit
+- `src/components/NotificationDropdown.tsx` — remove message tracking, add seen-on-open behavior
+- `src/components/AppHeader.tsx` — add unread message badge to message button, add push prompt logic
 
