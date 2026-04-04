@@ -1,5 +1,5 @@
-import { useState, useEffect } from "react";
-import { Bell, Check, X, MessageCircle, UserCheck, Loader2, Settings, Flame, Trophy, TrendingUp, Shirt } from "lucide-react";
+import { useState, useEffect, useRef } from "react";
+import { Bell, Check, X, UserCheck, Loader2, Settings, Flame, Trophy, TrendingUp, Shirt } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { toast } from "sonner";
@@ -12,7 +12,7 @@ import {
 
 type Notification = {
   id: string;
-  type: "friend_request" | "friend_accepted" | "unread_messages";
+  type: "friend_request" | "friend_accepted";
   fromUserId: string;
   fromName: string | null;
   fromUsername: string | null;
@@ -44,12 +44,11 @@ const PREF_ITEMS: { key: keyof NotifPreferences; label: string; desc: string; ic
 const NotificationDropdown = ({ onRequestHandled }: Props) => {
   const { user } = useAuth();
   const [notifications, setNotifications] = useState<Notification[]>([]);
-  const [unreadMsgCount, setUnreadMsgCount] = useState(0);
   const [acting, setActing] = useState<string | null>(null);
   const [open, setOpen] = useState(false);
   const [showSettings, setShowSettings] = useState(false);
   const [preferences, setPreferences] = useState<NotifPreferences>(DEFAULT_PREFS);
-  const [loadingPrefs, setLoadingPrefs] = useState(false);
+  const seenIdsRef = useRef<Set<string>>(new Set());
 
   const fetchNotifications = async () => {
     if (!user) return;
@@ -102,24 +101,6 @@ const NotificationDropdown = ({ onRequestHandled }: Props) => {
     setNotifications(notifs);
   };
 
-  const fetchUnreadMessages = async () => {
-    if (!user) return;
-    const { data: participations } = await supabase
-      .from("conversation_participants")
-      .select("conversation_id")
-      .eq("user_id", user.id);
-    if (!participations || participations.length === 0) { setUnreadMsgCount(0); return; }
-    const convIds = participations.map(p => p.conversation_id);
-    const since = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString();
-    const { count } = await supabase
-      .from("messages")
-      .select("*", { count: "exact", head: true })
-      .in("conversation_id", convIds)
-      .neq("sender_id", user.id)
-      .gte("created_at", since);
-    setUnreadMsgCount(count || 0);
-  };
-
   const fetchPreferences = async () => {
     if (!user) return;
     const { data } = await supabase
@@ -145,7 +126,6 @@ const NotificationDropdown = ({ onRequestHandled }: Props) => {
   useEffect(() => {
     if (!user) return;
     fetchNotifications();
-    fetchUnreadMessages();
     fetchPreferences();
 
     const friendChannel = supabase
@@ -154,21 +134,18 @@ const NotificationDropdown = ({ onRequestHandled }: Props) => {
       .on("postgres_changes", { event: "UPDATE", schema: "public", table: "friends" }, () => fetchNotifications())
       .subscribe();
 
-    const msgChannel = supabase
-      .channel("notif-messages")
-      .on("postgres_changes", { event: "INSERT", schema: "public", table: "messages" }, (payload: any) => {
-        if (payload.new?.sender_id !== user.id) setUnreadMsgCount(prev => prev + 1);
-      })
-      .subscribe();
-
     return () => {
       supabase.removeChannel(friendChannel);
-      supabase.removeChannel(msgChannel);
     };
   }, [user?.id]);
 
   useEffect(() => {
-    if (open) { fetchNotifications(); fetchPreferences(); }
+    if (open) {
+      fetchNotifications();
+      fetchPreferences();
+      // Mark all current notifications as seen
+      notifications.forEach(n => seenIdsRef.current.add(n.id));
+    }
     if (!open) setShowSettings(false);
   }, [open]);
 
@@ -179,7 +156,12 @@ const NotificationDropdown = ({ onRequestHandled }: Props) => {
       .update({ status: "accepted" } as any)
       .eq("id", friendRowId) as any;
     if (error) toast.error("Failed to accept request");
-    else { toast.success("Friend request accepted!"); setNotifications(prev => prev.filter(n => n.id !== notifId)); onRequestHandled?.(); }
+    else {
+      toast.success("Friend request accepted!");
+      setNotifications(prev => prev.filter(n => n.id !== notifId));
+      seenIdsRef.current.add(notifId);
+      onRequestHandled?.();
+    }
     setActing(null);
   };
 
@@ -190,26 +172,31 @@ const NotificationDropdown = ({ onRequestHandled }: Props) => {
       .update({ status: "declined" } as any)
       .eq("id", friendRowId) as any;
     if (error) toast.error("Failed to decline request");
-    else { toast.success("Request declined"); setNotifications(prev => prev.filter(n => n.id !== notifId)); onRequestHandled?.(); }
+    else {
+      toast.success("Request declined");
+      setNotifications(prev => prev.filter(n => n.id !== notifId));
+      seenIdsRef.current.add(notifId);
+      onRequestHandled?.();
+    }
     setActing(null);
   };
 
-  const totalBadge = notifications.filter(n => n.type === "friend_request").length + unreadMsgCount;
+  // Badge only shows unseen notifications
+  const unseenCount = notifications.filter(n => !seenIdsRef.current.has(n.id)).length;
 
   return (
     <DropdownMenu open={open} onOpenChange={setOpen}>
       <DropdownMenuTrigger asChild>
         <button className="relative w-9 h-9 rounded-full bg-card shadow-soft flex items-center justify-center active:scale-95 transition-transform">
           <Bell size={16} className="text-muted-foreground" />
-          {totalBadge > 0 && (
+          {unseenCount > 0 && (
             <span className="absolute -top-0.5 -right-0.5 min-w-[16px] h-4 rounded-full bg-gold text-white text-[9px] font-bold flex items-center justify-center px-1">
-              {totalBadge > 99 ? "99+" : totalBadge}
+              {unseenCount > 99 ? "99+" : unseenCount}
             </span>
           )}
         </button>
       </DropdownMenuTrigger>
       <DropdownMenuContent align="end" className="w-72 max-h-96 overflow-y-auto p-2">
-        {/* Header with settings toggle */}
         <div className="flex items-center justify-between px-2 py-1.5 mb-1">
           <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Notifications</p>
           <button
@@ -220,7 +207,6 @@ const NotificationDropdown = ({ onRequestHandled }: Props) => {
           </button>
         </div>
 
-        {/* Notification Preferences */}
         {showSettings && (
           <div className="border border-border/50 rounded-lg p-2 mb-2 space-y-1.5 bg-secondary/30">
             <p className="text-[10px] font-medium text-muted-foreground uppercase tracking-wider px-1">Alert Preferences</p>
@@ -241,19 +227,8 @@ const NotificationDropdown = ({ onRequestHandled }: Props) => {
           </div>
         )}
 
-        {notifications.length === 0 && unreadMsgCount === 0 && !showSettings && (
+        {notifications.length === 0 && !showSettings && (
           <p className="text-xs text-muted-foreground text-center py-6">No notifications</p>
-        )}
-
-        {unreadMsgCount > 0 && (
-          <div className="flex items-center gap-2.5 px-2 py-2 rounded-lg bg-secondary/50 mb-1">
-            <div className="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center flex-shrink-0">
-              <MessageCircle size={14} className="text-primary" />
-            </div>
-            <p className="text-xs text-foreground flex-1">
-              <span className="font-medium">{unreadMsgCount}</span> unread message{unreadMsgCount > 1 ? "s" : ""}
-            </p>
-          </div>
         )}
 
         {notifications.map(n => (
