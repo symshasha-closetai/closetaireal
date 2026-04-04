@@ -12,6 +12,7 @@ import { compressImage } from "@/lib/imageCompression";
 import html2canvas from "html2canvas";
 import { precacheImages } from "@/lib/imageCache";
 import SendToFriendPicker from "@/components/SendToFriendPicker";
+import SignUpPromptDialog from "@/components/SignUpPromptDialog";
 import { DndContext, closestCenter, PointerSensor, TouchSensor, useSensor, useSensors, type DragEndEvent } from "@dnd-kit/core";
 import { SortableContext, useSortable, rectSortingStrategy, arrayMove } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
