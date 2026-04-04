@@ -1,17 +1,20 @@
 import { Home, Camera, ShirtIcon, User } from "lucide-react";
 import { useLocation, useNavigate } from "react-router-dom";
 import { motion } from "framer-motion";
+import { useAuth } from "@/hooks/useAuth";
+import { toast } from "sonner";
 
 const tabs = [
   { path: "/", icon: Camera, label: "Camera" },
   { path: "/home", icon: Home, label: "Home" },
   { path: "/wardrobe", icon: ShirtIcon, label: "Wardrobe" },
-  { path: "/profile", icon: User, label: "Profile" },
+  { path: "/profile", icon: User, label: "Profile", authOnly: true },
 ];
 
 const BottomNav = () => {
   const location = useLocation();
   const navigate = useNavigate();
+  const { isGuest } = useAuth();
 
   if (location.pathname.startsWith("/chat") || location.pathname === "/messages") return null;
 
