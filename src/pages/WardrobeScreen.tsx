@@ -685,6 +685,7 @@ const WardrobeScreen = () => {
   }, [user, styleProfile]);
 
   const handleSaveDetected = async () => {
+    if (isGuest) { setShowSignUpPrompt(true); resetModal(); return; }
     if (!user || !uploadedFile || selectedDetected.length === 0) return;
     const itemsToSave = [...detectedItems];
     const selectedToSave = [...selectedDetected];
@@ -697,6 +698,7 @@ const WardrobeScreen = () => {
   };
 
   const handleManualSave = async () => {
+    if (isGuest) { setShowSignUpPrompt(true); resetModal(); return; }
     if (!user || !uploadedFile) return;
     setUploading(true);
     try {
