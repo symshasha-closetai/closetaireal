@@ -384,6 +384,13 @@ const CameraScreen = () => {
   const { image, imageBase64, analyzing, result, wardrobeItems, analysisSteps,
     wardrobeSuggestions, shoppingSuggestions, detectedItems, suggestionImages, savedSuggestions } = globalDripState;
 
+  // Show sign-up prompt for guests after result loads
+  useEffect(() => {
+    if (isGuest && result && !analyzing) {
+      const timer = setTimeout(() => setShowSignUpPrompt(true), 2000);
+      return () => clearTimeout(timer);
+    }
+  }, [isGuest, result, analyzing]);
   // Fetch user's actual wardrobe items on mount
   useEffect(() => {
     if (!user?.id) return;
