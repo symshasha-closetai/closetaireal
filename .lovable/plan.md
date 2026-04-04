@@ -1,40 +1,70 @@
-## Fix AI Quality + Photo Cropping Issues
 
-### Problems identified
 
-1. **Image over-compressed to 512x512** — `runAnalysis` calls `compressImage(file, 512, 512, ...)` which squashes photos into a tiny square, destroying detail the AI needs to analyze outfits properly. This degrades killer tag and praise line quality because the model can't see the outfit clearly.
-2. **Prompt conflicts** — The current prompt mixes your DRIPD AI spec with the old scoring prompt, creating confusion. The killer tag/praise line instructions are buried inside a massive prompt that also asks for scores, reasons, and advice — the model prioritizes the structured scoring over creative tag/praise generation.
-3. **No photo aspect ratio preservation** — Photos get force-cropped to 3:4 aspect in display, and compressed to square for AI. Original proportions are lost.
+## Add "Login Later" Guest Mode with Smart Sign-Up Prompts
+
+### What it does
+
+Users can skip auth, explore the app freely (drip check, wardrobe), but get a persuasive sign-up popup after key actions to encourage account creation.
 
 ### Implementation
 
-**1. Fix image compression (`src/lib/imageCompression.ts` + `CameraScreen.tsx`)**
+**1. Add guest mode to auth context (`src/hooks/useAuth.tsx`)**
 
-- Change `compressImage` call from `(file, 512, 512, 0.65, 200)` to `(file, 1024, 1024, 0.7, 300)` — larger resolution preserves outfit detail for the AI without meaningfully increasing latency
-- The compression function already preserves aspect ratio (scales proportionally), so no changes needed there — just increasing the max dimensions
+- Add `isGuest: boolean` and `setGuestMode: (v: boolean) => void` to `AuthContextType`
+- Store guest state in a `useState` (not localStorage — resets each session intentionally)
+- When guest mode is active, `user` stays `null` but `loading` is `false`
 
-**2. Rewrite the AI prompt in `rate-outfit/index.ts**`
+**2. Add "Login Later" button to auth screen (`src/pages/AuthScreen.tsx`)**
 
-The current prompt tries to do everything in one go. The fix is to restructure it so the DRIPD AI killer tag/praise line spec is the PRIMARY instruction, not an afterthought:
+- Add a subtle "Explore without an account" / "Login Later" link at the top of the page
+- On click: call `setGuestMode(true)` and navigate to `/`
 
-- Move Steps 0-6 of your spec to the TOP of the prompt as the dominant instruction
-- Keep the scoring JSON fields but make them secondary ("also return these scores")
-- Add explicit instruction: "The killer_tag and praise_line are the MOST IMPORTANT outputs. Generate them UNIQUE to this specific image — the examples given are ONLY for tone reference, never copy them"
-- Add `temperature: 0.9` (up from 0.7) to increase creativity/uniqueness of tags
-- Keep `gemini-2.5-flash-lite` model — no speed change
+**3. Update routing to allow guest access (`src/App.tsx`)**
 
-**3. Remove forced aspect ratio on display (`CameraScreen.tsx`)**
+- Modify `ProtectedRoute` to also allow access when `isGuest === true`
+- Guest users skip onboarding check
+- Auth route redirects guests to `/` as well
+- Show `BottomNav` for guests too (but hide Messages/Profile tabs or grey them out)
 
-- Change `aspect-[3/4]` to `aspect-auto` / natural sizing on the preview and the shared image so photos display in their original ratio
-- Keep the upload area at 3:4 as a placeholder, but once an image is loaded, show it at its natural aspect
+**4. Create a reusable sign-up prompt dialog (`src/components/SignUpPromptDialog.tsx`)**
 
-**4. Display the tag properly (`OutfitRatingCard.tsx`)**
+- A beautifully designed modal with sophisticated copy:
+  - Title: "Your Drip Deserves to Be Remembered"
+  - Body: "This score, this look, this moment — it all disappears without an account. Sign up in 10 seconds and never lose a drip check again."
+  - CTA: "Create My Account" (navigates to `/auth`)
+  - Secondary: "Maybe Later" (dismisses)
+- For wardrobe variant:
+  - Title: "Your Wardrobe Is Building Itself"
+  - Body: "Every piece you add shapes your style DNA. Without an account, it vanishes when you close the app. Lock it in."
+- Accept a `variant: "drip" | "wardrobe"` prop to switch copy
 
-- Ensure `killer_tag` renders as uppercase tracking-wide for maximum visual impact
-- No other structural changes needed
+**5. Trigger prompt after drip check result (`src/pages/CameraScreen.tsx`)**
 
-### Files
+- After `runAnalysis` completes and shows result, if `isGuest` is true:
+  - Still show the full result (scores, killer tag, praise line)
+  - Skip `saveDripToHistory` DB save (no user ID)
+  - After a 2-second delay, show the `SignUpPromptDialog` with `variant="drip"`
 
-- `supabase/functions/rate-outfit/index.ts` — prompt restructure + temperature bump
-- `src/pages/CameraScreen.tsx` — compression params + aspect ratio fix
-- `src/components/OutfitRatingCard.tsx` — tag display styling
+**6. Trigger prompt after wardrobe add (`src/pages/WardrobeScreen.tsx`)**
+
+- After successfully adding an item to wardrobe (which will fail for guests since no user ID):
+  - Intercept the add flow — if `isGuest`, show the item visually but don't attempt DB insert
+  - Show `SignUpPromptDialog` with `variant="wardrobe"`
+
+**7. Guest restrictions**
+
+- Messages and Chat routes: redirect guests to auth with a toast "Sign up to message friends"
+- Profile: redirect guests to auth
+- Wardrobe: allow browsing UI but trigger prompt on add
+- Drip Check: fully functional, prompt after result
+- Leaderboard: viewable
+
+### Files to edit
+- `src/hooks/useAuth.tsx` — add `isGuest` + `setGuestMode`
+- `src/pages/AuthScreen.tsx` — add "Login Later" button
+- `src/App.tsx` — update `ProtectedRoute` + routing for guests
+- `src/components/SignUpPromptDialog.tsx` — new reusable prompt component
+- `src/pages/CameraScreen.tsx` — trigger prompt after drip result for guests
+- `src/pages/WardrobeScreen.tsx` — trigger prompt after wardrobe add for guests
+- `src/components/BottomNav.tsx` — handle guest nav restrictions
+
