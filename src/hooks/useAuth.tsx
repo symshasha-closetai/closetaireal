@@ -48,6 +48,8 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const [session, setSession] = useState<Session | null>(null);
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
+  const [isGuest, setIsGuest] = useState(false);
+  const setGuestMode = useCallback((v: boolean) => setIsGuest(v), []);
   const [profile, setProfile] = useState<Profile | null>(null);
   const [styleProfile, setStyleProfile] = useState<StyleProfile | null>(null);
   const [hasCompletedOnboarding, setHasCompletedOnboarding] = useState<boolean | null>(null);
