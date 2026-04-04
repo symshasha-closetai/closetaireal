@@ -570,7 +570,7 @@ const OutfitRatingCard = ({ image, imageBase64, result, wardrobeItems = [],
     <div className="space-y-4">
       {/* Hero Photo Card */}
       <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="rounded-2xl overflow-hidden shadow-lg relative shimmer">
-        <img src={image} alt="Outfit" className="w-full aspect-[3/4] object-cover" />
+        <img src={image} alt="Outfit" className="w-full object-contain max-h-[70vh]" />
         
         {/* Dripd branding */}
         <div className="absolute top-4 left-4 z-10">
@@ -595,7 +595,7 @@ const OutfitRatingCard = ({ image, imageBase64, result, wardrobeItems = [],
                 animate={{ opacity: 1, scale: 1 }}
                 transition={{ delay: 0.5, type: "spring", stiffness: 200 }}
               >
-                <span className="text-[11px] font-medium tracking-wider text-white" style={{ textShadow: "0 1px 6px rgba(0,0,0,0.9), 0 0 2px rgba(0,0,0,0.7)" }}>
+                <span className="text-[12px] font-semibold uppercase tracking-[0.15em] text-white" style={{ textShadow: "0 1px 6px rgba(0,0,0,0.9), 0 0 2px rgba(0,0,0,0.7)" }}>
                   {result.killer_tag}
                 </span>
               </motion.div>
