@@ -95,6 +95,19 @@ const AuthScreen = () => {
         transition={{ duration: 0.6 }}
         className="w-full max-w-sm space-y-8"
       >
+        {/* Login Later */}
+        <div className="text-center">
+          <button
+            onClick={() => {
+              setGuestMode(true);
+              navigate("/");
+            }}
+            className="text-sm text-muted-foreground hover:text-foreground transition-colors underline underline-offset-4"
+          >
+            Explore without an account
+          </button>
+        </div>
+
         {/* Logo */}
         <div className="text-center space-y-2">
           <motion.img
