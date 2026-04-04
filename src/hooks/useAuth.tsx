@@ -26,6 +26,8 @@ type AuthContextType = {
   styleProfile: StyleProfile | null;
   refreshProfile: () => Promise<void>;
   hasCompletedOnboarding: boolean | null;
+  isGuest: boolean;
+  setGuestMode: (v: boolean) => void;
 };
 
 const AuthContext = createContext<AuthContextType>({
