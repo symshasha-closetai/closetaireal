@@ -188,7 +188,8 @@ const SortableWardrobeCard = (props: CardContentProps & { index: number; toggleS
 };
 
 const WardrobeScreen = () => {
-  const { user, styleProfile } = useAuth();
+  const { user, styleProfile, isGuest } = useAuth();
+  const [showSignUpPrompt, setShowSignUpPrompt] = useState(false);
   const [activeCategory, setActiveCategory] = useState("All");
   const [items, setItems] = useState<ClothingItem[]>([]);
   const [loading, setLoading] = useState(true);
