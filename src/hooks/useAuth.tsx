@@ -39,6 +39,8 @@ const AuthContext = createContext<AuthContextType>({
   styleProfile: null,
   refreshProfile: async () => {},
   hasCompletedOnboarding: null,
+  isGuest: false,
+  setGuestMode: () => {},
 });
 
 export const AuthProvider = ({ children }: { children: ReactNode }) => {
