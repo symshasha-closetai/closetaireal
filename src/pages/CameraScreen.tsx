@@ -335,7 +335,9 @@ const runAnalysis = async (file: File, userId: string | undefined, styleProfile:
     }
     if (data?.result) {
       updateGlobal({ result: data.result, analyzing: false, progress: 0, stage: "", analysisSteps: [] });
-      saveDripToHistory(globalDripState.image || "", data.result, userId, imageHash);
+      if (userId) {
+        saveDripToHistory(globalDripState.image || "", data.result, userId, imageHash);
+      }
       // Update streak on successful drip check (synced with HomeScreen format)
       if (userId) {
         try {
