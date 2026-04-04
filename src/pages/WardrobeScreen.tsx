@@ -1480,6 +1480,7 @@ const WardrobeScreen = () => {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+      <SignUpPromptDialog open={showSignUpPrompt} onOpenChange={setShowSignUpPrompt} variant="wardrobe" />
     </div>
   );
 };
