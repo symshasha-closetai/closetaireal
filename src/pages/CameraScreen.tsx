@@ -366,8 +366,9 @@ const runAnalysis = async (file: File, userId: string | undefined, styleProfile:
 };
 
 const CameraScreen = () => {
-  const { user, styleProfile } = useAuth();
+  const { user, styleProfile, isGuest } = useAuth();
   const [, forceUpdate] = useState(0);
+  const [showSignUpPrompt, setShowSignUpPrompt] = useState(false);
   const fileRef = useRef<HTMLInputElement>(null);
   const cameraFileRef = useRef<HTMLInputElement>(null);
 
