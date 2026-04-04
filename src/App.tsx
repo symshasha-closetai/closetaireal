@@ -24,10 +24,10 @@ import BottomNav from "./components/BottomNav";
 const queryClient = new QueryClient();
 
 const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
-  const { user, loading, hasCompletedOnboarding } = useAuth();
+  const { user, loading, hasCompletedOnboarding, isGuest } = useAuth();
   if (loading) return <PageSkeleton />;
-  if (!user) return <Navigate to="/auth" replace />;
-  if (hasCompletedOnboarding === false) return <Navigate to="/onboarding" replace />;
+  if (!user && !isGuest) return <Navigate to="/auth" replace />;
+  if (user && hasCompletedOnboarding === false) return <Navigate to="/onboarding" replace />;
   return <>{children}</>;
 };
 
