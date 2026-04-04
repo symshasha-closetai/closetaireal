@@ -9,6 +9,8 @@ import { useNavigate } from "react-router-dom";
 const logo = "/dripd-logo-192.webp";
 
 const AuthScreen = () => {
+  const { setGuestMode } = useAuth();
+  const navigate = useNavigate();
   const [isLogin, setIsLogin] = useState(true);
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
