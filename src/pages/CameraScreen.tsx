@@ -552,6 +552,7 @@ const CameraScreen = () => {
         </>
         )}
       </div>
+      <SignUpPromptDialog open={showSignUpPrompt} onOpenChange={setShowSignUpPrompt} variant="drip" />
     </div>
   );
 };

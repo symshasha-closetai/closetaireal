@@ -27,8 +27,15 @@ const BottomNav = () => {
           return (
             <button
               key={tab.path}
-              onClick={() => navigate(tab.path)}
-              className="relative flex flex-col items-center gap-1 px-5 py-2 transition-all duration-300"
+              onClick={() => {
+                if (isGuest && tab.authOnly) {
+                  toast("Sign up to access your profile", { description: "Create a free account to unlock everything." });
+                  navigate("/auth");
+                  return;
+                }
+                navigate(tab.path);
+              }}
+              className={`relative flex flex-col items-center gap-1 px-5 py-2 transition-all duration-300 ${isGuest && tab.authOnly ? "opacity-50" : ""}`}
             >
               {isActive && (
                 <motion.div
