@@ -3,10 +3,14 @@ import { motion, AnimatePresence } from "framer-motion";
 import { supabase } from "@/integrations/supabase/client";
 import { Mail, Lock, User, Eye, EyeOff } from "lucide-react";
 import { toast } from "sonner";
+import { useAuth } from "@/hooks/useAuth";
+import { useNavigate } from "react-router-dom";
 
 const logo = "/dripd-logo-192.webp";
 
 const AuthScreen = () => {
+  const { setGuestMode } = useAuth();
+  const navigate = useNavigate();
   const [isLogin, setIsLogin] = useState(true);
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -91,6 +95,19 @@ const AuthScreen = () => {
         transition={{ duration: 0.6 }}
         className="w-full max-w-sm space-y-8"
       >
+        {/* Login Later */}
+        <div className="text-center">
+          <button
+            onClick={() => {
+              setGuestMode(true);
+              navigate("/");
+            }}
+            className="text-sm text-muted-foreground hover:text-foreground transition-colors underline underline-offset-4"
+          >
+            Explore without an account
+          </button>
+        </div>
+
         {/* Logo */}
         <div className="text-center space-y-2">
           <motion.img

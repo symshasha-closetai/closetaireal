@@ -4,6 +4,7 @@ import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
+import { toast } from "sonner";
 import { ThemeProvider } from "next-themes";
 import { AuthProvider, useAuth } from "./hooks/useAuth";
 import SplashScreen from "./components/SplashScreen";
@@ -24,22 +25,31 @@ import BottomNav from "./components/BottomNav";
 const queryClient = new QueryClient();
 
 const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
-  const { user, loading, hasCompletedOnboarding } = useAuth();
+  const { user, loading, hasCompletedOnboarding, isGuest } = useAuth();
   if (loading) return <PageSkeleton />;
-  if (!user) return <Navigate to="/auth" replace />;
-  if (hasCompletedOnboarding === false) return <Navigate to="/onboarding" replace />;
+  if (!user && !isGuest) return <Navigate to="/auth" replace />;
+  if (user && hasCompletedOnboarding === false) return <Navigate to="/onboarding" replace />;
+  return <>{children}</>;
+};
+
+const GuestRedirect = ({ children }: { children: React.ReactNode }) => {
+  const { user, isGuest } = useAuth();
+  if (!user && isGuest) {
+    toast("Sign up to access this feature", { description: "Create a free account to unlock everything." });
+    return <Navigate to="/auth" replace />;
+  }
   return <>{children}</>;
 };
 
 const AppRoutes = () => {
-  const { user, loading, hasCompletedOnboarding } = useAuth();
+  const { user, loading, hasCompletedOnboarding, isGuest } = useAuth();
 
   if (loading) return <PageSkeleton />;
 
   return (
     <Suspense fallback={<PageSkeleton />}>
       <Routes>
-        <Route path="/auth" element={user ? <Navigate to="/" replace /> : <AuthScreen />} />
+        <Route path="/auth" element={(user || isGuest) ? <Navigate to="/" replace /> : <AuthScreen />} />
         <Route path="/reset-password" element={<ResetPasswordScreen />} />
         <Route path="/onboarding" element={
           !user ? <Navigate to="/auth" replace /> :
@@ -50,12 +60,12 @@ const AppRoutes = () => {
         <Route path="/home" element={<ProtectedRoute><HomeScreen /></ProtectedRoute>} />
         <Route path="/camera" element={<Navigate to="/" replace />} />
         <Route path="/wardrobe" element={<ProtectedRoute><WardrobeScreen /></ProtectedRoute>} />
-        <Route path="/profile" element={<ProtectedRoute><ProfileScreen /></ProtectedRoute>} />
-        <Route path="/messages" element={<ProtectedRoute><MessagesScreen /></ProtectedRoute>} />
-        <Route path="/chat/:conversationId" element={<ProtectedRoute><ChatScreen /></ProtectedRoute>} />
+        <Route path="/profile" element={<ProtectedRoute><GuestRedirect><ProfileScreen /></GuestRedirect></ProtectedRoute>} />
+        <Route path="/messages" element={<ProtectedRoute><GuestRedirect><MessagesScreen /></GuestRedirect></ProtectedRoute>} />
+        <Route path="/chat/:conversationId" element={<ProtectedRoute><GuestRedirect><ChatScreen /></GuestRedirect></ProtectedRoute>} />
         <Route path="*" element={<NotFound />} />
       </Routes>
-      {user && hasCompletedOnboarding !== false && <BottomNav />}
+      {(user || isGuest) && (user ? hasCompletedOnboarding !== false : true) && <BottomNav />}
     </Suspense>
   );
 };

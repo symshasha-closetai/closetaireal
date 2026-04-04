@@ -12,6 +12,7 @@ import { compressImage } from "@/lib/imageCompression";
 import html2canvas from "html2canvas";
 import { precacheImages } from "@/lib/imageCache";
 import SendToFriendPicker from "@/components/SendToFriendPicker";
+import SignUpPromptDialog from "@/components/SignUpPromptDialog";
 import { DndContext, closestCenter, PointerSensor, TouchSensor, useSensor, useSensors, type DragEndEvent } from "@dnd-kit/core";
 import { SortableContext, useSortable, rectSortingStrategy, arrayMove } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
@@ -187,7 +188,8 @@ const SortableWardrobeCard = (props: CardContentProps & { index: number; toggleS
 };
 
 const WardrobeScreen = () => {
-  const { user, styleProfile } = useAuth();
+  const { user, styleProfile, isGuest } = useAuth();
+  const [showSignUpPrompt, setShowSignUpPrompt] = useState(false);
   const [activeCategory, setActiveCategory] = useState("All");
   const [items, setItems] = useState<ClothingItem[]>([]);
   const [loading, setLoading] = useState(true);
@@ -683,6 +685,7 @@ const WardrobeScreen = () => {
   }, [user, styleProfile]);
 
   const handleSaveDetected = async () => {
+    if (isGuest) { setShowSignUpPrompt(true); resetModal(); return; }
     if (!user || !uploadedFile || selectedDetected.length === 0) return;
     const itemsToSave = [...detectedItems];
     const selectedToSave = [...selectedDetected];
@@ -695,6 +698,7 @@ const WardrobeScreen = () => {
   };
 
   const handleManualSave = async () => {
+    if (isGuest) { setShowSignUpPrompt(true); resetModal(); return; }
     if (!user || !uploadedFile) return;
     setUploading(true);
     try {
@@ -1476,6 +1480,7 @@ const WardrobeScreen = () => {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+      <SignUpPromptDialog open={showSignUpPrompt} onOpenChange={setShowSignUpPrompt} variant="wardrobe" />
     </div>
   );
 };

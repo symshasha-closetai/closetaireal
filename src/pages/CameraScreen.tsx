@@ -4,6 +4,7 @@ import { Camera, Upload, X, Sparkles, Check, Loader2 } from "lucide-react";
 import LeaderboardTab from "../components/LeaderboardTab";
 import AppHeader from "../components/AppHeader";
 import OutfitRatingCard from "../components/OutfitRatingCard";
+import SignUpPromptDialog from "../components/SignUpPromptDialog";
 import { supabase } from "@/integrations/supabase/client";
 import { r2 } from "@/lib/r2Storage";
 import { useAuth } from "@/hooks/useAuth";
@@ -334,7 +335,9 @@ const runAnalysis = async (file: File, userId: string | undefined, styleProfile:
     }
     if (data?.result) {
       updateGlobal({ result: data.result, analyzing: false, progress: 0, stage: "", analysisSteps: [] });
-      saveDripToHistory(globalDripState.image || "", data.result, userId, imageHash);
+      if (userId) {
+        saveDripToHistory(globalDripState.image || "", data.result, userId, imageHash);
+      }
       // Update streak on successful drip check (synced with HomeScreen format)
       if (userId) {
         try {
@@ -365,8 +368,9 @@ const runAnalysis = async (file: File, userId: string | undefined, styleProfile:
 };
 
 const CameraScreen = () => {
-  const { user, styleProfile } = useAuth();
+  const { user, styleProfile, isGuest } = useAuth();
   const [, forceUpdate] = useState(0);
+  const [showSignUpPrompt, setShowSignUpPrompt] = useState(false);
   const fileRef = useRef<HTMLInputElement>(null);
   const cameraFileRef = useRef<HTMLInputElement>(null);
 
@@ -380,6 +384,13 @@ const CameraScreen = () => {
   const { image, imageBase64, analyzing, result, wardrobeItems, analysisSteps,
     wardrobeSuggestions, shoppingSuggestions, detectedItems, suggestionImages, savedSuggestions } = globalDripState;
 
+  // Show sign-up prompt for guests after result loads
+  useEffect(() => {
+    if (isGuest && result && !analyzing) {
+      const timer = setTimeout(() => setShowSignUpPrompt(true), 2000);
+      return () => clearTimeout(timer);
+    }
+  }, [isGuest, result, analyzing]);
   // Fetch user's actual wardrobe items on mount
   useEffect(() => {
     if (!user?.id) return;
@@ -541,6 +552,7 @@ const CameraScreen = () => {
         </>
         )}
       </div>
+      <SignUpPromptDialog open={showSignUpPrompt} onOpenChange={setShowSignUpPrompt} variant="drip" />
     </div>
   );
 };
