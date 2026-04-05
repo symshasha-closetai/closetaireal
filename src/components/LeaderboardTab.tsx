@@ -291,6 +291,9 @@ const LeaderboardTab = () => {
     setLoading(false);
     dailyCache = { entries: combined, friendIds: friends, ts: Date.now() };
     if (user) setCache(CACHE_KEYS.LEADERBOARD_DAILY, user.id, { entries: combined, friendIds: friends });
+    // Pre-cache leaderboard images
+    const imageUrls = combined.map(e => e.image_url).filter(Boolean) as string[];
+    precacheImages(imageUrls);
   }, [user?.id]);
 
   const fetchWeekly = useCallback(async (force = false) => {
