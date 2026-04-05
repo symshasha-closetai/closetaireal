@@ -470,8 +470,7 @@ CRITICAL: Return ONLY valid JSON.`;
 
       const roastTemp = unfiltered ? 1.2 : 0.9;
       const roastTokens = unfiltered ? 512 : 256;
-      const roastModel = unfiltered ? "gemini-1.5-pro" : "gemini-2.5-flash-lite";
-      const roastCall2 = await callGemini(apiKey, [
+      const roastMessages = [
         { role: "system", content: roastPrompt },
         {
           role: "user",
@@ -480,7 +479,10 @@ CRITICAL: Return ONLY valid JSON.`;
             { type: "image_url", image_url: { url: `data:image/jpeg;base64,${imageBase64}` } },
           ],
         },
-      ], roastTemp, roastTokens, roastModel);
+      ];
+      const roastCall2 = unfiltered
+        ? await callLovableAI(roastMessages, roastTemp, roastTokens, "google/gemini-2.5-flash")
+        : await callGemini(apiKey, roastMessages, roastTemp, roastTokens);
 
       console.log("Roast Call 2 result:", JSON.stringify(roastCall2));
 
