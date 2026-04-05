@@ -441,6 +441,7 @@ CRITICAL: Return ONLY valid JSON.`;
 
       const roastTemp = unfiltered ? 1.2 : 0.9;
       const roastTokens = unfiltered ? 512 : 256;
+      const roastModel = unfiltered ? "gemini-2.5-flash" : "gemini-2.5-flash-lite";
       const roastCall2 = await callGemini(apiKey, [
         { role: "system", content: roastPrompt },
         {
@@ -450,7 +451,7 @@ CRITICAL: Return ONLY valid JSON.`;
             { type: "image_url", image_url: { url: `data:image/jpeg;base64,${imageBase64}` } },
           ],
         },
-      ], roastTemp, roastTokens);
+      ], roastTemp, roastTokens, roastModel);
 
       console.log("Roast Call 2 result:", JSON.stringify(roastCall2));
 
