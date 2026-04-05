@@ -612,7 +612,9 @@ const WardrobeScreen = () => {
           if (!origUpErr) {
             originalImageUrl = publicUrl;
           }
-        } catch {}
+         } catch (origErr) {
+          console.error("Original image upload failed:", origErr);
+        }
         for (let i = 0; i < job.selected.length; i++) {
           const idx = job.selected[i];
           const item = job.items[idx];
@@ -622,7 +624,14 @@ const WardrobeScreen = () => {
               body: { imageBase64: base64, itemName: item.name, itemType: item.type, itemColor: item.color, itemMaterial: item.material, userId: user.id, bodyType: styleProfile?.body_type || null, gender: styleProfile?.gender || null },
             });
             if (!genError && genData?.imageUrl) imageUrl = genData.imageUrl;
-          } catch {}
+            else console.error("generate-clothing-image failed:", genError, genData);
+          } catch (genErr) {
+            console.error("generate-clothing-image exception:", genErr);
+          }
+          // If AI image generation failed, immediately upload compressed original as fallback
+          if (!imageUrl && originalImageUrl) {
+            imageUrl = originalImageUrl;
+          }
           if (!imageUrl) {
             // Retry upload up to 2 times
             let uploadSuccess = false;

@@ -658,6 +658,10 @@ export type Database = {
         Args: { friend_id: string }
         Returns: string
       }
+      create_group_conversation: {
+        Args: { group_name: string; member_ids: string[] }
+        Returns: string
+      }
       find_or_create_conversation: {
         Args: { target_friend_id: string }
         Returns: string

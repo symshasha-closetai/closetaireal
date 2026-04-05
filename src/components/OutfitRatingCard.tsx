@@ -224,7 +224,7 @@ const OutfitRatingCard = ({ image, imageBase64, result, wardrobeItems = [],
     ctx.fillRect(0, 0, W, H);
 
     // Draw outfit image — prefer imageBase64 (no CORS), fallback to fetch
-    const IMG_H = Math.round(H * 0.68);
+    const IMG_H = Math.round(H * 0.78);
     let imgBitmap: ImageBitmap | HTMLImageElement;
     const imgSrc = imageBase64 || image;
     try {
@@ -356,47 +356,11 @@ const OutfitRatingCard = ({ image, imageBase64, result, wardrobeItems = [],
       ctx.fillText(result.killer_tag, (W - tagW) / 2, panelY + 30);
     }
 
-    // Separator line
-    const sepY = scoreBaseY + 28;
-    const sepGrad = ctx.createLinearGradient(28, 0, W - 28, 0);
-    sepGrad.addColorStop(0, "rgba(201,169,110,0.05)");
-    sepGrad.addColorStop(0.3, "rgba(201,169,110,0.3)");
-    sepGrad.addColorStop(0.7, "rgba(160,160,160,0.3)");
-    sepGrad.addColorStop(1, "rgba(160,160,160,0.05)");
-    ctx.fillStyle = sepGrad;
-    ctx.fillRect(28, sepY, W - 56, 1);
-
-    // Sub-scores row
-    const subScores = [
-      { label: "COLOR", score: result.color_score, color: "#FFFFFF" },
-      { label: "POSTURE", score: result.posture_score ?? result.style_score ?? 0, color: "#FFFFFF" },
-      { label: "LAYERING", score: result.layering_score ?? result.fit_score ?? 0, color: "#FFFFFF" },
-      { label: "FACE", score: result.face_score ?? 0, color: "#FFFFFF" },
-    ];
-    const subY = sepY + 28;
-    const colW = (W - 56) / subScores.length;
-    subScores.forEach((s, i) => {
-      const cx = 28 + colW * i + colW / 2;
-      const scoreVal = Number.isInteger(s.score) ? String(s.score) : s.score.toFixed(1);
-      
-      ctx.fillStyle = "#FFFFFF";
-      ctx.font = "700 20px 'Inter', 'Helvetica', sans-serif";
-      const sW = ctx.measureText(scoreVal).width;
-      ctx.fillText(scoreVal, cx - sW / 2, subY);
-
-      ctx.fillStyle = "rgba(255,255,255,0.6)";
-      ctx.font = "600 7px 'Inter', 'Helvetica', sans-serif";
-      ctx.letterSpacing = "1px";
-      const lW = ctx.measureText(s.label).width;
-      ctx.fillText(s.label, cx - lW / 2, subY + 14);
-      ctx.letterSpacing = "0px";
-    });
-
-    // Praise line
+    // Praise line — directly after scores (no sub-scores)
     if (result.praise_line) {
       ctx.fillStyle = "rgba(255,255,255,0.8)";
       ctx.font = "italic 400 12px 'Inter', 'Helvetica', sans-serif";
-      const praiseY = subY + 32;
+      const praiseY = scoreBaseY + 32;
       const maxW = W - 56;
       const words = result.praise_line.split(" ");
       let line = "";
@@ -576,7 +540,7 @@ const OutfitRatingCard = ({ image, imageBase64, result, wardrobeItems = [],
     <div className="space-y-4">
       {/* Hero Photo Card */}
       <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="rounded-2xl overflow-hidden shadow-lg relative shimmer">
-        <img src={image} alt="Outfit" className="w-full min-h-[300px] object-contain" />
+        <img src={imageBase64 || image} alt="Outfit" className="w-full min-h-[300px] object-contain" onError={(e) => { if (imageBase64 && e.currentTarget.src !== imageBase64) e.currentTarget.src = imageBase64; }} />
         
         {/* Dripd branding */}
         <div className="absolute top-4 left-4 z-10">
