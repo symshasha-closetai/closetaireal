@@ -69,7 +69,10 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         .single();
       setProfile(newProfile);
       if (newProfile) setCache(CACHE_KEYS.PROFILE, userId, newProfile);
-      toast("Welcome to Dripd!", { description: "Let's set up your style profile." });
+      if (!localStorage.getItem("dripd_welcomed")) {
+        localStorage.setItem("dripd_welcomed", "1");
+        toast("Welcome to Dripd!", { description: "Let's set up your style profile." });
+      }
     } else {
       setProfile(data);
       setCache(CACHE_KEYS.PROFILE, userId, data);
