@@ -184,6 +184,7 @@ const saveDripToHistory = async (image: string, result: RatingResult, userId?: s
         full_result: result as any,
         image_hash: imageHash || null,
         confidence_score: result.confidence_rating || null,
+        mode: unfiltered ? "savage" : "standard",
       });
       if (dbErr) {
         console.error("Failed to save drip to DB:", dbErr);
@@ -299,52 +300,52 @@ const runAnalysis = async (file: File, userId: string | undefined, styleProfile:
     if (activeAbort?.signal.aborted) return;
     clearStageTimers();
 
+    // --- REAL ERROR HANDLING: never mask failures with fake results ---
     if (error) {
-      console.error("rate-outfit error:", error);
-      toast.error("AI rating failed: " + (error.message || "Unknown error — check edge function deployment"));
-    }
-
-    // Roast mode now returns a full result card (scores at 0, with killer_tag + praise_line)
-    // No special interception needed — flows through as normal result
-
-    if (error || data?.error || !data?.result) {
-      if (data?.error) {
-        console.error("rate-outfit returned error:", data.error);
-        toast.error("AI returned error: " + (typeof data.error === 'string' ? data.error : JSON.stringify(data.error)));
-      }
-      const fallback = clientFallbackResult(gender);
-      updateGlobal({ result: fallback, analyzing: false, progress: 0, stage: "", analysisSteps: [] });
-      saveDripToHistory(globalDripState.image || "", fallback, userId, imageHash, unfiltered);
+      console.error("rate-outfit network/invoke error:", error);
+      const msg = error.message || "Network error — check your connection";
+      toast.error("Drip Check failed: " + msg, { duration: 6000, action: { label: "Retry", onClick: () => runAnalysis(file, userId, styleProfile, gender, unfiltered) } });
+      updateGlobal({ result: null, analyzing: false, progress: 0, stage: "", analysisSteps: [] });
       return;
     }
-    if (data?.result) {
-      updateGlobal({ result: data.result, analyzing: false, progress: 0, stage: "", analysisSteps: [] });
-      if (userId) {
-        saveDripToHistory(globalDripState.image || "", data.result, userId, imageHash, unfiltered);
-      }
-      // Update streak on successful drip check (synced with HomeScreen format)
-      if (userId) {
-        try {
-          const today = new Date().toDateString();
-          const yesterday = new Date(Date.now() - 86400000).toDateString();
-          let newStreak = 1;
-          const raw = localStorage.getItem(`streak-${userId}`);
-          if (raw) {
-            const { count, lastDate } = JSON.parse(raw);
-            if (lastDate === yesterday) newStreak = count + 1;
-            else if (lastDate === today) newStreak = count;
-            else newStreak = 1;
-          }
-          localStorage.setItem(`streak-${userId}`, JSON.stringify({ count: newStreak, lastDate: today }));
-        } catch {}
-      }
+
+    if (data?.error || !data?.result) {
+      const errDetail = data?.error;
+      const stage = data?.stage || "unknown";
+      const model = data?.model || "unknown";
+      console.error("rate-outfit backend error:", { error: errDetail, stage, model });
+      const userMsg = typeof errDetail === "string" ? errDetail : "AI analysis failed";
+      toast.error(`${userMsg} (stage: ${stage})`, { duration: 6000, action: { label: "Retry", onClick: () => runAnalysis(file, userId, styleProfile, gender, unfiltered) } });
+      updateGlobal({ result: null, analyzing: false, progress: 0, stage: "", analysisSteps: [] });
+      return;
+    }
+
+    // Success path
+    const aiResult = data.result;
+    updateGlobal({ result: aiResult, analyzing: false, progress: 0, stage: "", analysisSteps: [] });
+    // Save to history for both guest and signed-in users
+    saveDripToHistory(globalDripState.image || "", aiResult, userId, imageHash, unfiltered);
+    // Update streak on successful drip check
+    if (userId) {
+      try {
+        const today = new Date().toDateString();
+        const yesterday = new Date(Date.now() - 86400000).toDateString();
+        let newStreak = 1;
+        const raw = localStorage.getItem(`streak-${userId}`);
+        if (raw) {
+          const { count, lastDate } = JSON.parse(raw);
+          if (lastDate === yesterday) newStreak = count + 1;
+          else if (lastDate === today) newStreak = count;
+          else newStreak = 1;
+        }
+        localStorage.setItem(`streak-${userId}`, JSON.stringify({ count: newStreak, lastDate: today }));
+      } catch {}
     }
   } catch (err: any) {
     if (err?.name === "AbortError" || activeAbort?.signal.aborted) return;
-    console.error("Rating error:", err);
-    const fallback = clientFallbackResult(gender);
-    updateGlobal({ result: fallback, analyzing: false, progress: 0, stage: "", analysisSteps: [] });
-    saveDripToHistory(globalDripState.image || "", fallback, userId);
+    console.error("Rating network error:", err);
+    toast.error("Connection error — please try again", { duration: 6000, action: { label: "Retry", onClick: () => runAnalysis(file, userId, styleProfile, gender, unfiltered) } });
+    updateGlobal({ result: null, analyzing: false, progress: 0, stage: "", analysisSteps: [] });
   } finally {
     activeAbort = null;
     clearStageTimers();
@@ -441,7 +442,14 @@ const CameraScreen = () => {
               <span className="text-xs text-muted-foreground font-medium whitespace-nowrap">Savage Mode 😏</span>
               <Switch
                 checked={globalDripState.unfiltered}
-                onCheckedChange={(v) => updateGlobal({ unfiltered: v })}
+                onCheckedChange={(v) => {
+                  updateGlobal({ unfiltered: v });
+                  // If there's a loaded image with a result, clear the result to force re-analysis
+                  if (globalDripState.image && globalDripState.result && !globalDripState.analyzing) {
+                    updateGlobal({ result: null });
+                    toast.info(v ? "Savage Mode ON — re-upload to analyze" : "Standard Mode — re-upload to analyze");
+                  }
+                }}
               />
             </div>
           </div>
@@ -521,6 +529,14 @@ const CameraScreen = () => {
                 </div>
               ) : result ? (
                 <div className="relative">
+                  {/* Mode badge */}
+                  <div className="absolute top-3 left-3 z-10">
+                    <span className={`px-2 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider backdrop-blur-sm ${
+                      globalDripState.unfiltered ? "bg-red-500/80 text-white" : "bg-gold/80 text-white"
+                    }`}>
+                      {globalDripState.unfiltered ? "🔥 Savage" : "✨ Standard"}
+                    </span>
+                  </div>
                   <button onClick={clearImage} className="absolute top-3 right-3 z-10 w-8 h-8 rounded-full bg-foreground/60 text-primary-foreground flex items-center justify-center backdrop-blur-sm">
                     <X size={16} />
                   </button>
@@ -539,6 +555,23 @@ const CameraScreen = () => {
                     className="w-full mt-4 py-3 rounded-full bg-card border border-border/40 text-foreground/70 font-medium text-sm active:scale-[0.98] transition-transform flex items-center justify-center gap-2 tracking-wider shadow-lg shadow-black/30">
                     <Camera size={16} /> Try With Different Outfit
                   </motion.button>
+                </div>
+              ) : !analyzing && image ? (
+                <div className="rounded-2xl overflow-hidden relative">
+                  <img src={image} alt="Outfit" className="w-full object-contain" />
+                  <div className="absolute inset-0 bg-background/70 backdrop-blur-sm flex flex-col items-center justify-center gap-4 p-6">
+                    <p className="text-foreground font-medium text-center">Analysis failed — check the error above</p>
+                    <div className="flex gap-3">
+                      <button onClick={() => {
+                        if (fileRef.current) fileRef.current.click();
+                      }} className="px-4 py-2 rounded-xl gradient-gold text-white font-medium text-sm">
+                        Try Again
+                      </button>
+                      <button onClick={clearImage} className="px-4 py-2 rounded-xl bg-card border border-border text-foreground text-sm">
+                        Clear
+                      </button>
+                    </div>
+                  </div>
                 </div>
               ) : null}
             </motion.div>

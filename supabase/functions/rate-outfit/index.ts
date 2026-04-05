@@ -22,41 +22,43 @@ async function callGemini(apiKey: string, messages: any[], temperature: number, 
     headers: { Authorization: `Bearer ${apiKey}`, "Content-Type": "application/json" },
     body: JSON.stringify({ model, messages, temperature, max_tokens: maxTokens }),
   });
-  if (res.status === 429) throw { status: 429, message: "Rate limited, please try again later." };
-  if (res.status === 402) throw { status: 402, message: "AI credits exhausted. Please add funds." };
+  if (res.status === 429) throw { status: 429, message: "Rate limited, please try again later.", stage: "gemini_call" };
+  if (res.status === 402) throw { status: 402, message: "AI credits exhausted.", stage: "gemini_call" };
   if (!res.ok) {
     const t = await res.text();
-    console.error(`Gemini error [${res.status}] model=${model}:`, t);
-    throw new Error(`Gemini error ${res.status}: ${t.substring(0, 300)}`);
+    console.error(`Gemini error [${res.status}] model=${model}:`, t.substring(0, 500));
+    // Check for safety block
+    if (t.includes("SAFETY") || t.includes("blocked") || t.includes("HarmCategory")) {
+      throw { status: res.status, message: "Content blocked by safety filter", stage: "safety_block", model, provider_body: t.substring(0, 300) };
+    }
+    throw { status: res.status, message: `Gemini ${res.status}: ${t.substring(0, 200)}`, stage: "provider_error", model };
   }
   const data = await res.json();
-  const content = data.choices?.[0]?.message?.content || "{}";
-  console.log("Gemini raw content:", content.substring(0, 300));
+  const content = data.choices?.[0]?.message?.content || "";
+  const finishReason = data.choices?.[0]?.finish_reason || "unknown";
+  console.log(`Gemini raw (model=${model}, finish=${finishReason}):`, content.substring(0, 300));
+  
+  if (!content.trim()) {
+    throw { status: 200, message: "Empty response from AI", stage: "empty_response", model, finish_reason: finishReason };
+  }
+  
   const cleaned = content.replace(/```json\n?/g, "").replace(/```\n?/g, "").trim();
   try {
     return JSON.parse(cleaned);
   } catch {
-    // Try to extract a JSON object even if truncated
     const m = cleaned.match(/\{[\s\S]*\}/);
     if (m) {
-      try {
-        return JSON.parse(m[0]);
-      } catch {}
+      try { return JSON.parse(m[0]); } catch {}
     }
-    // Handle truncated JSON — try to close it
-    const truncated = cleaned.startsWith("{") ? cleaned : `{${cleaned}`;
-    // Try to extract key-value pairs from truncated JSON
-    const tagMatch = truncated.match(/"killer_tag"\s*:\s*"([^"]*)"/);
-    const praiseMatch = truncated.match(/"praise_line"\s*:\s*"([^"]*)"/);
+    // Recover key-value pairs from truncated JSON
+    const tagMatch = cleaned.match(/"killer_tag"\s*:\s*"([^"]*)"/);
+    const praiseMatch = cleaned.match(/"praise_line"\s*:\s*"([^"]*)"/);
     if (tagMatch || praiseMatch) {
       console.warn("Recovered from truncated JSON response");
-      return {
-        killer_tag: tagMatch?.[1] || "",
-        praise_line: praiseMatch?.[1] || "",
-      };
+      return { killer_tag: tagMatch?.[1] || "", praise_line: praiseMatch?.[1] || "" };
     }
-    console.error("Failed to parse Gemini response:", cleaned.substring(0, 500));
-    throw new Error("Failed to parse AI response");
+    console.error("JSON parse failed:", cleaned.substring(0, 500));
+    throw { status: 200, message: "Failed to parse AI response as JSON", stage: "json_parse", model, raw_preview: cleaned.substring(0, 200) };
   }
 }
 
@@ -380,8 +382,8 @@ serve(async (req) => {
       });
     }
 
-    const gender = styleProfile?.gender || "unknown";
-    const apiKey = getApiKey();
+    const imgSizeKb = Math.round(imageBase64.length * 3 / 4 / 1024);
+    console.log(`Request: mode=${unfiltered ? "savage" : "standard"}, gender=${gender}, imgSize=${imgSizeKb}KB`);
 
     let profileContext = "";
     if (styleProfile) {
@@ -405,8 +407,16 @@ serve(async (req) => {
       },
     ];
 
-    console.log("Call 1: Human detection + scoring (direct Gemini)...");
-    const call1Result = await callGemini(apiKey, call1Messages, 0.3, 512);
+    let call1Result;
+    try {
+      call1Result = await callGemini(apiKey, call1Messages, 0.3, 512);
+    } catch (e: any) {
+      console.error("Call 1 failed:", e);
+      return new Response(JSON.stringify({ error: e.message || "Call 1 failed", stage: "call1", model: "gemini-2.5-flash-lite", provider_status: e.status }), {
+        status: e.status === 429 || e.status === 402 ? e.status : 500,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
 
     console.log("Call 1 result:", JSON.stringify(call1Result).substring(0, 200));
 
@@ -460,6 +470,7 @@ CRITICAL: Return ONLY valid JSON.`;
 
       const roastTemp = unfiltered ? 1.2 : 0.9;
       const roastTokens = unfiltered ? 512 : 256;
+      const roastModel = unfiltered ? "gemini-2.5-flash" : "gemini-2.5-flash-lite";
       const roastMessages = [
         { role: "system", content: roastPrompt },
         {
@@ -470,24 +481,24 @@ CRITICAL: Return ONLY valid JSON.`;
           ],
         },
       ];
-      const roastCall2 = await callGemini(apiKey, roastMessages, roastTemp, roastTokens, unfiltered ? "gemini-2.5-flash" : "gemini-2.5-flash-lite");
+      
+      let roastCall2;
+      try {
+        roastCall2 = await callGemini(apiKey, roastMessages, roastTemp, roastTokens, roastModel);
+      } catch (e: any) {
+        console.error("Roast Call 2 failed:", e);
+        // Use fallback roast copy instead of failing entirely
+        roastCall2 = { killer_tag: "Not A Fit 💀", praise_line: `you really sent a ${roastCategory} to a fashion app` };
+      }
 
       console.log("Roast Call 2 result:", JSON.stringify(roastCall2));
 
       const roastResult = {
-        drip_score: 0,
-        drip_reason: "No human detected",
-        confidence_rating: 0,
-        confidence_reason: "No human detected",
-        killer_tag: roastCall2.killer_tag || "Not A Fit",
-        color_score: 0,
-        color_reason: "N/A",
-        posture_score: 0,
-        posture_reason: "N/A",
-        layering_score: 0,
-        layering_reason: "N/A",
-        face_score: 0,
-        face_reason: "N/A",
+        drip_score: 0, drip_reason: "No human detected",
+        confidence_rating: 0, confidence_reason: "No human detected",
+        killer_tag: roastCall2.killer_tag || "Not A Fit 💀",
+        color_score: 0, color_reason: "N/A", posture_score: 0, posture_reason: "N/A",
+        layering_score: 0, layering_reason: "N/A", face_score: 0, face_reason: "N/A",
         advice: "Upload a photo with you wearing an outfit",
         praise_line: roastCall2.praise_line || roastCategory,
       };
@@ -504,6 +515,7 @@ CRITICAL: Return ONLY valid JSON.`;
 
     const call2Temp = unfiltered ? 1.2 : 0.9;
     const call2Tokens = unfiltered ? 512 : 256;
+    const call2Model = unfiltered ? "gemini-2.5-flash" : "gemini-2.5-flash-lite";
     const call2Messages = [
       { role: "system", content: call2System },
       {
@@ -514,7 +526,26 @@ CRITICAL: Return ONLY valid JSON.`;
         ],
       },
     ];
-    const call2Result = await callGemini(apiKey, call2Messages, call2Temp, call2Tokens, unfiltered ? "gemini-2.5-flash" : "gemini-2.5-flash-lite");
+    
+    let call2Result;
+    try {
+      call2Result = await callGemini(apiKey, call2Messages, call2Temp, call2Tokens, call2Model);
+    } catch (e: any) {
+      console.error("Call 2 failed:", e);
+      // If Call 2 fails (safety block, parse error), use fallback copy but still return Call 1 scores
+      const fb = getFallbackCopy(call1Result.drip_score, sceneType, Boolean(unfiltered));
+      const fallbackResult = {
+        drip_score: call1Result.drip_score, drip_reason: call1Result.drip_reason,
+        confidence_rating: call1Result.confidence_rating, confidence_reason: call1Result.confidence_reason,
+        killer_tag: fb.killer_tag, color_score: call1Result.color_score, color_reason: call1Result.color_reason,
+        posture_score: call1Result.posture_score, posture_reason: call1Result.posture_reason,
+        layering_score: call1Result.layering_score, layering_reason: call1Result.layering_reason,
+        face_score: call1Result.face_score, face_reason: call1Result.face_reason,
+        advice: call1Result.advice, praise_line: fb.praise_line,
+      };
+      console.log("Returning Call 1 scores with fallback copy due to Call 2 failure");
+      return new Response(JSON.stringify({ result: fallbackResult }), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
+    }
 
     console.log("Call 2 result:", JSON.stringify(call2Result));
 
@@ -528,29 +559,25 @@ CRITICAL: Return ONLY valid JSON.`;
     }
 
     const finalResult = {
-      drip_score: call1Result.drip_score,
-      drip_reason: call1Result.drip_reason,
-      confidence_rating: call1Result.confidence_rating,
-      confidence_reason: call1Result.confidence_reason,
+      drip_score: call1Result.drip_score, drip_reason: call1Result.drip_reason,
+      confidence_rating: call1Result.confidence_rating, confidence_reason: call1Result.confidence_reason,
       killer_tag: shouldFallback ? fallbackCopy.killer_tag : (safeKillerTag || fallbackCopy.killer_tag),
-      color_score: call1Result.color_score,
-      color_reason: call1Result.color_reason,
-      posture_score: call1Result.posture_score,
-      posture_reason: call1Result.posture_reason,
-      layering_score: call1Result.layering_score,
-      layering_reason: call1Result.layering_reason,
-      face_score: call1Result.face_score,
-      face_reason: call1Result.face_reason,
+      color_score: call1Result.color_score, color_reason: call1Result.color_reason,
+      posture_score: call1Result.posture_score, posture_reason: call1Result.posture_reason,
+      layering_score: call1Result.layering_score, layering_reason: call1Result.layering_reason,
+      face_score: call1Result.face_score, face_reason: call1Result.face_reason,
       advice: call1Result.advice,
       praise_line: shouldFallback ? fallbackCopy.praise_line : (safePraiseLine || fallbackCopy.praise_line),
     };
 
     return new Response(JSON.stringify({ result: finalResult }), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
   } catch (e: any) {
-    console.error("rate-outfit error:", e);
+    console.error("rate-outfit unhandled error:", e);
+    const stage = e?.stage || "unknown";
+    const model = e?.model || "unknown";
     if (e?.status === 429 || e?.status === 402) {
-      return new Response(JSON.stringify({ error: e.message }), { status: e.status, headers: { ...corsHeaders, "Content-Type": "application/json" } });
+      return new Response(JSON.stringify({ error: e.message, stage, model }), { status: e.status, headers: { ...corsHeaders, "Content-Type": "application/json" } });
     }
-    return new Response(JSON.stringify({ error: e instanceof Error ? e.message : "Unknown error" }), { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } });
+    return new Response(JSON.stringify({ error: e?.message || (e instanceof Error ? e.message : "Unknown error"), stage, model }), { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } });
   }
 });
