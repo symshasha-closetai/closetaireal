@@ -384,8 +384,8 @@ const OutfitRatingCard = ({ image, imageBase64, result, wardrobeItems = [],
     // Praise line
     if (result.praise_line) {
       ctx.fillStyle = "rgba(255,255,255,0.8)";
-      ctx.font = "italic 400 13px 'Inter', 'Helvetica', sans-serif";
-      const praiseY = subY + 42;
+      ctx.font = "italic 400 12px 'Inter', 'Helvetica', sans-serif";
+      const praiseY = subY + 32;
       const maxW = W - 56;
       const words = result.praise_line.split(" ");
       let line = "";
@@ -396,7 +396,7 @@ const OutfitRatingCard = ({ image, imageBase64, result, wardrobeItems = [],
           const lw = ctx.measureText(line.trim()).width;
           ctx.fillText(line.trim(), (W - lw) / 2, y);
           line = word + " ";
-          y += 18;
+          y += 16;
         } else {
           line = test;
         }

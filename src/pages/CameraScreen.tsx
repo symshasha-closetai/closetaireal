@@ -444,8 +444,19 @@ const CameraScreen = () => {
         ) : (
         <>
         <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.05 }}>
-          <h1 className="font-display text-2xl font-semibold text-foreground">Drip Check</h1>
-          <p className="text-sm text-muted-foreground mt-1">Upload or capture your outfit for styling insights</p>
+          <div className="flex items-center justify-between">
+            <div>
+              <h1 className="font-display text-2xl font-semibold text-foreground">Drip Check</h1>
+              <p className="text-sm text-muted-foreground mt-1">Upload or capture your outfit for styling insights</p>
+            </div>
+            <div className="flex items-center gap-2">
+              <span className="text-xs text-muted-foreground font-medium">Unfiltered 🔥</span>
+              <Switch
+                checked={globalDripState.unfiltered}
+                onCheckedChange={(v) => updateGlobal({ unfiltered: v })}
+              />
+            </div>
+          </div>
         </motion.div>
 
         <input type="file" accept="image/*" ref={fileRef} className="hidden" onChange={handleUpload} onClick={(e) => { (e.target as HTMLInputElement).value = ""; }} />
