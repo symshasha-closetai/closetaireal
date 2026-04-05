@@ -516,8 +516,7 @@ CRITICAL: Return ONLY valid JSON.`;
 
     const call2Temp = unfiltered ? 1.2 : 0.9;
     const call2Tokens = unfiltered ? 512 : 256;
-    const call2Model = unfiltered ? "gemini-1.5-pro" : "gemini-2.5-flash-lite";
-    const call2Result = await callGemini(apiKey, [
+    const call2Messages = [
       { role: "system", content: call2System },
       {
         role: "user",
@@ -526,7 +525,10 @@ CRITICAL: Return ONLY valid JSON.`;
           { type: "image_url", image_url: { url: `data:image/jpeg;base64,${imageBase64}` } },
         ],
       },
-    ], call2Temp, call2Tokens, call2Model);
+    ];
+    const call2Result = unfiltered
+      ? await callLovableAI(call2Messages, call2Temp, call2Tokens, "google/gemini-2.5-flash")
+      : await callGemini(apiKey, call2Messages, call2Temp, call2Tokens);
 
     console.log("Call 2 result:", JSON.stringify(call2Result));
 
