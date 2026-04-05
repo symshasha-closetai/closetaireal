@@ -310,8 +310,9 @@ serve(async (req) => {
       console.log("Roast mode — generating funny killer_tag + roast praise_line via Call 2");
       const roastCategory = call1Result.roast_line || "I don't know what this is, but it's not a fit.";
       
-      const roastCall2 = await callGemini(apiKey, [
-        { role: "system", content: `You generate funny, shareable content for non-outfit images submitted to a fashion rating app called DRIPD.
+      const roastPrompt = unfiltered
+        ? getUnfilteredRoastPrompt(roastCategory)
+        : `You generate funny, shareable content for non-outfit images submitted to a fashion rating app called DRIPD.
 
 The image is NOT a person wearing clothes. The roast category is: "${roastCategory}"
 
@@ -324,7 +325,10 @@ Generate:
 2. praise_line: One sentence roast. Funny, not mean. The kind of line someone would screenshot and send to friends. Can include 1-2 emojis where they feel natural.
 
 Return EXACTLY: {"killer_tag":"2-3 words + emoji","praise_line":"one sentence roast no period"}
-CRITICAL: Return ONLY valid JSON.` },
+CRITICAL: Return ONLY valid JSON.`;
+
+      const roastCall2 = await callGemini(apiKey, [
+        { role: "system", content: roastPrompt },
         { role: "user", content: [
           { type: "text", text: "Look at this image and generate a funny killer_tag and roast praise_line for it." },
           { type: "image_url", image_url: { url: `data:image/jpeg;base64,${imageBase64}` } },
