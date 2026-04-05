@@ -183,9 +183,11 @@ serve(async (req) => {
     console.log("Call 1 result:", JSON.stringify(call1Result).substring(0, 200));
 
     // ── SERVER-SIDE VALIDATION: Force roast if no human indicators ──
+    const subScoreTotal = (call1Result.color_score || 0) + (call1Result.posture_score || 0) + (call1Result.layering_score || 0) + (call1Result.face_score || 0);
     const isRoast = call1Result.error === "roast"
-      || (call1Result.drip_score === 0 && call1Result.color_score === 0 && call1Result.posture_score === 0 && call1Result.layering_score === 0 && call1Result.face_score === 0)
-      || (call1Result.face_score === 0 && call1Result.posture_score === 0);
+      || (call1Result.drip_score === 0 && subScoreTotal === 0)
+      || (call1Result.face_score === 0 && call1Result.posture_score === 0)
+      || (call1Result.drip_score < 2 && subScoreTotal < 3);
 
     if (isRoast) {
       console.log("Roast mode — generating funny killer_tag + roast praise_line via Call 2");
