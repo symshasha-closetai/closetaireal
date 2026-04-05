@@ -356,8 +356,12 @@ CRITICAL: Return ONLY valid JSON.`;
     const sceneType = call1Result.scene_type || "solo";
     console.log("Call 2: Generating killer tag + praise line...");
 
+    const call2System = unfiltered
+      ? getCall2SystemUnfiltered(call1Result.drip_score, gender, faceHidden, sceneType)
+      : getCall2System(call1Result.drip_score, gender, faceHidden, sceneType, profileContext);
+
     const call2Result = await callGemini(apiKey, [
-      { role: "system", content: getCall2System(call1Result.drip_score, gender, faceHidden, sceneType, profileContext) },
+      { role: "system", content: call2System },
       { role: "user", content: [
         { type: "text", text: "Look at this outfit and generate the killer_tag and praise_line based on the score and vibe rules provided." },
         { type: "image_url", image_url: { url: `data:image/jpeg;base64,${imageBase64}` } },
