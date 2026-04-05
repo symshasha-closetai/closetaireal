@@ -314,7 +314,7 @@ const runAnalysis = async (file: File, userId: string | undefined, styleProfile:
       }
       const fallback = clientFallbackResult(gender);
       updateGlobal({ result: fallback, analyzing: false, progress: 0, stage: "", analysisSteps: [] });
-      saveDripToHistory(globalDripState.image || "", fallback, userId, imageHash);
+      saveDripToHistory(globalDripState.image || "", fallback, userId, imageHash, unfiltered);
       return;
     }
     if (data?.result) {
