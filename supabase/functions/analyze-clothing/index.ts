@@ -23,8 +23,12 @@ serve(async (req) => {
 
     const systemPrompt = `You are a fashion AI that analyzes clothing images. Given an image of a person wearing clothes or a group of clothing items, identify and categorize each visible clothing item or accessory.
 
+VISIBILITY RULE: Only include items that are at least 40-50% visible in the image. If less than half the item is visible or it's mostly obscured, skip it entirely. Focus on items where you can clearly see the color, pattern, and material.
+
+WATCH RULE: For watches — if the dial/face is NOT clearly visible, classify it simply as "Watch" (NOT "Smartwatch" or "Analog Watch"). Only specify smartwatch or analog if the dial face is clearly and fully visible. For the name, describe only what is visible (e.g., "Silver Metal Watch" or "Brown Leather Strap Watch").
+
 For each item found, return a JSON array of objects with these fields:
-- "name": descriptive name of the item (e.g., "Blue Denim Jacket", "Gold Watch")
+- "name": descriptive name of the item (e.g., "Blue Denim Jacket", "Silver Metal Watch")
 - "type": one of "Tops", "Bottoms", "Shoes", "Dresses", "Accessories"
 - "color": primary color
 - "material": material if identifiable (e.g., "Denim", "Leather", "Cotton", "Linen", "Polyester", "Silk", "Wool", "Nylon", "Chiffon", "Velvet", "Satin"), or null

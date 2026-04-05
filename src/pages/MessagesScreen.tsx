@@ -195,41 +195,30 @@ const MessagesScreen = () => {
     if (!user || selectedMembers.length < 2 || !groupName.trim()) return;
     setCreatingGroup(true);
 
-    // Create conversation with is_group=true and name
-    const { data: convo, error: convoErr } = await supabase
-      .from("conversations")
-      .insert({ name: groupName.trim(), is_group: true } as any)
-      .select("id")
-      .single();
+    try {
+      const { data: convoId, error } = await supabase.rpc("create_group_conversation", {
+        group_name: groupName.trim(),
+        member_ids: selectedMembers,
+      });
 
-    if (convoErr || !convo) {
+      if (error || !convoId) {
+        console.error("Group creation error:", error);
+        toast.error("Failed to create group");
+        setCreatingGroup(false);
+        return;
+      }
+
+      toast.success("Group created! 🎉");
+      setCreatingGroup(false);
+      setShowGroupCreate(false);
+      setGroupName("");
+      setSelectedMembers([]);
+      navigate(`/chat/${convoId}`);
+    } catch (err) {
+      console.error("Group creation exception:", err);
       toast.error("Failed to create group");
       setCreatingGroup(false);
-      return;
     }
-
-    // Add all participants including self
-    const participants = [user.id, ...selectedMembers].map(uid => ({
-      conversation_id: convo.id,
-      user_id: uid,
-    }));
-
-    const { error: partErr } = await supabase
-      .from("conversation_participants")
-      .insert(participants);
-
-    if (partErr) {
-      toast.error("Failed to add members");
-      setCreatingGroup(false);
-      return;
-    }
-
-    toast.success("Group created! 🎉");
-    setCreatingGroup(false);
-    setShowGroupCreate(false);
-    setGroupName("");
-    setSelectedMembers([]);
-    navigate(`/chat/${convo.id}`);
   };
 
   const toggleMember = (id: string) => {
