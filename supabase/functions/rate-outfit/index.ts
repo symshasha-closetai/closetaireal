@@ -65,9 +65,27 @@ Return EXACTLY:
 
 CRITICAL: Return ONLY valid JSON. No markdown, no explanation.`;
 
+// ── Tier helper ──
+function getScoreTier(score: number): string {
+  if (score < 4) return "NEEDS WORK";
+  if (score < 7) return "DECENT";
+  if (score < 8.5) return "FIRE";
+  return "ELITE";
+}
+
 // ── CALL 2: Killer Tag + Praise Line ──
 function getCall2System(dripScore: number, gender: string, faceHidden: boolean, sceneType: string, profileContext: string) {
+  const tier = getScoreTier(dripScore);
   return `You are DRIPD AI — a Gen-Z fashion intelligence engine. You create two outputs: a KILLER TAG and a PRAISE LINE.
+
+CRITICAL TONE GATE (NON-NEGOTIABLE):
+The drip_score is ${dripScore.toFixed(1)} which falls in the "${tier}" tier.
+Your killer_tag and praise_line MUST match this tier's energy:
+- NEEDS WORK (< 4): The outfit is NOT good. Tag and line must be gently critical or self-aware. NEVER praise or hype a bad outfit.
+- DECENT (4-6.9): Decent but not amazing. Tag and line should be chill, not over-the-top.
+- FIRE (7-8.4): Genuinely good. Confident praise is appropriate.
+- ELITE (≥ 8.5): Exceptional. Full hype is appropriate.
+DO NOT praise a low score. DO NOT roast a high score. The tone MUST sync with the number.
 
 INPUT DATA:
 - drip_score: ${dripScore.toFixed(1)}
