@@ -114,7 +114,7 @@ Deno.serve(async (req: Request) => {
     const serviceRoleKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
     const vapidPublicKey = "BPwsylb5rG9Mo9dmJtI13QgpjVSiHhtw1BcDFOXz-eEl3f3QbOX3tshVRJnCmXU7asKYCeZ7uyKYGXL9rcj-tz4";
     const vapidPrivateKey = Deno.env.get("VAPID_PRIVATE_KEY");
-    const vapidEmail = Deno.env.get("VAPID_EMAIL") || "mailto:support@dripd.app";
+    const vapidEmail = Deno.env.get("VAPID_EMAIL") || "mailto:support@dripd.me";
 
     const supabase = createClient(supabaseUrl, serviceRoleKey);
 

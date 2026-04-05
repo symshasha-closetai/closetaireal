@@ -5,6 +5,7 @@ import LeaderboardTab from "../components/LeaderboardTab";
 import AppHeader from "../components/AppHeader";
 import OutfitRatingCard from "../components/OutfitRatingCard";
 import SignUpPromptDialog from "../components/SignUpPromptDialog";
+import { Switch } from "@/components/ui/switch";
 import { supabase } from "@/integrations/supabase/client";
 import { r2 } from "@/lib/r2Storage";
 import { useAuth } from "@/hooks/useAuth";
@@ -86,6 +87,7 @@ type DripState = {
   detectedItems: DetectedItem[] | null;
   suggestionImages: Record<number, string | null>;
   savedSuggestions: string[];
+  unfiltered: boolean;
 };
 
 const ANALYSIS_STEP_LABELS = [
@@ -109,6 +111,7 @@ const globalDripState: DripState = {
   detectedItems: null,
   suggestionImages: {},
   savedSuggestions: [],
+  unfiltered: false,
 };
 
 let globalListeners: Set<() => void> = new Set();
@@ -256,7 +259,7 @@ const clearStageTimers = () => {
   stageTimers = [];
 };
 
-const runAnalysis = async (file: File, userId: string | undefined, styleProfile: any, gender?: string | null) => {
+const runAnalysis = async (file: File, userId: string | undefined, styleProfile: any, gender?: string | null, unfiltered?: boolean) => {
   activeAbort = new AbortController();
   updateGlobal({ analyzing: true, progress: 5, stage: "Compressing image...", analysisSteps: [] });
 
@@ -296,8 +299,8 @@ const runAnalysis = async (file: File, userId: string | undefined, styleProfile:
     const minDelay = new Promise((r) => setTimeout(r, 5000));
 
     const aiCallBody: any = uploadedUrl
-      ? { imageUrl: uploadedUrl, styleProfile: styleProfile || undefined }
-      : { imageBase64, styleProfile: styleProfile || undefined };
+      ? { imageUrl: uploadedUrl, styleProfile: styleProfile || undefined, unfiltered: !!unfiltered }
+      : { imageBase64, styleProfile: styleProfile || undefined, unfiltered: !!unfiltered };
 
     const aiCall = supabase.functions.invoke("rate-outfit", {
       body: aiCallBody,
@@ -402,7 +405,7 @@ const CameraScreen = () => {
       r.readAsDataURL(file);
     });
     updateGlobal({ image: url, imageBase64: dataUrl, result: null });
-    runAnalysis(file, user?.id, styleProfile, styleProfile?.gender);
+    runAnalysis(file, user?.id, styleProfile, styleProfile?.gender, globalDripState.unfiltered);
   };
 
   const cancelAnalysis = () => {
@@ -441,8 +444,19 @@ const CameraScreen = () => {
         ) : (
         <>
         <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.05 }}>
-          <h1 className="font-display text-2xl font-semibold text-foreground">Drip Check</h1>
-          <p className="text-sm text-muted-foreground mt-1">Upload or capture your outfit for styling insights</p>
+          <div className="flex items-center justify-between">
+            <div>
+              <h1 className="font-display text-2xl font-semibold text-foreground">Drip Check</h1>
+              <p className="text-sm text-muted-foreground mt-1">Upload or capture your outfit for styling insights</p>
+            </div>
+            <div className="flex items-center gap-2">
+              <span className="text-xs text-muted-foreground font-medium">Unfiltered 🔥</span>
+              <Switch
+                checked={globalDripState.unfiltered}
+                onCheckedChange={(v) => updateGlobal({ unfiltered: v })}
+              />
+            </div>
+          </div>
         </motion.div>
 
         <input type="file" accept="image/*" ref={fileRef} className="hidden" onChange={handleUpload} onClick={(e) => { (e.target as HTMLInputElement).value = ""; }} />

@@ -224,7 +224,7 @@ const OutfitRatingCard = ({ image, imageBase64, result, wardrobeItems = [],
     ctx.fillRect(0, 0, W, H);
 
     // Draw outfit image — try fetch blob first, fallback to Image element for CORS
-    const IMG_H = Math.round(H * 0.58);
+    const IMG_H = Math.round(H * 0.68);
     let imgBitmap: ImageBitmap | HTMLImageElement;
     try {
       const imgResponse = await fetch(image);
@@ -274,42 +274,42 @@ const OutfitRatingCard = ({ image, imageBase64, result, wardrobeItems = [],
     ctx.letterSpacing = "0px";
 
     // === Bottom panel content ===
-    const panelY = IMG_H + 10;
+    const panelY = IMG_H + 4;
 
     // Drip Score — large display with gold glow
     ctx.textBaseline = "alphabetic";
     const scoreStr = String(result.drip_score);
     const scoreX = 28;
-    const scoreBaseY = panelY + 52;
+    const scoreBaseY = panelY + 42;
 
     // Gold glow effect
     ctx.save();
     ctx.shadowColor = "rgba(201,169,110,0.6)";
     ctx.shadowBlur = 24;
     ctx.fillStyle = "#C9A96E";
-    ctx.font = "800 56px 'Inter', 'Helvetica', sans-serif";
+    ctx.font = "800 48px 'Inter', 'Helvetica', sans-serif";
     const scoreMetrics = ctx.measureText(scoreStr);
     ctx.fillText(scoreStr, scoreX, scoreBaseY);
-    ctx.fillText(scoreStr, scoreX, scoreBaseY); // double-draw for stronger glow
+    ctx.fillText(scoreStr, scoreX, scoreBaseY);
     ctx.restore();
 
     // "/10" next to score
     ctx.fillStyle = "rgba(255,255,255,0.3)";
-    ctx.font = "400 20px 'Inter', 'Helvetica', sans-serif";
+    ctx.font = "400 18px 'Inter', 'Helvetica', sans-serif";
     ctx.fillText("/10", scoreX + scoreMetrics.width + 4, scoreBaseY);
 
     // "DRIP SCORE" label
     ctx.fillStyle = "rgba(201,169,110,0.6)";
-    ctx.font = "700 10px 'Inter', 'Helvetica', sans-serif";
+    ctx.font = "700 9px 'Inter', 'Helvetica', sans-serif";
     ctx.letterSpacing = "2px";
-    ctx.fillText("DRIP SCORE", scoreX, scoreBaseY + 18);
+    ctx.fillText("DRIP SCORE", scoreX, scoreBaseY + 16);
     ctx.letterSpacing = "0px";
 
     // Confidence Score — right aligned with silver glow
     const confStr = String(result.confidence_rating);
-    ctx.font = "800 56px 'Inter', 'Helvetica', sans-serif";
+    ctx.font = "800 48px 'Inter', 'Helvetica', sans-serif";
     const confMetrics = ctx.measureText(confStr);
-    ctx.font = "400 20px 'Inter', 'Helvetica', sans-serif";
+    ctx.font = "400 18px 'Inter', 'Helvetica', sans-serif";
     const slashMetrics = ctx.measureText("/10");
     const confBlockW = confMetrics.width + 4 + slashMetrics.width;
     const confX = W - 28 - confBlockW;
@@ -319,22 +319,22 @@ const OutfitRatingCard = ({ image, imageBase64, result, wardrobeItems = [],
     ctx.shadowColor = "rgba(180,180,200,0.5)";
     ctx.shadowBlur = 20;
     ctx.fillStyle = "#A0A0A0";
-    ctx.font = "800 56px 'Inter', 'Helvetica', sans-serif";
+    ctx.font = "800 48px 'Inter', 'Helvetica', sans-serif";
     ctx.fillText(confStr, confX, scoreBaseY);
-    ctx.fillText(confStr, confX, scoreBaseY); // double-draw for stronger glow
+    ctx.fillText(confStr, confX, scoreBaseY);
     ctx.restore();
 
     ctx.fillStyle = "rgba(255,255,255,0.3)";
-    ctx.font = "400 20px 'Inter', 'Helvetica', sans-serif";
+    ctx.font = "400 18px 'Inter', 'Helvetica', sans-serif";
     ctx.fillText("/10", confX + confMetrics.width + 4, scoreBaseY);
 
     // "CONFIDENCE" label
     ctx.fillStyle = "rgba(160,160,160,0.6)";
-    ctx.font = "700 10px 'Inter', 'Helvetica', sans-serif";
+    ctx.font = "700 9px 'Inter', 'Helvetica', sans-serif";
     ctx.letterSpacing = "2px";
     const confLabel = "CONFIDENCE";
     const confLabelW = ctx.measureText(confLabel).width;
-    ctx.fillText(confLabel, W - 28 - confLabelW, scoreBaseY + 18);
+    ctx.fillText(confLabel, W - 28 - confLabelW, scoreBaseY + 16);
     ctx.letterSpacing = "0px";
 
     // Killer tag centered
@@ -346,7 +346,7 @@ const OutfitRatingCard = ({ image, imageBase64, result, wardrobeItems = [],
     }
 
     // Separator line
-    const sepY = scoreBaseY + 34;
+    const sepY = scoreBaseY + 28;
     const sepGrad = ctx.createLinearGradient(28, 0, W - 28, 0);
     sepGrad.addColorStop(0, "rgba(201,169,110,0.05)");
     sepGrad.addColorStop(0.3, "rgba(201,169,110,0.3)");
@@ -362,30 +362,30 @@ const OutfitRatingCard = ({ image, imageBase64, result, wardrobeItems = [],
       { label: "LAYERING", score: result.layering_score ?? result.fit_score ?? 0, color: "#FFFFFF" },
       { label: "FACE", score: result.face_score ?? 0, color: "#FFFFFF" },
     ];
-    const subY = sepY + 36;
+    const subY = sepY + 28;
     const colW = (W - 56) / subScores.length;
     subScores.forEach((s, i) => {
       const cx = 28 + colW * i + colW / 2;
       const scoreVal = Number.isInteger(s.score) ? String(s.score) : s.score.toFixed(1);
       
       ctx.fillStyle = "#FFFFFF";
-      ctx.font = "700 24px 'Inter', 'Helvetica', sans-serif";
+      ctx.font = "700 20px 'Inter', 'Helvetica', sans-serif";
       const sW = ctx.measureText(scoreVal).width;
       ctx.fillText(scoreVal, cx - sW / 2, subY);
 
       ctx.fillStyle = "rgba(255,255,255,0.6)";
-      ctx.font = "600 8px 'Inter', 'Helvetica', sans-serif";
+      ctx.font = "600 7px 'Inter', 'Helvetica', sans-serif";
       ctx.letterSpacing = "1px";
       const lW = ctx.measureText(s.label).width;
-      ctx.fillText(s.label, cx - lW / 2, subY + 16);
+      ctx.fillText(s.label, cx - lW / 2, subY + 14);
       ctx.letterSpacing = "0px";
     });
 
     // Praise line
     if (result.praise_line) {
       ctx.fillStyle = "rgba(255,255,255,0.8)";
-      ctx.font = "italic 400 13px 'Inter', 'Helvetica', sans-serif";
-      const praiseY = subY + 42;
+      ctx.font = "italic 400 12px 'Inter', 'Helvetica', sans-serif";
+      const praiseY = subY + 32;
       const maxW = W - 56;
       const words = result.praise_line.split(" ");
       let line = "";
@@ -396,7 +396,7 @@ const OutfitRatingCard = ({ image, imageBase64, result, wardrobeItems = [],
           const lw = ctx.measureText(line.trim()).width;
           ctx.fillText(line.trim(), (W - lw) / 2, y);
           line = word + " ";
-          y += 18;
+          y += 16;
         } else {
           line = test;
         }
