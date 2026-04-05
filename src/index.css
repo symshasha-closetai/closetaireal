@@ -158,6 +158,23 @@
   h1, h2, h3 {
     letter-spacing: -0.02em;
   }
+
+  button {
+    box-shadow: var(--shadow-soft);
+    transition: box-shadow 200ms ease, transform 200ms ease;
+  }
+
+  button:hover {
+    box-shadow: var(--shadow-card);
+  }
+
+  button:active {
+    box-shadow: var(--shadow-soft);
+  }
+
+  button:disabled {
+    box-shadow: none;
+  }
 }
 
 @layer utilities {

@@ -24,14 +24,28 @@ async function callGemini(apiKey: string, messages: any[], temperature: number, 
   });
   if (res.status === 429) throw { status: 429, message: "Rate limited, please try again later." };
   if (res.status === 402) throw { status: 402, message: "AI credits exhausted. Please add funds." };
-  if (!res.ok) { const t = await res.text(); console.error("AI error:", res.status, t); throw new Error(`AI error: ${res.status}`); }
+  if (!res.ok) {
+    const t = await res.text();
+    console.error("AI error:", res.status, t);
+    throw new Error(`AI error: ${res.status}`);
+  }
   const data = await res.json();
   const content = data.choices?.[0]?.message?.content || "{}";
   const cleaned = content.replace(/```json\n?/g, "").replace(/```\n?/g, "").trim();
-  try { return JSON.parse(cleaned); } catch { const m = cleaned.match(/\{[\s\S]*\}/); if (m) try { return JSON.parse(m[0]); } catch {} throw new Error("Failed to parse AI response"); }
+  try {
+    return JSON.parse(cleaned);
+  } catch {
+    const m = cleaned.match(/\{[\s\S]*\}/);
+    if (m) {
+      try {
+        return JSON.parse(m[0]);
+      } catch {
+      }
+    }
+    throw new Error("Failed to parse AI response");
+  }
 }
 
-// ── CALL 1: Human detection + scoring ──
 const CALL1_SYSTEM = `You analyze outfit photos. Your ONLY job: detect if there's a human wearing clothes, and either score or roast.
 
 STEP 1: Is there a human in this image?
@@ -65,7 +79,6 @@ Return EXACTLY:
 
 CRITICAL: Return ONLY valid JSON. No markdown, no explanation.`;
 
-// ── Tier helper ──
 function getScoreTier(score: number): string {
   if (score < 4) return "NEEDS WORK";
   if (score < 7) return "DECENT";
@@ -73,19 +86,109 @@ function getScoreTier(score: number): string {
   return "ELITE";
 }
 
-// ── CALL 2: Killer Tag + Praise Line ──
+function getSceneRule(sceneType: string): string {
+  if (sceneType === "couple") {
+    return `SCENE RULE: This is a COUPLE photo. You MUST write like there are TWO people in frame.
+- Use plural language: y'all, you two, both of you, duo, pair, together.
+- Reference chemistry, coordination, matching energy, shared vibe, or couple tension.
+- NEVER write this like a solo compliment.`;
+  }
+  if (sceneType === "group") {
+    return `SCENE RULE: This is a GROUP photo. You MUST write like there are multiple people in frame.
+- Use plural language: y'all, squad, crew, lineup, everyone, all of you.
+- Reference collective energy, lineup strength, or shared aura.
+- NEVER write this like a solo compliment.`;
+  }
+  return `SCENE RULE: This is a SOLO photo. Write to one person only.`;
+}
+
+function hasSceneCue(text: string, sceneType: string): boolean {
+  if (sceneType === "couple") return /\b(y['’]all|you two|both of you|duo|pair|together|chemistry|couple|matched|both)\b/i.test(text);
+  if (sceneType === "group") return /\b(y['’]all|squad|crew|lineup|everyone|all of you|group|team|together)\b/i.test(text);
+  return true;
+}
+
+function hasSavageCue(text: string): boolean {
+  return /\b(lowkey|no cap|deadass|went crazy|locked in|clean as hell|different|ate|stood on business|menace|wild|cooked)\b/i.test(text);
+}
+
+function hasLowScorePraise(text: string): boolean {
+  return /\b(clean|fire|elite|iconic|perfect|amazing|gorgeous|stunning|beautiful|hard|different|illegal|god tier|main character)\b/i.test(text);
+}
+
+function hasHighScoreDiss(text: string): boolean {
+  return /\b(trying era|almost there|work in progress|not there yet|still cooking|ain['’]t it|mid|meh|needs work)\b/i.test(text);
+}
+
+function getFallbackCopy(dripScore: number, sceneType: string, unfiltered: boolean) {
+  const tier = getScoreTier(dripScore);
+
+  if (sceneType === "couple") {
+    if (unfiltered) {
+      if (tier === "NEEDS WORK") return { killer_tag: "Chaotic Duo 😬", praise_line: "y'all got chemistry for sure, but deadass the fits are not on the same page yet" };
+      if (tier === "DECENT") return { killer_tag: "Cute Trouble 😏", praise_line: "lowkey, you two are carrying this off chemistry and that's saving the whole vibe" };
+      if (tier === "FIRE") return { killer_tag: "Power Menace 😮‍💨", praise_line: "deadass y'all went crazy together, the duo energy is doing heavy damage" };
+      return { killer_tag: "Double Trouble 😈", praise_line: "no cap, you two look illegal together and the whole frame is absolutely different" };
+    }
+
+    if (tier === "NEEDS WORK") return { killer_tag: "Mixed Signals 😬", praise_line: "you two have chemistry, but the fits need more of the same energy to really click" };
+    if (tier === "DECENT") return { killer_tag: "Cute Sync ✨", praise_line: "y'all look good together and the coordination is lowkey starting to land" };
+    if (tier === "FIRE") return { killer_tag: "Power Pair 🔥", praise_line: "you two look locked in and the shared energy makes the whole photo hit harder" };
+    return { killer_tag: "Main Duo 👑", praise_line: "y'all walked in like the caption wrote itself and honestly that's dangerous" };
+  }
+
+  if (sceneType === "group") {
+    if (unfiltered) {
+      if (tier === "NEEDS WORK") return { killer_tag: "Squad Loading 😬", praise_line: "the squad has energy, but no cap the fits still need one cleaner direction" };
+      if (tier === "DECENT") return { killer_tag: "Crew Pressure 😮‍💨", praise_line: "lowkey this lineup is doing enough damage to keep the room interested" };
+      if (tier === "FIRE") return { killer_tag: "Lineup Crazy 🔥", praise_line: "deadass, y'all are locked in and the group energy makes this hit way harder" };
+      return { killer_tag: "Whole Threat 😈", praise_line: "no cap, this group looks like a problem and everybody else just got cooked" };
+    }
+
+    if (tier === "NEEDS WORK") return { killer_tag: "Almost Synced 😅", praise_line: "the squad energy is there, but the outfits need one stronger common thread" };
+    if (tier === "DECENT") return { killer_tag: "Clean Lineup ✨", praise_line: "the group looks coordinated and that shared energy is doing a lot for the shot" };
+    if (tier === "FIRE") return { killer_tag: "Main Cast 🔥", praise_line: "y'all look locked in and the lineup feels intentional in the best way" };
+    return { killer_tag: "Full Pressure 👑", praise_line: "this lineup walked in like the room already belonged to all of you" };
+  }
+
+  if (unfiltered) {
+    if (tier === "NEEDS WORK") return { killer_tag: "Still Cooking 😬", praise_line: "no cap, the confidence is trying to carry this but the fit still needs saving" };
+    if (tier === "DECENT") return { killer_tag: "Lowkey Menace 😮‍💨", praise_line: "lowkey clean, lowkey trouble, you almost had to pay rent in this one" };
+    if (tier === "FIRE") return { killer_tag: "Locked In 🔥", praise_line: "deadass this went crazy, you look like you stood on business before leaving the house" };
+    return { killer_tag: "Different Breed 😈", praise_line: "no cap, this fit is actually a problem and everybody else just got cooked" };
+  }
+
+  if (tier === "NEEDS WORK") return { killer_tag: "Almost There 😅", praise_line: "the pose is helping, but the fit still needs one cleaner idea to lock in" };
+  if (tier === "DECENT") return { killer_tag: "Lowkey Clean ✨", praise_line: "this is easy on the eyes and one sharper detail would make it hit harder" };
+  if (tier === "FIRE") return { killer_tag: "Clean Pressure 🔥", praise_line: "you look locked in and the whole fit feels intentional in the best way" };
+  return { killer_tag: "Main Event 👑", praise_line: "this look walked in like it already knew it was the moment" };
+}
+
+function needsCopyFallback(killerTag: string, praiseLine: string, dripScore: number, sceneType: string, unfiltered: boolean): boolean {
+  const combined = `${killerTag} ${praiseLine}`;
+  if (!killerTag || !praiseLine) return true;
+  if (!hasSceneCue(combined, sceneType)) return true;
+  if (unfiltered && !hasSavageCue(praiseLine)) return true;
+  if (dripScore < 4 && hasLowScorePraise(combined)) return true;
+  if (dripScore >= 8.5 && hasHighScoreDiss(combined)) return true;
+  return false;
+}
+
 function getCall2System(dripScore: number, gender: string, faceHidden: boolean, sceneType: string, profileContext: string) {
   const tier = getScoreTier(dripScore);
+  const sceneRule = getSceneRule(sceneType);
   return `You are DRIPD AI — a Gen-Z fashion intelligence engine. You create two outputs: a KILLER TAG and a PRAISE LINE.
 
 CRITICAL TONE GATE (NON-NEGOTIABLE):
 The drip_score is ${dripScore.toFixed(1)} which falls in the "${tier}" tier.
 Your killer_tag and praise_line MUST match this tier's energy:
-- NEEDS WORK (< 4): The outfit is NOT good. Tag and line must be gently critical or self-aware. NEVER praise or hype a bad outfit.
-- DECENT (4-6.9): Decent but not amazing. Tag and line should be chill, not over-the-top.
-- FIRE (7-8.4): Genuinely good. Confident praise is appropriate.
-- ELITE (≥ 8.5): Exceptional. Full hype is appropriate.
-DO NOT praise a low score. DO NOT roast a high score. The tone MUST sync with the number.
+- NEEDS WORK (< 4): The outfit is NOT good. Be gently critical, self-aware, or lightly funny. NEVER praise or hype it.
+- DECENT (4-6.9): Nice but not crazy. Keep it smooth, current, and lowkey.
+- FIRE (7-8.4): Genuinely good. Use confident praise.
+- ELITE (≥ 8.5): Exceptional. Go full hype.
+DO NOT praise a low score. DO NOT underplay a high score.
+
+${sceneRule}
 
 INPUT DATA:
 - drip_score: ${dripScore.toFixed(1)}
@@ -94,85 +197,57 @@ INPUT DATA:
 - scene_type: ${sceneType}${profileContext}
 
 VOICE RULES:
-- Gen Z tone: natural, current, never performative
-- No expired slang (no "slay", "periodt", "bussin" unless it fits perfectly)
-- No cuss words. No cringe reassurance ("you're beautiful no matter what!")
-- Witty ≠ mean. Warm ≠ basic.
-- Avoid repetition across tag + praise line
-- EMOJIS: Include exactly 1 relevant emoji at the END of the killer_tag. Can include 1-2 emojis in the praise_line where they feel natural.
-- The tag and praise line should feel like they were made together
+- Sound current, witty, and Gen Z native — not corporate, not generic.
+- Mild modern slang is welcome when it feels natural: lowkey, no cap, locked in, clean, different.
+- WIT RULE: The line needs a twist, contrast, or clever observation. Plain compliments are not enough.
+- No cuss words. No fake positivity.
+- Avoid repetition across tag + praise line.
+- Include exactly 1 relevant emoji at the END of the killer_tag.
+- The tag and praise line must feel like they belong together.
 
-KILLER TAG (MOST IMPORTANT OUTPUT):
-- Exactly 2–3 words. Include exactly 1 relevant emoji at the END.
-- Must feel like a vibe, not a sentence. Screenshot-worthy.
-- Feels personal, not generic. Never reuse examples verbatim.
-- Use the drip_score to set the tone:
-  • < 4 → self-aware, gently funny (e.g. "Trying Era", "Almost There", "Work In Progress")
-  • 4–6.9 → casual, aesthetic, low-key (e.g. "Chill Fit", "Easy Clean", "Quiet Flex")
-  • 7–8.4 → confident, smooth, elevated (e.g. "Soft Power", "No Cap Clean", "Effortless Mode")
-  • ≥ 8.5 → hype, iconic, slightly unhinged in a good way (e.g. "Elite Drip", "Built Different", "Full Send")
-- Face hidden? Always lean into mystery (e.g. "Hidden Drip", "Lowkey Vibe", "Who Is This")
-- Examples are just examples — generate unique tags every time
+KILLER TAG:
+- Exactly 2–3 words.
+- Feels like a screenshot-worthy vibe, not a sentence.
+- Match the score tier exactly.
+- If face is hidden, lean into mystery without ignoring the score tier.
+- NEVER reuse examples verbatim.
 
 PRAISE LINE:
-- Exactly 1 sentence, no period at the end. Can include 1-2 emojis where they feel natural.
-- Sounds like a friend who's brutally honest but rooting for you
-- Must feel written for THIS specific look
-- Match the energy of the killer_tag
-- Use drip_score tone:
-  • < 4: light roast + genuine encouragement (e.g. "not quite there yet, but the energy? that's a start")
-  • 4–6.9: smooth, clean, easy compliment (e.g. "this is the kind of fit that doesn't need to try hard")
-  • 7–8.4: aesthetic + slightly flirty (e.g. "effortless looks good on you, clearly")
-  • ≥ 8.5: hype, confident, no hesitation (e.g. "this look walked in and raised the bar for everyone")
-- Face hidden: playful tease, never harsh (e.g. "whoever's behind the phone is clearly onto something")
-- Examples are just examples — generate unique lines every time
+- Exactly 1 sentence, no period at the end.
+- Must feel written for THIS specific image.
+- Must match the score tier exactly.
+- For couples/groups: MUST explicitly sound plural, never singular.
+- Must feel witty, not templated.
 
-SOCIAL CONTEXT (blend as flavor — CRITICAL for couples/groups):
-
-COUPLE PHOTOS (scene_type = "couple"):
-- The tag and line MUST reference the duo/pair dynamic — NEVER treat it as a solo shot
-- killer_tag examples: "Power Duo 🔥", "Main Characters ✨", "Matched Energy 💫", "Couple Goals 👑", "Built Together 🫶", "Double Trouble 😈"
-- praise_line examples: "y'all walked in and the room got nervous", "this duo doesn't need a caption", "the coordination is giving soulmate energy 🫶", "two fits, one vibe — that's rare"
-- Close together → chemistry + coordination energy
-- Standing apart → individual style that still matches
-- Focus on: outfit coordination, complementary colors, matching energy, power couple vibes
-
-GROUP PHOTOS (scene_type = "group"):
-- killer_tag examples: "Squad Goals 🔥", "Main Cast ✨", "Full Lineup 💫"
-- praise_line examples: "the squad showed up and left no crumbs", "this lineup hits different when everyone's locked in"
-- Male-dominant → squad energy, brotherhood vibes
-- Female-dominant → collective glow, group slay
-- Mixed → synergy, main character energy as a unit
-
-FINAL TEST (mental check before output):
-✅ Would someone screenshot this tag?
-✅ Does the praise line feel written for THEM, not a template?
-✅ Funny without being mean? Hype without being fake?
-✅ For couples: Would someone tag their partner in this?
-✅ For groups: Would someone send this to the group chat?
+FINAL CHECK:
+✅ Tone matches the number
+✅ Couple/group shots sound plural
+✅ Feels Gen Z, not brand-safe
+✅ Has wit, not just praise
 If any fail → rewrite.
 
 Return EXACTLY this JSON:
 {"killer_tag":"2-3 word tag + emoji","praise_line":"one sentence no period at end"}
-
 CRITICAL: Return ONLY valid JSON. No markdown, no explanation.`;
 }
 
-// ── CALL 2 UNFILTERED: Raw Gen-Z hype engine ──
 function getCall2SystemUnfiltered(dripScore: number, gender: string, faceHidden: boolean, sceneType: string) {
   const tier = getScoreTier(dripScore);
+  const sceneRule = getSceneRule(sceneType);
   return `You are DRIPD AI — a RAW, UNFILTERED Gen-Z hype engine.
 You do NOT sound safe. You do NOT sound corporate.
-You sound like that one friend who sees your fit and literally cannot keep it together.
+You sound like that one witty friend who sees the fit and immediately says something screenshot-worthy.
 
 CRITICAL TONE GATE (NON-NEGOTIABLE):
 The drip_score is ${dripScore.toFixed(1)} which falls in the "${tier}" tier.
 Your killer_tag and praise_line MUST match this tier's energy:
-- NEEDS WORK (< 4): The outfit is NOT good. Be brutally honest. Roast it. NEVER praise or hype a bad outfit.
-- DECENT (4-6.9): It's okay. Chill energy, not over-the-top.
-- FIRE (7-8.4): Genuinely good. Go hard with the hype.
-- ELITE (≥ 8.5): Exceptional. Full unhinged hype mode.
-DO NOT praise a low score. DO NOT go easy on a high score. The tone MUST sync with the number.
+- NEEDS WORK (< 4): The outfit is NOT good. Be honest, funny, slightly savage. NEVER praise it.
+- DECENT (4-6.9): It's working enough. Be playful, sharp, and lowkey dangerous.
+- FIRE (7-8.4): Genuinely hard. Hype it with edge.
+- ELITE (≥ 8.5): Insane. Full chaos, full aura, full pressure.
+DO NOT praise a low score. DO NOT soften a high score.
+
+${sceneRule}
 
 INPUT:
 - drip_score: ${dripScore.toFixed(1)}
@@ -180,90 +255,39 @@ INPUT:
 - face_hidden: ${faceHidden}
 - scene_type: ${sceneType}
 
-KILLER TAG:
-- Exactly 2–3 words. Must hit like a gut punch — short, sharp, done.
-- Can be aggressive, slang-heavy, or quietly menacing.
+MANDATORY SAVAGE MODE RULES:
+- The praise_line MUST contain at least one current Gen-Z/slang phrase that feels natural.
+- Allowed examples: lowkey, no cap, deadass, went crazy, locked in, clean as hell, different, ate, stood on business, menace, cooked.
+- The line MUST have wit. A plain compliment is an automatic fail.
+- The line should sound like something a real person would post or send to the group chat.
+- Include 1 emoji at the end of the killer_tag only.
 
-Score mapping:
-drip_score < 4: "Still Cooking", "Work In Progress", "Drip Loading", "Not Yet Bro"
-4–6.9: "Calm Killer", "Quiet Heat", "Lowkey Fire", "Easy Menace"
-7–8.4: "Heat Rising", "Silent Threat", "Locked In", "Dangerous Fit"
-≥ 8.5: "Illegal Drip", "God Tier", "Built Different", "Certified Heat"
-Face hidden: "Hidden Heat", "Lowkey Dangerous", "Mystery Drip", "Who Is This"
-Examples only — generate unique tags every time. Include 1 emoji at the end.
+VOICE RULES:
+- Male = loud hype friend, chaotic respect.
+- Female below 8 = hype bestie, warm chaos.
+- Female 8+ = cold, smooth, flirty danger.
+- Unknown = neutral but sharp.
+- For couples/groups, ALWAYS sound plural.
+- NEVER mix gender modes.
+- Cuss words are allowed, but only to increase hype or comedy.
 
-PRAISE LINE — STRICTLY FOLLOW GENDER + SCORE RULES:
-
-IF gender = male:
-TONE: hype friend energy. chaotic. loud. like your boy just saw you walk in and lost his mind.
-< 4: "bro this ain't it yet but the fact you tried? motherfucker gets points for that"
-4–6.9: "lowkey this fit is bussin and you already know it, stop playing"
-7–8.4: "bro said let me just casually look this good, disrespectful honestly"
-≥ 8.5: "motherfucker really woke up and chose violence today, absolute respect" / "BITCH?? this fit is actually illegal what the hell is happening"
-Face hidden (male): "bro come out from behind the phone this fit is going crazy"
-
-IF gender = female:
-< 8 TONE: hype bestie energy. loud, supportive, chaotic but warm.
-< 4: "okay it's not fully there yet but babe the ENERGY is doing something"
-4–6.9: "lowkey this is clean as hell and you know exactly what you're doing"
-7–7.9: "bitch this fit is actually going crazy, who let you out like this"
-
-≥ 8 TONE: COLD FLIRTY MODE — MANDATORY. NO hype bestie lines.
-8–8.9: "wearing that like you already know what it does to people" / "the fit isn't even trying that hard and somehow that's the problem"
-≥ 9: "whoever sees this in person is not having a normal rest of their day" / "she didn't get dressed. she loaded up."
-Face hidden (≥ 8): "hiding the face but the fit already said everything it needed to"
-Face hidden (< 8): "bestie come out from behind the phone this is actually fire"
-
-IF gender = unknown:
-< 4: "not there yet but the attempt is noted and we respect it"
-4–6.9: "lowkey this fit is clean and you know it"
-7–8.4: "this fit walked in and quietly raised the bar for everyone"
-≥ 8.5: "this is not a fit. this is a problem. a very clean problem."
-
-SOCIAL CHAOS LAYER (blend into praise line — amplify, don't override):
-Couple (male): "the fit AND the energy?? bro y'all are actually menaces"
-Couple (female ≥ 8): "two people this dangerous in one frame should not be legal"
-Couple (female < 8): "the fits are matching the chemistry and I'm not okay"
-Group (male): "this squad looks like they run every single room they walk into"
-Group (female ≥ 8): "this is not a group photo. this is a threat."
-Group (mixed): "this group just broke the vibe scale and nobody is apologizing for it"
-
-CUSS WORD RULES:
-- Use freely: bitch, fuck, fuckin, motherfucker, hell, damn, ass, shit
-- These are HYPE words — they punch energy UP, never tear the person down
-- "bitch" = term of endearment / hype, never an insult
-- "motherfucker" = respect / awe, never aggression
-- Don't cuss in every line — let it land when it hits
-- Never use slurs, never target appearance
-
-VOICE RULES (NON-NEGOTIABLE):
-- Male = loud hype friend, chaotic, unhinged respect
-- Female below 8 = loud hype bestie, warm chaos
-- Female 8+ = cold, smooth, flirty — makes her feel dangerous
-- Unknown = neutral energy hype
-- NEVER mix these tones across genders
-- NEVER write flirty lines for male users
-- NEVER write bestie lines for female users above score 8
+ORIGINALITY RULES:
+- NEVER copy or reuse examples.
+- Every output must feel fresh, modern, and unpredictable.
+- If it sounds safe, bland, or templated, rewrite it.
 
 FINAL CHECK:
-✅ Is user_gender male? → hype + cuss energy only
-✅ Is user_gender female AND score ≥ 8? → cold flirty ONLY
-✅ Is user_gender female AND score < 8? → hype bestie energy only
-✅ Would she read the flirty line and go "oh??" and post it immediately?
-✅ Would he read the hype line and send it to his group chat?
-All pass → output. One fails → rewrite.
-
-ORIGINALITY RULES (NON-NEGOTIABLE):
-- NEVER copy or reuse the example lines above. They exist ONLY to show tone.
-- Every killer_tag and praise_line MUST be 100% original, never seen before.
-- If your output resembles any example above, REWRITE IT from scratch.
-- Surprise the user. Be unpredictable. Channel pure creative chaos.
+✅ Has slang
+✅ Has wit
+✅ Matches score tier
+✅ Couple/group shots sound plural
+✅ Screenshot-worthy energy
+If any fail → rewrite.
 
 Return EXACTLY: {"killer_tag":"2-3 word tag + emoji","praise_line":"one raw sentence, no period at end"}
 CRITICAL: Return ONLY valid JSON. No markdown, no explanation.`;
 }
 
-// ── CALL 2 UNFILTERED ROAST ──
 function getUnfilteredRoastPrompt(roastCategory: string) {
   return `You are DRIPD AI — a RAW, UNFILTERED Gen-Z hype engine generating content for non-outfit images.
 
@@ -295,16 +319,26 @@ serve(async (req) => {
   try {
     const { imageBase64: rawBase64, imageUrl, styleProfile, unfiltered } = await req.json();
 
-    // Resolve image
     let imageBase64 = rawBase64;
     if (!imageBase64 && imageUrl) {
       const imgRes = await fetch(imageUrl);
-      if (!imgRes.ok) return new Response(JSON.stringify({ error: "Failed to fetch image from URL" }), { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } });
+      if (!imgRes.ok) {
+        return new Response(JSON.stringify({ error: "Failed to fetch image from URL" }), {
+          status: 400,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
       const bytes = new Uint8Array(await imgRes.arrayBuffer());
-      let binary = ""; for (let i = 0; i < bytes.length; i++) binary += String.fromCharCode(bytes[i]);
+      let binary = "";
+      for (let i = 0; i < bytes.length; i++) binary += String.fromCharCode(bytes[i]);
       imageBase64 = btoa(binary);
     }
-    if (!imageBase64) return new Response(JSON.stringify({ error: "No image provided" }), { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } });
+    if (!imageBase64) {
+      return new Response(JSON.stringify({ error: "No image provided" }), {
+        status: 400,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
 
     const gender = styleProfile?.gender || "unknown";
     const apiKey = getApiKey();
@@ -319,29 +353,29 @@ serve(async (req) => {
       if (parts.length > 0) profileContext = `\n- User profile: ${parts.join(", ")}`;
     }
 
-    // ── CALL 1: Human check + scores ──
     console.log("Call 1: Human detection + scoring...");
     const call1Result = await callGemini(apiKey, [
       { role: "system", content: CALL1_SYSTEM },
-      { role: "user", content: [
-        { type: "text", text: `Analyze this image. Is there a human wearing clothes? If yes, score the outfit. If no, roast it. User gender: ${gender}.` },
-        { type: "image_url", image_url: { url: `data:image/jpeg;base64,${imageBase64}` } },
-      ]},
+      {
+        role: "user",
+        content: [
+          { type: "text", text: `Analyze this image. Is there a human wearing clothes? If yes, score the outfit. If no, roast it. User gender: ${gender}.` },
+          { type: "image_url", image_url: { url: `data:image/jpeg;base64,${imageBase64}` } },
+        ],
+      },
     ], 0.3, 512);
 
     console.log("Call 1 result:", JSON.stringify(call1Result).substring(0, 200));
 
-    // ── SERVER-SIDE DRIP SCORE: Override AI's math with correct weighted formula ──
     const calculatedDrip = Math.round(
       ((call1Result.color_score || 0) * 0.3 +
-       (call1Result.posture_score || 0) * 0.3 +
-       (call1Result.layering_score || 0) * 0.25 +
-       (call1Result.face_score || 0) * 0.15) * 10
+        (call1Result.posture_score || 0) * 0.3 +
+        (call1Result.layering_score || 0) * 0.25 +
+        (call1Result.face_score || 0) * 0.15) * 10,
     ) / 10;
     console.log(`Server-side drip: ${calculatedDrip} (AI said: ${call1Result.drip_score})`);
     call1Result.drip_score = calculatedDrip;
 
-    // ── SERVER-SIDE VALIDATION: Force roast if no human indicators ──
     const subScoreTotal = (call1Result.color_score || 0) + (call1Result.posture_score || 0) + (call1Result.layering_score || 0) + (call1Result.face_score || 0);
     const isRoast = call1Result.error === "roast"
       || (call1Result.drip_score === 0 && subScoreTotal === 0)
@@ -351,7 +385,7 @@ serve(async (req) => {
     if (isRoast) {
       console.log("Roast mode — generating funny killer_tag + roast praise_line via Call 2");
       const roastCategory = call1Result.roast_line || "I don't know what this is, but it's not a fit.";
-      
+
       const roastPrompt = unfiltered
         ? getUnfilteredRoastPrompt(roastCategory)
         : `You generate funny, shareable content for non-outfit images submitted to a fashion rating app called DRIPD.
@@ -373,29 +407,37 @@ CRITICAL: Return ONLY valid JSON.`;
       const roastTokens = unfiltered ? 512 : 256;
       const roastCall2 = await callGemini(apiKey, [
         { role: "system", content: roastPrompt },
-        { role: "user", content: [
-          { type: "text", text: "Look at this image and generate a funny killer_tag and roast praise_line for it." },
-          { type: "image_url", image_url: { url: `data:image/jpeg;base64,${imageBase64}` } },
-        ]},
+        {
+          role: "user",
+          content: [
+            { type: "text", text: "Look at this image and generate a funny killer_tag and roast praise_line for it." },
+            { type: "image_url", image_url: { url: `data:image/jpeg;base64,${imageBase64}` } },
+          ],
+        },
       ], roastTemp, roastTokens);
 
       console.log("Roast Call 2 result:", JSON.stringify(roastCall2));
 
       const roastResult = {
-        drip_score: 0, drip_reason: "No human detected",
-        confidence_rating: 0, confidence_reason: "No human detected",
+        drip_score: 0,
+        drip_reason: "No human detected",
+        confidence_rating: 0,
+        confidence_reason: "No human detected",
         killer_tag: roastCall2.killer_tag || "Not A Fit",
-        color_score: 0, color_reason: "N/A",
-        posture_score: 0, posture_reason: "N/A",
-        layering_score: 0, layering_reason: "N/A",
-        face_score: 0, face_reason: "N/A",
+        color_score: 0,
+        color_reason: "N/A",
+        posture_score: 0,
+        posture_reason: "N/A",
+        layering_score: 0,
+        layering_reason: "N/A",
+        face_score: 0,
+        face_reason: "N/A",
         advice: "Upload a photo with you wearing an outfit",
         praise_line: roastCall2.praise_line || roastCategory,
       };
       return new Response(JSON.stringify({ result: roastResult }), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
     }
 
-    // ── CALL 2: Killer Tag + Praise Line ──
     const faceHidden = call1Result.face_hidden ?? (call1Result.face_score < 2);
     const sceneType = call1Result.scene_type || "solo";
     console.log("Call 2: Generating killer tag + praise line...");
@@ -408,21 +450,32 @@ CRITICAL: Return ONLY valid JSON.`;
     const call2Tokens = unfiltered ? 512 : 256;
     const call2Result = await callGemini(apiKey, [
       { role: "system", content: call2System },
-      { role: "user", content: [
-        { type: "text", text: "Look at this outfit and generate the killer_tag and praise_line based on the score and vibe rules provided." },
-        { type: "image_url", image_url: { url: `data:image/jpeg;base64,${imageBase64}` } },
-      ]},
+      {
+        role: "user",
+        content: [
+          { type: "text", text: "Look at this outfit and generate the killer_tag and praise_line based on the score and vibe rules provided." },
+          { type: "image_url", image_url: { url: `data:image/jpeg;base64,${imageBase64}` } },
+        ],
+      },
     ], call2Temp, call2Tokens);
 
     console.log("Call 2 result:", JSON.stringify(call2Result));
 
-    // ── MERGE RESULTS ──
+    const fallbackCopy = getFallbackCopy(call1Result.drip_score, sceneType, Boolean(unfiltered));
+    const safeKillerTag = typeof call2Result.killer_tag === "string" ? call2Result.killer_tag.trim() : "";
+    const safePraiseLine = typeof call2Result.praise_line === "string" ? call2Result.praise_line.trim() : "";
+    const shouldFallback = needsCopyFallback(safeKillerTag, safePraiseLine, call1Result.drip_score, sceneType, Boolean(unfiltered));
+
+    if (shouldFallback) {
+      console.log("Using server fallback copy for score/scene consistency");
+    }
+
     const finalResult = {
       drip_score: call1Result.drip_score,
       drip_reason: call1Result.drip_reason,
       confidence_rating: call1Result.confidence_rating,
       confidence_reason: call1Result.confidence_reason,
-      killer_tag: call2Result.killer_tag || "Clean Look",
+      killer_tag: shouldFallback ? fallbackCopy.killer_tag : (safeKillerTag || fallbackCopy.killer_tag),
       color_score: call1Result.color_score,
       color_reason: call1Result.color_reason,
       posture_score: call1Result.posture_score,
@@ -432,7 +485,7 @@ CRITICAL: Return ONLY valid JSON.`;
       face_score: call1Result.face_score,
       face_reason: call1Result.face_reason,
       advice: call1Result.advice,
-      praise_line: call2Result.praise_line || "this fit speaks for itself",
+      praise_line: shouldFallback ? fallbackCopy.praise_line : (safePraiseLine || fallbackCopy.praise_line),
     };
 
     return new Response(JSON.stringify({ result: finalResult }), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
