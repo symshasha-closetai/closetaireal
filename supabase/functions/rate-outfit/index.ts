@@ -515,6 +515,7 @@ CRITICAL: Return ONLY valid JSON.`;
 
     const call2Temp = unfiltered ? 1.2 : 0.9;
     const call2Tokens = unfiltered ? 512 : 256;
+    const call2Model = unfiltered ? "gemini-2.5-flash" : "gemini-2.5-flash-lite";
     const call2Messages = [
       { role: "system", content: call2System },
       {
@@ -525,7 +526,26 @@ CRITICAL: Return ONLY valid JSON.`;
         ],
       },
     ];
-    const call2Result = await callGemini(apiKey, call2Messages, call2Temp, call2Tokens, unfiltered ? "gemini-2.5-flash" : "gemini-2.5-flash-lite");
+    
+    let call2Result;
+    try {
+      call2Result = await callGemini(apiKey, call2Messages, call2Temp, call2Tokens, call2Model);
+    } catch (e: any) {
+      console.error("Call 2 failed:", e);
+      // If Call 2 fails (safety block, parse error), use fallback copy but still return Call 1 scores
+      const fb = getFallbackCopy(call1Result.drip_score, sceneType, Boolean(unfiltered));
+      const fallbackResult = {
+        drip_score: call1Result.drip_score, drip_reason: call1Result.drip_reason,
+        confidence_rating: call1Result.confidence_rating, confidence_reason: call1Result.confidence_reason,
+        killer_tag: fb.killer_tag, color_score: call1Result.color_score, color_reason: call1Result.color_reason,
+        posture_score: call1Result.posture_score, posture_reason: call1Result.posture_reason,
+        layering_score: call1Result.layering_score, layering_reason: call1Result.layering_reason,
+        face_score: call1Result.face_score, face_reason: call1Result.face_reason,
+        advice: call1Result.advice, praise_line: fb.praise_line,
+      };
+      console.log("Returning Call 1 scores with fallback copy due to Call 2 failure");
+      return new Response(JSON.stringify({ result: fallbackResult }), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
+    }
 
     console.log("Call 2 result:", JSON.stringify(call2Result));
 
@@ -539,29 +559,25 @@ CRITICAL: Return ONLY valid JSON.`;
     }
 
     const finalResult = {
-      drip_score: call1Result.drip_score,
-      drip_reason: call1Result.drip_reason,
-      confidence_rating: call1Result.confidence_rating,
-      confidence_reason: call1Result.confidence_reason,
+      drip_score: call1Result.drip_score, drip_reason: call1Result.drip_reason,
+      confidence_rating: call1Result.confidence_rating, confidence_reason: call1Result.confidence_reason,
       killer_tag: shouldFallback ? fallbackCopy.killer_tag : (safeKillerTag || fallbackCopy.killer_tag),
-      color_score: call1Result.color_score,
-      color_reason: call1Result.color_reason,
-      posture_score: call1Result.posture_score,
-      posture_reason: call1Result.posture_reason,
-      layering_score: call1Result.layering_score,
-      layering_reason: call1Result.layering_reason,
-      face_score: call1Result.face_score,
-      face_reason: call1Result.face_reason,
+      color_score: call1Result.color_score, color_reason: call1Result.color_reason,
+      posture_score: call1Result.posture_score, posture_reason: call1Result.posture_reason,
+      layering_score: call1Result.layering_score, layering_reason: call1Result.layering_reason,
+      face_score: call1Result.face_score, face_reason: call1Result.face_reason,
       advice: call1Result.advice,
       praise_line: shouldFallback ? fallbackCopy.praise_line : (safePraiseLine || fallbackCopy.praise_line),
     };
 
     return new Response(JSON.stringify({ result: finalResult }), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
   } catch (e: any) {
-    console.error("rate-outfit error:", e);
+    console.error("rate-outfit unhandled error:", e);
+    const stage = e?.stage || "unknown";
+    const model = e?.model || "unknown";
     if (e?.status === 429 || e?.status === 402) {
-      return new Response(JSON.stringify({ error: e.message }), { status: e.status, headers: { ...corsHeaders, "Content-Type": "application/json" } });
+      return new Response(JSON.stringify({ error: e.message, stage, model }), { status: e.status, headers: { ...corsHeaders, "Content-Type": "application/json" } });
     }
-    return new Response(JSON.stringify({ error: e instanceof Error ? e.message : "Unknown error" }), { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } });
+    return new Response(JSON.stringify({ error: e?.message || (e instanceof Error ? e.message : "Unknown error"), stage, model }), { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } });
   }
 });
