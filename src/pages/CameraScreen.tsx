@@ -140,7 +140,7 @@ const computeImageHash = (base64: string): string => {
 };
 
 // Save drip card to DB + localStorage cache
-const saveDripToHistory = async (image: string, result: RatingResult, userId?: string, imageHash?: string) => {
+const saveDripToHistory = async (image: string, result: RatingResult, userId?: string, imageHash?: string, unfiltered?: boolean) => {
   const entry = {
     id: `drip-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`,
     image,
@@ -148,6 +148,7 @@ const saveDripToHistory = async (image: string, result: RatingResult, userId?: s
     killerTag: result.killer_tag || "",
     praiseLine: result.praise_line || "",
     imageHash: imageHash || "",
+    mode: unfiltered ? "savage" : "standard",
     fullResult: result,
     timestamp: Date.now(),
   };
@@ -209,28 +210,17 @@ const saveDripToHistory = async (image: string, result: RatingResult, userId?: s
   }
 };
 
-// Check cache for existing result by image hash
-const checkCache = async (imageHash: string, userId?: string): Promise<RatingResult | null> => {
+// Check cache for existing result by image hash — MODE-AWARE
+const checkCache = async (imageHash: string, userId?: string, unfiltered?: boolean): Promise<RatingResult | null> => {
+  const modeKey = unfiltered ? "savage" : "standard";
   // Check localStorage first
   try {
     const cached = JSON.parse(localStorage.getItem("drip-history") || "[]");
-    const match = cached.find((e: any) => e.imageHash === imageHash);
+    const match = cached.find((e: any) => e.imageHash === imageHash && (e.mode || "standard") === modeKey);
     if (match?.fullResult) return match.fullResult;
   } catch {}
 
-  // Check DB
-  if (userId) {
-    try {
-      const { data } = await supabase
-        .from("drip_history" as any)
-        .select("full_result")
-        .eq("user_id", userId)
-        .eq("image_hash", imageHash)
-        .order("created_at", { ascending: false })
-        .limit(1) as any;
-      if (data?.[0]?.full_result) return data[0].full_result as RatingResult;
-    } catch {}
-  }
+  // Skip DB cache for mode-aware lookups (DB doesn't store mode)
   return null;
 };
 
@@ -271,7 +261,7 @@ const runAnalysis = async (file: File, userId: string | undefined, styleProfile:
     // Parallel: check cache + upload to storage
     const imageHash = computeImageHash(imageBase64);
     
-    const cachePromise = checkCache(imageHash, userId);
+    const cachePromise = checkCache(imageHash, userId, unfiltered);
     let uploadPromise: Promise<string | null> = Promise.resolve(null);
     if (userId) {
       const path = `${userId}/drip-${Date.now()}.jpg`;
@@ -324,13 +314,13 @@ const runAnalysis = async (file: File, userId: string | undefined, styleProfile:
       }
       const fallback = clientFallbackResult(gender);
       updateGlobal({ result: fallback, analyzing: false, progress: 0, stage: "", analysisSteps: [] });
-      saveDripToHistory(globalDripState.image || "", fallback, userId, imageHash);
+      saveDripToHistory(globalDripState.image || "", fallback, userId, imageHash, unfiltered);
       return;
     }
     if (data?.result) {
       updateGlobal({ result: data.result, analyzing: false, progress: 0, stage: "", analysisSteps: [] });
       if (userId) {
-        saveDripToHistory(globalDripState.image || "", data.result, userId, imageHash);
+        saveDripToHistory(globalDripState.image || "", data.result, userId, imageHash, unfiltered);
       }
       // Update streak on successful drip check (synced with HomeScreen format)
       if (userId) {

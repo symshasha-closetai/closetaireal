@@ -26,62 +26,41 @@ async function callGemini(apiKey: string, messages: any[], temperature: number, 
   if (res.status === 402) throw { status: 402, message: "AI credits exhausted. Please add funds." };
   if (!res.ok) {
     const t = await res.text();
-    console.error("AI error:", res.status, t);
-    if (res.status === 400 && t.includes("Unable to process input image")) {
-      throw {
-        status: 400,
-        code: "IMAGE_PROCESSING_FAILED",
-        retryWithGateway: true,
-        message: "Unable to process input image",
-      };
-    }
-    throw new Error(`AI error: ${res.status}`);
+    console.error(`Gemini error [${res.status}] model=${model}:`, t);
+    throw new Error(`Gemini error ${res.status}: ${t.substring(0, 300)}`);
   }
   const data = await res.json();
   const content = data.choices?.[0]?.message?.content || "{}";
+  console.log("Gemini raw content:", content.substring(0, 300));
   const cleaned = content.replace(/```json\n?/g, "").replace(/```\n?/g, "").trim();
   try {
     return JSON.parse(cleaned);
   } catch {
+    // Try to extract a JSON object even if truncated
     const m = cleaned.match(/\{[\s\S]*\}/);
     if (m) {
       try {
         return JSON.parse(m[0]);
-      } catch {
-      }
+      } catch {}
     }
+    // Handle truncated JSON — try to close it
+    const truncated = cleaned.startsWith("{") ? cleaned : `{${cleaned}`;
+    // Try to extract key-value pairs from truncated JSON
+    const tagMatch = truncated.match(/"killer_tag"\s*:\s*"([^"]*)"/);
+    const praiseMatch = truncated.match(/"praise_line"\s*:\s*"([^"]*)"/);
+    if (tagMatch || praiseMatch) {
+      console.warn("Recovered from truncated JSON response");
+      return {
+        killer_tag: tagMatch?.[1] || "",
+        praise_line: praiseMatch?.[1] || "",
+      };
+    }
+    console.error("Failed to parse Gemini response:", cleaned.substring(0, 500));
     throw new Error("Failed to parse AI response");
   }
 }
 
-async function callLovableAI(messages: any[], temperature: number, maxTokens: number, model: string = "google/gemini-2.5-flash") {
-  const lovableKey = Deno.env.get("LOVABLE_API_KEY");
-  if (!lovableKey) throw new Error("LOVABLE_API_KEY not configured");
-  const res = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
-    method: "POST",
-    headers: { Authorization: `Bearer ${lovableKey}`, "Content-Type": "application/json" },
-    body: JSON.stringify({ model, messages, temperature, max_tokens: maxTokens }),
-  });
-  if (res.status === 429) throw { status: 429, message: "Rate limited, please try again later." };
-  if (res.status === 402) throw { status: 402, message: "AI credits exhausted. Please add funds." };
-  if (!res.ok) {
-    const t = await res.text();
-    console.error("Lovable AI error:", res.status, t);
-    throw new Error(`Lovable AI error: ${res.status}`);
-  }
-  const data = await res.json();
-  const content = data.choices?.[0]?.message?.content || "{}";
-  const cleaned = content.replace(/```json\n?/g, "").replace(/```\n?/g, "").trim();
-  try {
-    return JSON.parse(cleaned);
-  } catch {
-    const m = cleaned.match(/\{[\s\S]*\}/);
-    if (m) {
-      try { return JSON.parse(m[0]); } catch {}
-    }
-    throw new Error("Failed to parse Lovable AI response");
-  }
-}
+// Gateway removed — using direct Gemini API only
 
 const CALL1_SYSTEM = `You analyze outfit photos. Your ONLY job: detect if there's a human wearing clothes, and either score or roast.
 
@@ -426,17 +405,8 @@ serve(async (req) => {
       },
     ];
 
-    let call1Result;
-    try {
-      call1Result = await callGemini(apiKey, call1Messages, 0.3, 512);
-    } catch (e: any) {
-      if (e?.retryWithGateway) {
-        console.warn("Call 1 image failed on direct Gemini API, retrying through Lovable AI Gateway");
-        call1Result = await callLovableAI(call1Messages, 0.3, 512, "google/gemini-2.5-flash");
-      } else {
-        throw e;
-      }
-    }
+    console.log("Call 1: Human detection + scoring (direct Gemini)...");
+    const call1Result = await callGemini(apiKey, call1Messages, 0.3, 512);
 
     console.log("Call 1 result:", JSON.stringify(call1Result).substring(0, 200));
 
@@ -500,9 +470,7 @@ CRITICAL: Return ONLY valid JSON.`;
           ],
         },
       ];
-      const roastCall2 = unfiltered
-        ? await callLovableAI(roastMessages, roastTemp, roastTokens, "google/gemini-2.5-flash")
-        : await callGemini(apiKey, roastMessages, roastTemp, roastTokens);
+      const roastCall2 = await callGemini(apiKey, roastMessages, roastTemp, roastTokens, unfiltered ? "gemini-2.5-flash" : "gemini-2.5-flash-lite");
 
       console.log("Roast Call 2 result:", JSON.stringify(roastCall2));
 
@@ -546,9 +514,7 @@ CRITICAL: Return ONLY valid JSON.`;
         ],
       },
     ];
-    const call2Result = unfiltered
-      ? await callLovableAI(call2Messages, call2Temp, call2Tokens, "google/gemini-2.5-flash")
-      : await callGemini(apiKey, call2Messages, call2Temp, call2Tokens);
+    const call2Result = await callGemini(apiKey, call2Messages, call2Temp, call2Tokens, unfiltered ? "gemini-2.5-flash" : "gemini-2.5-flash-lite");
 
     console.log("Call 2 result:", JSON.stringify(call2Result));
 
