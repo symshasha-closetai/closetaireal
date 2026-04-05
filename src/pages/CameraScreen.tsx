@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect, useCallback } from "react";
+import { useState, useRef, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { Camera, Upload, X, Sparkles, Check, Loader2 } from "lucide-react";
 import LeaderboardTab from "../components/LeaderboardTab";
