@@ -401,28 +401,40 @@ serve(async (req) => {
     call1Result.drip_score = calculatedDrip;
 
     const subScoreTotal = (call1Result.color_score || 0) + (call1Result.posture_score || 0) + (call1Result.layering_score || 0) + (call1Result.face_score || 0);
+    
+    // Strengthen roast detection — also check text signals from Call 1
+    const dripReason = (call1Result.drip_reason || "").toLowerCase();
+    const adviceText = (call1Result.advice || "").toLowerCase();
+    const hasNoHumanSignal = dripReason.includes("no human") || dripReason.includes("not a fashion") || adviceText.includes("upload a photo") || adviceText.includes("no human");
+    
     const isRoast = call1Result.error === "roast"
       || (call1Result.drip_score === 0 && subScoreTotal === 0)
       || (call1Result.face_score === 0 && call1Result.posture_score === 0)
-      || (call1Result.drip_score < 2 && subScoreTotal < 3);
+      || (call1Result.drip_score < 2 && subScoreTotal < 3)
+      || hasNoHumanSignal;
 
     if (isRoast) {
       console.log("Roast mode — generating funny killer_tag + roast praise_line via Call 2");
-      const roastCategory = call1Result.roast_line || "I don't know what this is, but it's not a fit.";
+      const roastCategory = call1Result.roast_line || call1Result.roast_category || "unknown object";
 
       const roastPrompt = unfiltered
         ? getUnfilteredRoastPrompt(roastCategory)
-        : `You generate funny, shareable content for non-outfit images submitted to a fashion rating app called DRIPD.
+        : `You are DRIPD AI — a witty, sarcastic roast machine for a fashion rating app.
 
-The image is NOT a person wearing clothes. The roast category is: "${roastCategory}"
+The user sent a NON-OUTFIT image. The dominant subject is: "${roastCategory}"
+
+RULES:
+- Focus ONLY on the dominant subject — the thing taking up the most space. Ignore small elements, icons, watermarks, or background details.
+- Be genuinely funny and sarcastic. The kind of line people screenshot and send to friends.
+- Has real bite — not corporate, not safe, not generic.
+- Reference what they ACTUALLY sent, don't be vague.
+- Clean language but sharp wit.
 
 Generate:
-1. killer_tag: A hilarious 2-3 word tag. Must be witty, screenshot-worthy. Think meme energy but clean.
-   Examples by category: Food → "Not A Fit 🍕", "Drip Or Dip 💧" | Animal → "Fur Coat Only 🐾", "Wrong Model 🐶" | Diagram → "Study Break 📊" | Car → "Wrong Flex 🚗"
-   DO NOT reuse these examples. Be original every time.
-   IMPORTANT: Include exactly 1 relevant emoji at the END of the killer_tag.
+1. killer_tag: 2-3 words, witty, meme-worthy. 1 emoji at end.
+2. praise_line: One sarcastic sentence roast. Funny enough to share. No period at end.
 
-2. praise_line: One sentence roast. Funny, not mean. The kind of line someone would screenshot and send to friends. Can include 1-2 emojis where they feel natural.
+DO NOT reuse examples. Be original.
 
 Return EXACTLY: {"killer_tag":"2-3 words + emoji","praise_line":"one sentence roast no period"}
 CRITICAL: Return ONLY valid JSON.`;
