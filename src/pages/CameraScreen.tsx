@@ -111,6 +111,7 @@ const globalDripState: DripState = {
   detectedItems: null,
   suggestionImages: {},
   savedSuggestions: [],
+  unfiltered: false,
 };
 
 let globalListeners: Set<() => void> = new Set();
