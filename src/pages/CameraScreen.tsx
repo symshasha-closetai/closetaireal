@@ -299,8 +299,8 @@ const runAnalysis = async (file: File, userId: string | undefined, styleProfile:
     const minDelay = new Promise((r) => setTimeout(r, 5000));
 
     const aiCallBody: any = uploadedUrl
-      ? { imageUrl: uploadedUrl, styleProfile: styleProfile || undefined }
-      : { imageBase64, styleProfile: styleProfile || undefined };
+      ? { imageUrl: uploadedUrl, styleProfile: styleProfile || undefined, unfiltered: !!unfiltered }
+      : { imageBase64, styleProfile: styleProfile || undefined, unfiltered: !!unfiltered };
 
     const aiCall = supabase.functions.invoke("rate-outfit", {
       body: aiCallBody,
