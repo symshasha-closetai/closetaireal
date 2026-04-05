@@ -570,7 +570,7 @@ const OutfitRatingCard = ({ image, imageBase64, result, wardrobeItems = [],
     <div className="space-y-4">
       {/* Hero Photo Card */}
       <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="rounded-2xl overflow-hidden shadow-lg relative shimmer">
-        <img src={image} alt="Outfit" className="w-full object-contain max-h-[70vh]" />
+        <img src={image} alt="Outfit" className="w-full object-contain" />
         
         {/* Dripd branding */}
         <div className="absolute top-4 left-4 z-10">
