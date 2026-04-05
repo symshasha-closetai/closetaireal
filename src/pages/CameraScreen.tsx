@@ -5,6 +5,7 @@ import LeaderboardTab from "../components/LeaderboardTab";
 import AppHeader from "../components/AppHeader";
 import OutfitRatingCard from "../components/OutfitRatingCard";
 import SignUpPromptDialog from "../components/SignUpPromptDialog";
+import { Switch } from "@/components/ui/switch";
 import { supabase } from "@/integrations/supabase/client";
 import { r2 } from "@/lib/r2Storage";
 import { useAuth } from "@/hooks/useAuth";
