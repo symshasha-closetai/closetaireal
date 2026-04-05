@@ -1,63 +1,53 @@
 
 
-## Plan: Replace Lovable Gateway with Direct Replicate Mistral 7B for Savage Mode Captions
+## Plan: Replace Mistral 7B with Gemini 2.5 Flash for Caption Generation
 
-### What Changes
+### Problem
 
-The current Call 2 (caption generation) uses the Lovable AI Gateway with `google/gemini-2.5-flash`. You want to replace this with a direct call to **Replicate's Mistral 7B** using your existing `REPLICATE_API_KEY` — no Lovable gateway involved. The scores (drip, color, layering, confidence) get passed as inputs, and the Savage Mode badge (🔥) appears on the share card.
+Mistral 7B (7 billion parameters) is too weak to follow the complex caption instructions. It ignores scene type (couple/group), gender tone, score tier, and mode (savage vs standard). Result: generic solo-focused captions like "Classic Comfort 😎" even for a couple photo in savage mode.
 
-### Architecture
+### Fix
 
-```text
-CURRENT:
-  Call 1 (Gemini, scoring) → Call 2 (Lovable Gateway, gemini-2.5-flash) → caption
+Replace the Replicate Mistral 7B call with a direct Gemini 2.5 Flash call using your existing Google AI API keys. You already have `callGemini()` and 4 API keys configured — zero new dependencies.
 
-NEW:
-  Call 1 (Gemini, scoring) → Call 2 (Replicate, Mistral 7B direct) → caption
-  Share card: adds 🔥 Savage Mode badge when mode=savage
-```
+### Why This Works
+
+- Gemini 2.5 Flash is ~100x more capable than Mistral 7B at instruction following
+- Already integrated — `callGemini()` function exists, just call it with `gemini-2.5-flash` model
+- No Replicate polling delay (saves 2-4s per request)
+- No Lovable gateway — direct Google API like Call 1
+- Same API keys, same auth, same error handling
 
 ### File Changes
 
-#### 1. `supabase/functions/rate-outfit/index.ts`
+**`supabase/functions/rate-outfit/index.ts`**
 
-**Replace `generateCaption()` function** — remove the Lovable Gateway fetch, replace with a direct Replicate API call to `mistralai/mistral-7b-instruct-v0.3`:
+1. **Delete**: `callReplicateMistral()`, `waitForReplicatePrediction()`, `extractJsonFromText()` — all Replicate-specific code
 
-- Use `REPLICATE_API_KEY` (already configured as a secret)
-- Replicate prediction API: `POST https://api.replicate.com/v1/models/mistralai/mistral-7b-instruct-v0.3/predictions`
-- Pass the savage persona system prompt + user message containing: `drip_score`, `color_score`, `layering_score`, `confidence_rating`, `outfit_description`, gender, scene, mode
-- Poll for completion (Replicate is async — poll `GET /predictions/{id}` until `status=succeeded`)
-- Parse the output text for `killer_tag` and `praise_line` (JSON extraction from free text)
-- Keep the same retry + fallback logic (2 attempts, then minimal fallback captions)
+2. **Rewrite `generateCaption()`**: Instead of building a `[INST]` prompt and calling Replicate, use `callGemini()` with model `gemini-2.5-flash`:
+   - System message: the existing `CAPTION_SYSTEM_STANDARD` or `CAPTION_SYSTEM_SAVAGE` (already well-written)
+   - User message: outfit description, all 4 scores, gender, scene type, mode
+   - Temperature 0.9 for creativity, max_tokens 150
+   - Parse JSON from response (callGemini already handles this)
+   - Keep 2-attempt retry + fallback logic
 
-**Replace `generateRoastCaption()` function** — same change, direct Replicate call instead of Lovable Gateway.
+3. **Rewrite `generateRoastCaption()`**: Same change — use `callGemini()` with `gemini-2.5-flash` instead of Replicate
 
-**Key payload:**
-```typescript
-const input = {
-  prompt: `<s>[INST] ${systemPrompt}\n\nOutfit: ${outfitDescription}\nDrip Score: ${dripScore}/10\nColor Score: ${colorScore}/10\nLayering Score: ${layeringScore}/10\nConfidence: ${confidenceRating}/10\nGender: ${gender}\nScene: ${sceneType}\nMode: ${mode}\n\nReturn JSON: {"killer_tag":"...","praise_line":"..."} [/INST]`,
-  max_tokens: 150,
-  temperature: 0.9
-};
+4. **No other changes** — Call 1, scoring, UI, share card all stay the same
+
+### Technical Detail
+
+```text
+BEFORE (broken):
+  generateCaption() → build [INST] prompt → POST Replicate → poll 1s intervals → parse free text
+  Model: Mistral 7B (can't follow complex instructions)
+  Latency: 3-5s (async polling)
+
+AFTER (fixed):
+  generateCaption() → callGemini(apiKey, messages, 0.9, 150, "gemini-2.5-flash")
+  Model: Gemini 2.5 Flash (excellent instruction following)
+  Latency: 1-2s (synchronous)
 ```
 
-#### 2. `src/components/OutfitRatingCard.tsx`
-
-**Add `isSavage` prop** to `Props` type (boolean).
-
-**Share card (`captureCard`)**: When `isSavage` is true, draw a small "🔥 SAVAGE MODE" badge in the top-right corner of the generated 9:16 PNG — gold text on a dark semi-transparent pill.
-
-**Results UI**: Show a small 🔥 badge next to the killer tag when savage mode is active.
-
-#### 3. `src/pages/CameraScreen.tsx`
-
-**Pass `isSavage` prop** to `OutfitRatingCard` — `isSavage={globalDripState.unfiltered}`.
-
-### Technical Notes
-
-- Replicate's API is async (returns a prediction ID, must poll for result). The function will poll with 1s intervals, max 30s timeout.
-- Mistral 7B is fast on Replicate (~2-4s for short prompts), so polling should complete quickly.
-- The prompt uses Mistral's `[INST]` format for instruction following.
-- No Lovable gateway involved anywhere — pure direct Replicate API.
-- `REPLICATE_API_KEY` is already in the project secrets.
+The system prompts already have all the right scene/gender/tier logic — the model just needs to be smart enough to follow them.
 
