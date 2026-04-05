@@ -331,6 +331,16 @@ serve(async (req) => {
 
     console.log("Call 1 result:", JSON.stringify(call1Result).substring(0, 200));
 
+    // ── SERVER-SIDE DRIP SCORE: Override AI's math with correct weighted formula ──
+    const calculatedDrip = Math.round(
+      ((call1Result.color_score || 0) * 0.3 +
+       (call1Result.posture_score || 0) * 0.3 +
+       (call1Result.layering_score || 0) * 0.25 +
+       (call1Result.face_score || 0) * 0.15) * 10
+    ) / 10;
+    console.log(`Server-side drip: ${calculatedDrip} (AI said: ${call1Result.drip_score})`);
+    call1Result.drip_score = calculatedDrip;
+
     // ── SERVER-SIDE VALIDATION: Force roast if no human indicators ──
     const subScoreTotal = (call1Result.color_score || 0) + (call1Result.posture_score || 0) + (call1Result.layering_score || 0) + (call1Result.face_score || 0);
     const isRoast = call1Result.error === "roast"
