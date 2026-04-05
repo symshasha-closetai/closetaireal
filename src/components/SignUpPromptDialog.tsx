@@ -54,7 +54,7 @@ const SignUpPromptDialog = ({ open, onOpenChange, variant }: SignUpPromptDialogP
 
           <div className="w-full space-y-2.5 pt-1">
             <Button
-              className="w-full rounded-xl h-11 font-medium"
+              className="w-full rounded-xl h-11 font-medium gradient-accent text-accent-foreground"
               onClick={() => {
                 onOpenChange(false);
                 navigate("/auth");
