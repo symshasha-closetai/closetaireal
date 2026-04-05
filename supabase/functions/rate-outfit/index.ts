@@ -97,7 +97,7 @@ KILLER TAG (MOST IMPORTANT OUTPUT):
 - Examples are just examples — generate unique tags every time
 
 PRAISE LINE:
-- Exactly 1 sentence, no period at the end
+- Exactly 1 sentence, no period at the end. Can include 1-2 emojis where they feel natural.
 - Sounds like a friend who's brutally honest but rooting for you
 - Must feel written for THIS specific look
 - Match the energy of the killer_tag
