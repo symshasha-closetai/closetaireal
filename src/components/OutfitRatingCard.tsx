@@ -707,9 +707,10 @@ const OutfitRatingCard = ({ image, imageBase64, result, wardrobeItems = [],
           <button
             type="button"
             onClick={() => setShowSendPicker(true)}
-            className="w-9 h-9 rounded-full border border-border/40 flex items-center justify-center text-foreground/50 active:scale-95 transition-transform"
+            className="border border-border/40 rounded-full px-5 py-2 text-xs tracking-wider text-foreground/70 flex items-center gap-2 active:scale-95 transition-transform"
           >
-            <Send size={14} />
+            <Swords size={14} />
+            Challenge
           </button>
         </div>
 
@@ -717,8 +718,8 @@ const OutfitRatingCard = ({ image, imageBase64, result, wardrobeItems = [],
           open={showSendPicker}
           onOpenChange={setShowSendPicker}
           contentType="drip_card"
-          content={`Drip Score: ${result.drip_score}/10`}
-          metadata={{ image_url: image, score: result.drip_score, killer_tag: result.killer_tag }}
+          content="Beat my drip 🔥"
+          metadata={{ image_url: image, score: result.drip_score, confidence_rating: result.confidence_rating, killer_tag: result.killer_tag }}
         />
       </motion.div>
 

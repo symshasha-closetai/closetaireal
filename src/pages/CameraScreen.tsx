@@ -484,7 +484,7 @@ const CameraScreen = () => {
             <motion.div key="preview" initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0, scale: 0.95 }} className="space-y-4">
               {analyzing ? (
                 <div className="rounded-2xl overflow-hidden relative">
-                  <img src={image} alt="Outfit" className="w-full aspect-[3/4] object-cover" />
+                  <img src={image} alt="Outfit" className="w-full object-contain" />
                   <button onClick={cancelAnalysis} className="absolute top-3 right-3 z-20 flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-destructive/90 text-destructive-foreground backdrop-blur-sm text-xs font-medium active:scale-95 transition-transform">
                     <X size={14} /> Cancel
                   </button>
