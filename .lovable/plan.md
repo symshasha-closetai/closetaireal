@@ -1,47 +1,69 @@
 
 
-## Fixes: Image Collapse, Share/Download Reliability, Savage Mode Rename, Unfiltered Prompt Creativity
+## Fix: Score-Creative Sync + Server-Side Drip Score Calculation
 
-### Issues identified
+### Root Causes
 
-1. **Image collapsed** — The hero image in `OutfitRatingCard` uses `object-contain` on a `w-full` img without a fixed height, so if the image blob URL expires or CORS blocks it, the `<img>` collapses to 0 height. Need to add `min-h-[300px]` and a fallback `aspect-ratio` to prevent collapse.
+1. **Drip score is wrong (2.5)** — The AI calculates `drip_score` itself in Call 1, but it miscalculates. Looking at the screenshot sub-scores: color=3, posture=7.5, layering=1, face=8 → the correct formula gives `3×0.3 + 7.5×0.3 + 1×0.25 + 8×0.15 = 4.6`, NOT 2.5. The AI is bad at math. **Fix: compute drip_score server-side** from the sub-scores after Call 1 returns, overriding whatever the AI says.
 
-2. **Download and share sometimes fail** — The `captureCard()` function fetches the image URL via `fetch(image)` which can fail due to CORS (R2 URLs) or blob URL expiration. Fix: try using the original `imageBase64` data URL as primary source (already available via prop `imageBase64`), only falling back to fetch. Also increase error specificity in toasts.
+2. **Killer tag and praise line don't match the score** — "CLASSIC VIBES ✨" and a praising line for a 2.5 score is wrong. The Call 2 prompt has score-tier mappings but the AI ignores them. The prompt needs a harder gate: repeat the score tier in all-caps before the generation instruction, and add a "TONE MUST match score" enforcement with negative examples.
 
-3. **"Unfiltered" label** → Replace with **"Savage Mode 😏"** (user's choice). Keep it on one line by using shorter text.
-
-4. **Unfiltered/Savage mode gives same output as filtered** — Two root causes:
-   - `max_tokens: 256` may truncate longer unfiltered responses with cuss words
-   - Temperature is already 0.9 but the model (gemini-2.5-flash-lite) may not be creative enough for this persona. Bump to `temperature: 1.2` for unfiltered Call 2, increase `max_tokens` to `512`, and add stronger "DO NOT use the examples verbatim" instruction.
-   - The unfiltered prompt has examples that the model copies verbatim — add explicit "NEVER copy examples. Generate completely original content every single time."
-
-5. **Remaining "dripd.app" references** — All found instances already say "dripd.me". No remaining issues.
+3. **Toggle label** — Code already says "Savage Mode 😏" (line 453). The screenshot may be from before the last deploy.
 
 ### Changes
 
-**1. `src/components/OutfitRatingCard.tsx`** — Fix image collapse + share/download reliability
-- Line 568: Add `min-h-[300px]` and `aspect-auto` to the `<img>` to prevent collapse
-- Line 213-241 (`captureCard`): Use `imageBase64` prop as primary image source instead of fetching `image` URL. Only fall back to fetch if `imageBase64` is not available. This eliminates CORS/blob-expiry failures.
-- Add `imageBase64` to the `captureCard` dependency array
+**1. `supabase/functions/rate-outfit/index.ts`** — Server-side drip_score calculation
 
-**2. `src/pages/CameraScreen.tsx`** — Rename toggle
-- Line 453: Change `"Unfiltered 🔥"` to `"Savage Mode 😏"`
+After Call 1 returns, recalculate `drip_score` from the sub-scores using the exact weighted formula, overriding the AI's value:
 
-**3. `supabase/functions/rate-outfit/index.ts`** — Fix unfiltered creativity
-- Line 23: For unfiltered Call 2, use `temperature: 1.2` and `max_tokens: 512` instead of `0.9` and `256`
-- Modify `callGemini` or the call site to pass different params for unfiltered mode
-- In `getCall2SystemUnfiltered`: Add stronger anti-copying instruction: "NEVER reuse examples verbatim. Every killer_tag and praise_line must be 100% original, never seen before."
-- In unfiltered roast prompt: Same creativity boost
+```typescript
+// Override AI's drip_score with correct calculation
+const calculatedDrip = Math.round(
+  ((call1Result.color_score || 0) * 0.3 +
+   (call1Result.posture_score || 0) * 0.3 +
+   (call1Result.layering_score || 0) * 0.25 +
+   (call1Result.face_score || 0) * 0.15) * 10
+) / 10;
+call1Result.drip_score = calculatedDrip;
+```
 
-### Technical details
+This ensures the drip score always matches the sub-scores. Apply this right after line 304 (after Call 1 result is logged), before the roast gate check.
 
-- Image collapse fix: `min-h-[300px]` ensures the card never collapses even if the image fails to load; the gradient overlay and scores still render correctly
-- Share card fix: Using `imageBase64` (data URL) directly as the image source for `createImageBitmap` or `new Image()` avoids all CORS issues since it's already in memory
-- Temperature 1.2 with gemini-2.5-flash-lite produces more varied outputs; the JSON format constraint keeps it structured
-- Increasing max_tokens from 256 to 512 for unfiltered prevents truncation of longer praise lines with cuss words
+**2. `supabase/functions/rate-outfit/index.ts`** — Enforce score-tone sync in Call 2 prompts
+
+In both `getCall2System` and `getCall2SystemUnfiltered`, add a hard enforcement block at the top:
+
+```
+CRITICAL TONE GATE:
+The drip_score is ${dripScore.toFixed(1)} which falls in the "${tierLabel}" tier.
+Your killer_tag and praise_line MUST match this tier's energy.
+- Score < 4 = the outfit is NOT good. Tag and line must be gently critical or self-aware. NEVER praise or hype.
+- Score 4-6.9 = decent but not amazing. Tag and line should be chill, not over-the-top.
+- Score 7-8.4 = genuinely good. Confident praise is appropriate.
+- Score ≥ 8.5 = exceptional. Full hype is appropriate.
+DO NOT praise a low score. DO NOT roast a high score. The tone MUST sync with the number.
+```
+
+Add a helper to compute the tier label string from the score.
+
+**3. Same file** — Update Call 1 prompt to NOT compute drip_score
+
+Remove the formula instruction from `CALL1_SYSTEM` since we compute it server-side. Change:
+```
+- drip_score = color_score*0.3 + posture_score*0.3 + layering_score*0.25 + face_score*0.15
+```
+to:
+```
+- drip_score: will be calculated server-side, just return 0 for this field
+```
+
+This prevents the AI from spending tokens on math it gets wrong.
 
 ### Files to edit
-- `src/components/OutfitRatingCard.tsx` (image collapse fix + share card reliability)
-- `src/pages/CameraScreen.tsx` (toggle label rename)
-- `supabase/functions/rate-outfit/index.ts` (creativity boost for unfiltered mode)
+- `supabase/functions/rate-outfit/index.ts` (server-side score calc + tone enforcement in both Call 2 prompts + simplify Call 1)
+
+### Technical details
+- The weighted formula: `color×0.3 + posture×0.3 + layering×0.25 + face×0.15`, rounded to 1 decimal
+- Tier labels: "needs work" (<4), "decent" (4-6.9), "fire" (7-8.4), "elite" (≥8.5)
+- Server-side calc is placed before the roast gate so the gate also uses the correct score
 
