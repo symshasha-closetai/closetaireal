@@ -313,15 +313,8 @@ const runAnalysis = async (file: File, userId: string | undefined, styleProfile:
       toast.error("AI rating failed: " + (error.message || "Unknown error — check edge function deployment"));
     }
 
-    // Handle roast mode (no human detected)
-    if (data?.result?.error === "roast" && data?.result?.roast_line) {
-      toast("No drip detected 😅", {
-        description: data.result.roast_line,
-        duration: 5000,
-      });
-      updateGlobal({ result: null, analyzing: false, progress: 0, stage: "", analysisSteps: [], image: null, imageBase64: null });
-      return;
-    }
+    // Roast mode now returns a full result card (scores at 0, with killer_tag + praise_line)
+    // No special interception needed — flows through as normal result
 
     if (error || data?.error || !data?.result) {
       if (data?.error) {
