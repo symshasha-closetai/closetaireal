@@ -393,17 +393,8 @@ serve(async (req) => {
       },
     ];
 
-    let call1Result;
-    try {
-      call1Result = await callGemini(apiKey, call1Messages, 0.3, 512);
-    } catch (e: any) {
-      if (e?.retryWithGateway) {
-        console.warn("Call 1 image failed on direct Gemini API, retrying through Lovable AI Gateway");
-        call1Result = await callLovableAI(call1Messages, 0.3, 512, "google/gemini-2.5-flash");
-      } else {
-        throw e;
-      }
-    }
+    console.log("Call 1: Human detection + scoring (direct Gemini)...");
+    const call1Result = await callGemini(apiKey, call1Messages, 0.3, 512);
 
     console.log("Call 1 result:", JSON.stringify(call1Result).substring(0, 200));
 
