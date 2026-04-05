@@ -1,47 +1,46 @@
-## Fix Drip Check AI + Challenge Send + No-Crop Photos
+## Multiple Fixes: Gold CTA, White Card Text, Unique User ID, Groups, Duplicate Friend Requests
 
-### What's changing
+### 1. Gold "Create My Account" button (`SignUpPromptDialog.tsx`)
 
-1. **Rewrite the AI prompt** in `rate-outfit` edge function using your exact prompt (killer tag + praise line as primary outputs, scores as secondary)
-2. **Change "Send" to "Challenge"** with provocative CTA ("Beat my drip 🔥")
-3. **Shared card shows drip score + confidence only** (already does, keeping it)
-4. **Drip card in messages opens fullscreen** when tapped
-5. **No cropping anywhere** — photos use `object-contain` with auto-sized containers
+- Change the CTA button from default primary to gold accent: `className="w-full rounded-xl h-11 font-medium gradient-accent text-accent-foreground"`
+- The app's gold is `--accent: 42 45% 52%` and `gradient-accent` is already defined
 
-No SQL changes needed. This is all prompt + UI work.
+### 2. White text on shared card (`OutfitRatingCard.tsx` — `captureCard`)
+
+- User said "white rgb #000" — likely means white text (`#FFFFFF`) on the dark card. The current card text uses varying opacities of white. Will ensure all text labels (killer tag, praise line, sub-scores, CTA) use full white `#FFFFFF` or near-white instead of muted colors
+- "BEAT MY DRIP" CTA text on the canvas card: change from `rgba(201,169,110,0.5)` to gold `#C9A96E` at full opacity for the "gold standard" look, as used in the whole app
+
+### 3. Unique user_id enforcement
+
+- `user_id` in profiles already references `auth.users(id)` which is inherently unique. Username uniqueness is already enforced via `profiles_username_unique` index. No changes needed here — this is already handled.
+
+### 4. Prevent duplicate friend requests (`AddFriendDialog.tsx`)
+
+- Currently checks `existingFriendIds` for accepted friends only, but doesn't check pending requests
+- Add a check: before searching, also fetch all pending friend requests sent by the user (`friends` table where `user_id = me` and `status = 'pending'`)
+- Track `pendingIds` state alongside `existingFriendIds`
+- In the search results, if a user has a pending request, show "Sent" label (like the "Added" label) instead of the add button
+- Also add a DB-level unique constraint migration for `(LEAST(user_id, friend_id), GREATEST(user_id, friend_id))` to prevent bidirectional duplicates
+
+### 5. Group messaging (`MessagesScreen.tsx`, DB migration)
+
+- **DB**: Add `name` and `is_group` columns to `conversations` table
+- **New Conversation dialog**: Add a "Create Group" option that lets user select multiple friends, enter a group name, and creates a conversation with multiple participants
+- **MessagesScreen**: Show group name and multi-avatar for group conversations
+- **Challenge (SendToFriendPicker)**: Add groups to the friend picker list, allowing challenges to be sent to groups
 
 ### Files to edit
 
-**1. `supabase/functions/rate-outfit/index.ts**` — Rewrite prompt
-
-- Replace the entire system prompt with the user's provided prompt verbatim
-- Keep the scoring JSON fields (drip_score, color_score, posture_score, layering_score, face_score, confidence_rating, drip_reason, confidence_reason, color_reason, posture_reason, layering_reason, face_reason, advice) in the "human detected" format
-- Add killer_tag and praise_line as the primary creative outputs using the user's exact step-by-step instructions
-- The roast mode returns `{killer_tag: null, praise_line: null, error: "roast", roast_line: "..."}`  plus zeroed scores
-- Keep same API call structure (system/user message split, gemini-2.5-flash-lite, temperature 0.9)
-
-**2. `src/components/OutfitRatingCard.tsx**` — Challenge button + no-crop
-
-- Change the Send button label to "Challenge" with a swords icon
-- Update `SendToFriendPicker` content to `"Beat my drip 🔥"` as the message text
-- Hero image: change from `object-contain max-h-[70vh]` to `object-contain w-full` with no forced aspect ratio (container auto-sizes to image)
-- Share card (`captureCard`): instead of cover-fit cropping, contain-fit the image preserving full aspect ratio with letterboxing on dark background
-
-**3. `src/components/MessageBubble.tsx**` — Fullscreen drip card + no-crop
-
-- For `drip_card` content type: make the card tappable → opens a fullscreen overlay with the image, scores, and killer tag
-- Change `aspect-[3/4] object-cover` to `object-contain w-full` so the image isn't cropped in the chat bubble
-- Add a fullscreen modal state that renders the drip card large when tapped
-- Show the challenge text ("Beat my drip 🔥") below the card in the bubble
-
-**4. `src/pages/CameraScreen.tsx**` — No-crop during analysis
-
-- Line 487: change `aspect-[3/4] object-cover` to `object-contain w-full` on the analyzing preview image so nothing gets cut off during the loading state
+- `src/components/SignUpPromptDialog.tsx` — gold CTA button
+- `src/components/OutfitRatingCard.tsx` — white text + gold CTA on canvas card
+- `src/components/AddFriendDialog.tsx` — pending request tracking, "Sent" state
+- `src/pages/MessagesScreen.tsx` — group creation flow
+- `src/components/SendToFriendPicker.tsx` — include groups in challenge picker
+- **DB migration**: Add `name`/`is_group` to conversations, add bidirectional unique constraint on friends
 
 ### Technical details
 
-- The prompt rewrite uses the user's exact structure with Steps 0-6 and the Final Test
-- Score calculation formula stays: `drip_score = color(30%) + posture(30%) + layering(25%) + face(15%)`
-- The fullscreen drip card in messages will be a simple fixed overlay with backdrop blur, dismissible by tap
-- Challenge metadata will include `confidence_rating` alongside existing `score` and `killer_tag`
-- Deploy edge function after editing
+- The bidirectional friend uniqueness constraint: `CREATE UNIQUE INDEX friends_pair_unique ON friends (LEAST(user_id, friend_id), GREATEST(user_id, friend_id));` — prevents A→B and B→A duplicates
+- Group conversations reuse existing `conversation_participants` table (multiple rows per conversation)
+- The `find_or_create_conversation` RPC is for 1:1 only; groups will use direct insert into `conversations` + `conversation_participants`
+- Canvas card text changes are purely in the `captureCard` callback — all `ctx.fillStyle` values for text will become `#FFFFFF` with appropriate opacity, and the "BEAT MY DRIP" line becomes `#C9A96E` at full opacity
