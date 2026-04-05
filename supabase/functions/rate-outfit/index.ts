@@ -416,13 +416,22 @@ CRITICAL: Return ONLY valid JSON.`;
 
     console.log("Call 2 result:", JSON.stringify(call2Result));
 
+    const fallbackCopy = getFallbackCopy(call1Result.drip_score, sceneType, Boolean(unfiltered));
+    const safeKillerTag = typeof call2Result.killer_tag === "string" ? call2Result.killer_tag.trim() : "";
+    const safePraiseLine = typeof call2Result.praise_line === "string" ? call2Result.praise_line.trim() : "";
+    const shouldFallback = needsCopyFallback(safeKillerTag, safePraiseLine, call1Result.drip_score, sceneType, Boolean(unfiltered));
+
+    if (shouldFallback) {
+      console.log("Using server fallback copy for score/scene consistency");
+    }
+
     // ── MERGE RESULTS ──
     const finalResult = {
       drip_score: call1Result.drip_score,
       drip_reason: call1Result.drip_reason,
       confidence_rating: call1Result.confidence_rating,
       confidence_reason: call1Result.confidence_reason,
-      killer_tag: call2Result.killer_tag || "Clean Look",
+      killer_tag: shouldFallback ? fallbackCopy.killer_tag : (safeKillerTag || fallbackCopy.killer_tag),
       color_score: call1Result.color_score,
       color_reason: call1Result.color_reason,
       posture_score: call1Result.posture_score,
@@ -432,7 +441,7 @@ CRITICAL: Return ONLY valid JSON.`;
       face_score: call1Result.face_score,
       face_reason: call1Result.face_reason,
       advice: call1Result.advice,
-      praise_line: call2Result.praise_line || "this fit speaks for itself",
+      praise_line: shouldFallback ? fallbackCopy.praise_line : (safePraiseLine || fallbackCopy.praise_line),
     };
 
     return new Response(JSON.stringify({ result: finalResult }), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
