@@ -5,7 +5,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { toast } from "sonner";
 import html2canvas from "html2canvas";
-import dripdLogo from "@/assets/closetai-logo.webp";
+import dripdLogo from "@/assets/dripd-logo-new.png";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import {
   DropdownMenu,
@@ -26,15 +26,15 @@ import {
 
 const RANK_TAGS: Record<number, string> = {
   1: "Drip God 👑",
-  2: "Style Titan ⚡",
-  3: "Trend Sniper 🎯",
-  4: "Fit Assassin 🔪",
-  5: "Clean Killer 🧼",
-  6: "Aura Builder ✨",
-  7: "Street Scholar 🧠",
-  8: "Fit Flexer 💪",
-  9: "Style Rookie 🚀",
-  10: "Drip Starter 🔥",
+  2: "Style Icon ✨",
+  3: "Fashion Elite 🔥",
+  4: "Trend Leader 💫",
+  5: "Vibe Master 🎯",
+  6: "Clean Machine ⚡",
+  7: "Rising Star 🌟",
+  8: "Style Scout 👀",
+  9: "Fresh Start 🌱",
+  10: "New Wave 🫧",
 };
 
 type LeaderboardEntry = {
@@ -51,6 +51,7 @@ type LeaderboardEntry = {
 type ViewMode = "daily" | "weekly";
 
 import { getCache, setCache, CACHE_KEYS } from "@/lib/deviceCache";
+import { precacheImages, getCachedImageUrl } from "@/lib/imageCache";
 
 type LeaderboardCache = { entries: LeaderboardEntry[]; friendIds: string[] };
 let dailyCache: (LeaderboardCache & { ts: number }) | null = null;
@@ -290,6 +291,9 @@ const LeaderboardTab = () => {
     setLoading(false);
     dailyCache = { entries: combined, friendIds: friends, ts: Date.now() };
     if (user) setCache(CACHE_KEYS.LEADERBOARD_DAILY, user.id, { entries: combined, friendIds: friends });
+    // Pre-cache leaderboard images
+    const imageUrls = combined.map(e => e.image_url).filter(Boolean) as string[];
+    precacheImages(imageUrls);
   }, [user?.id]);
 
   const fetchWeekly = useCallback(async (force = false) => {
@@ -406,6 +410,9 @@ const LeaderboardTab = () => {
     setLoading(false);
     weeklyCache = { entries: combined, friendIds: friends, ts: Date.now() };
     if (user) setCache(CACHE_KEYS.LEADERBOARD_WEEKLY, user.id, { entries: combined, friendIds: friends });
+    // Pre-cache leaderboard images
+    const imageUrls = combined.map(e => e.image_url).filter(Boolean) as string[];
+    precacheImages(imageUrls);
   }, [user?.id]);
 
   useEffect(() => {
@@ -485,23 +492,49 @@ const LeaderboardTab = () => {
 
   const ShareCard = ({ entry, rank }: { entry: LeaderboardEntry; rank: number }) => (
     <div className="fixed -left-[9999px] top-0" id={`share-card-${entry.user_id}`}>
-      <div className="w-[360px] bg-gradient-to-br from-[#1a1612] to-[#0d0a08] rounded-2xl overflow-hidden p-5 text-white">
-        <div className="flex items-center gap-2 mb-4">
-          <img src={dripdLogo} alt="" className="w-8 h-8 rounded-lg" crossOrigin="anonymous" />
-          <span className="font-bold text-sm tracking-wider" style={{ color: '#C9A96E' }}>Dripd</span>
+      <div className="w-[360px] bg-gradient-to-br from-[#1a1612] to-[#0d0a08] rounded-2xl overflow-hidden text-white">
+        {/* Header with logo */}
+        <div className="flex items-center justify-between px-5 pt-5 pb-3">
+          <div className="flex items-center gap-2">
+            <img src={dripdLogo} alt="" className="w-7 h-7 rounded-lg object-cover" crossOrigin="anonymous" />
+            <span className="font-bold text-sm tracking-wider" style={{ color: '#C9A96E' }}>DRIPD</span>
+          </div>
+          {getRankTag(rank) && (
+            <span className="text-xs font-semibold px-2.5 py-1 rounded-full" style={{ background: 'rgba(201,169,110,0.15)', color: '#C9A96E' }}>
+              #{rank} {getRankTag(rank)}
+            </span>
+          )}
         </div>
+        {/* Image */}
         {entry.image_url && (
-          <img src={entry.image_url} alt="" className="w-full aspect-[3/4] object-cover rounded-xl mb-4" crossOrigin="anonymous" />
+          <div className="px-4">
+            <img src={entry.image_url} alt="" className="w-full aspect-[3/4] object-cover rounded-xl" crossOrigin="anonymous" />
+          </div>
         )}
-        <div className="space-y-2">
-          <p className="text-3xl font-bold" style={{ color: '#C9A96E' }}>{entry.score.toFixed(1)}<span className="text-lg text-white/40">/100</span></p>
-          {getRankTag(rank) && <p className="text-lg font-semibold">{getRankTag(rank)}</p>}
-          {entry.killer_tag && <p className="text-xs text-white/50">{entry.killer_tag}</p>}
+        {/* Score + info */}
+        <div className="px-5 pt-4 pb-2 space-y-2">
+          <div className="flex items-center gap-3">
+            <div className="w-8 h-8 rounded-full bg-white/10 overflow-hidden flex-shrink-0">
+              {entry.avatar_url ? (
+                <img src={entry.avatar_url} alt="" className="w-full h-full object-cover" crossOrigin="anonymous" />
+              ) : (
+                <div className="w-full h-full flex items-center justify-center text-xs font-medium text-white/40">{(entry.name || "?")?.[0]}</div>
+              )}
+            </div>
+            <div className="flex-1 min-w-0">
+              <p className="text-sm font-semibold truncate">{entry.name || entry.username || "Anon"}</p>
+              {entry.username && <p className="text-[10px] text-white/40">@{entry.username}</p>}
+            </div>
+            <p className="text-3xl font-bold" style={{ color: '#C9A96E' }}>{entry.score.toFixed(1)}<span className="text-base text-white/40">/100</span></p>
+          </div>
+          {entry.killer_tag && (
+            <p className="text-lg font-bold" style={{ color: '#C9A96E' }}>{entry.killer_tag}</p>
+          )}
         </div>
-        <div className="mt-4 pt-3 border-t border-white/10 text-center">
-          <p className="text-sm font-semibold" style={{ color: '#C9A96E' }}>
-            Drop My Drip ✨
-          </p>
+        {/* CTA */}
+        <div className="px-5 pb-4 pt-2 border-t border-white/10 mt-2 flex items-center justify-between">
+          <p className="text-sm font-semibold" style={{ color: '#C9A96E' }}>BEAT MY DRIP 🔥</p>
+          <p className="text-[10px] text-white/30 tracking-widest uppercase">dripd.me</p>
         </div>
       </div>
     </div>

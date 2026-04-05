@@ -81,10 +81,11 @@ VOICE RULES:
 - No cuss words. No cringe reassurance ("you're beautiful no matter what!")
 - Witty ≠ mean. Warm ≠ basic.
 - Avoid repetition across tag + praise line
+- EMOJIS: Include exactly 1 relevant emoji at the END of the killer_tag. Can include 1-2 emojis in the praise_line where they feel natural.
 - The tag and praise line should feel like they were made together
 
 KILLER TAG (MOST IMPORTANT OUTPUT):
-- Exactly 2–3 words. No more. No emojis.
+- Exactly 2–3 words. Include exactly 1 relevant emoji at the END.
 - Must feel like a vibe, not a sentence. Screenshot-worthy.
 - Feels personal, not generic. Never reuse examples verbatim.
 - Use the drip_score to set the tone:
@@ -96,7 +97,7 @@ KILLER TAG (MOST IMPORTANT OUTPUT):
 - Examples are just examples — generate unique tags every time
 
 PRAISE LINE:
-- Exactly 1 sentence, no period at the end
+- Exactly 1 sentence, no period at the end. Can include 1-2 emojis where they feel natural.
 - Sounds like a friend who's brutally honest but rooting for you
 - Must feel written for THIS specific look
 - Match the energy of the killer_tag
@@ -122,7 +123,7 @@ FINAL TEST (mental check before output):
 If any fail → rewrite.
 
 Return EXACTLY this JSON:
-{"killer_tag":"2-3 word tag","praise_line":"one sentence no period at end"}
+{"killer_tag":"2-3 word tag + emoji","praise_line":"one sentence no period at end"}
 
 CRITICAL: Return ONLY valid JSON. No markdown, no explanation.`;
 }
@@ -185,12 +186,13 @@ The image is NOT a person wearing clothes. The roast category is: "${roastCatego
 
 Generate:
 1. killer_tag: A hilarious 2-3 word tag. Must be witty, screenshot-worthy. Think meme energy but clean.
-   Examples by category: Food → "Not A Fit", "Drip Or Dip", "Wrong Menu" | Animal → "Fur Coat Only", "Wrong Model" | Diagram → "Study Break" | Car → "Wrong Flex"
+   Examples by category: Food → "Not A Fit 🍕", "Drip Or Dip 💧" | Animal → "Fur Coat Only 🐾", "Wrong Model 🐶" | Diagram → "Study Break 📊" | Car → "Wrong Flex 🚗"
    DO NOT reuse these examples. Be original every time.
+   IMPORTANT: Include exactly 1 relevant emoji at the END of the killer_tag.
 
-2. praise_line: One sentence roast. Funny, not mean. The kind of line someone would screenshot and send to friends. Use the roast category as inspiration but make it feel fresh and personal to what you see in the image.
+2. praise_line: One sentence roast. Funny, not mean. The kind of line someone would screenshot and send to friends. Can include 1-2 emojis where they feel natural.
 
-Return EXACTLY: {"killer_tag":"2-3 words","praise_line":"one sentence roast no period"}
+Return EXACTLY: {"killer_tag":"2-3 words + emoji","praise_line":"one sentence roast no period"}
 CRITICAL: Return ONLY valid JSON.` },
         { role: "user", content: [
           { type: "text", text: "Look at this image and generate a funny killer_tag and roast praise_line for it." },

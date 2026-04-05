@@ -418,7 +418,7 @@ const OutfitRatingCard = ({ image, imageBase64, result, wardrobeItems = [],
 
     ctx.fillStyle = "rgba(255,255,255,0.5)";
     ctx.font = "500 10px 'Inter', 'Helvetica', sans-serif";
-    const app = "DRIPD.APP";
+    const app = "DRIPD.ME";
     const appW = ctx.measureText(app).width;
     ctx.fillText(app, (W - appW) / 2, H - 22);
 
@@ -768,10 +768,14 @@ const OutfitRatingCard = ({ image, imageBase64, result, wardrobeItems = [],
       {/* On-Demand Suggestion Buttons */}
       <motion.div initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.2 }} className="space-y-3">
         {wardrobeItems.length === 0 ? (
-          <div className="rounded-2xl bg-card border border-border/30 p-6 text-center space-y-2">
-            <Shirt size={20} className="mx-auto text-muted-foreground/50" />
-            <p className="text-xs text-muted-foreground">Add items to your wardrobe to unlock styling suggestions</p>
-          </div>
+          <button
+            onClick={() => window.location.href = '/wardrobe'}
+            className="w-full flex flex-col items-center gap-2 py-5 rounded-2xl bg-card border border-border/30 active:scale-[0.98] transition-transform"
+          >
+            <Shirt size={20} className="text-gold" />
+            <p className="text-xs font-medium text-foreground/80">Add items to your wardrobe to unlock styling suggestions</p>
+            <span className="text-[10px] text-gold font-medium">Go to Wardrobe →</span>
+          </button>
         ) : wardrobeSuggestions === null ? (
           <button
             onClick={() => fetchSuggestions("wardrobe")}
