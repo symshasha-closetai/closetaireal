@@ -26,19 +26,12 @@ async function callGemini(apiKey: string, messages: any[], temperature: number, 
   if (res.status === 402) throw { status: 402, message: "AI credits exhausted. Please add funds." };
   if (!res.ok) {
     const t = await res.text();
-    console.error("AI error:", res.status, t);
-    if (res.status === 400 && t.includes("Unable to process input image")) {
-      throw {
-        status: 400,
-        code: "IMAGE_PROCESSING_FAILED",
-        retryWithGateway: true,
-        message: "Unable to process input image",
-      };
-    }
-    throw new Error(`AI error: ${res.status}`);
+    console.error(`Gemini error [${res.status}] model=${model}:`, t);
+    throw new Error(`Gemini error ${res.status}: ${t.substring(0, 300)}`);
   }
   const data = await res.json();
   const content = data.choices?.[0]?.message?.content || "{}";
+  console.log("Gemini raw content:", content.substring(0, 300));
   const cleaned = content.replace(/```json\n?/g, "").replace(/```\n?/g, "").trim();
   try {
     return JSON.parse(cleaned);
@@ -50,6 +43,7 @@ async function callGemini(apiKey: string, messages: any[], temperature: number, 
       } catch {
       }
     }
+    console.error("Failed to parse Gemini response:", cleaned.substring(0, 500));
     throw new Error("Failed to parse AI response");
   }
 }
