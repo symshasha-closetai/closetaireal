@@ -357,6 +357,22 @@ const OutfitRatingCard = ({ image, imageBase64, result, isSavage = false, wardro
       ctx.fillText(result.killer_tag, (W - tagW) / 2, panelY + 30);
     }
 
+    // 🔥 Savage Mode badge on share card
+    if (isSavage) {
+      const badgeText = "🔥 SAVAGE MODE";
+      ctx.font = "700 11px 'Inter', 'Helvetica', sans-serif";
+      const badgeW = ctx.measureText(badgeText).width + 16;
+      const badgeH = 22;
+      const badgeX = W - badgeW - 16;
+      const badgeY = 16;
+      ctx.fillStyle = "rgba(0,0,0,0.7)";
+      ctx.beginPath();
+      ctx.roundRect(badgeX, badgeY, badgeW, badgeH, 11);
+      ctx.fill();
+      ctx.fillStyle = "#FFD700";
+      ctx.fillText(badgeText, badgeX + 8, badgeY + 15);
+    }
+
     // Praise line — directly after scores (no sub-scores)
     if (result.praise_line) {
       ctx.fillStyle = "rgba(255,255,255,0.8)";
