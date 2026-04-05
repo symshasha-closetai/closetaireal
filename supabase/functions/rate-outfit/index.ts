@@ -52,7 +52,7 @@ async function callGemini(apiKey: string, messages: any[], temperature: number, 
   }
 }
 
-// ===== LIVE CAPTION GENERATION via Lovable AI Gateway =====
+// ===== LIVE CAPTION GENERATION via Replicate Mistral 7B =====
 
 const CAPTION_SYSTEM_STANDARD = `You are DRIPD AI — a witty, clever fashion commentator. You create fun, memorable captions for outfit photos.
 
@@ -116,7 +116,6 @@ function getScoreTier(score: number): string {
   return "elite";
 }
 
-// Minimal fallback — only used if Call 2 fails twice
 const FALLBACK_CAPTIONS: Record<string, { killer_tag: string; praise_line: string }> = {
   low: { killer_tag: "Interesting Choice 🤔", praise_line: "The confidence is doing more work than the outfit right now" },
   mid: { killer_tag: "Almost There ✨", praise_line: "You're one styling tweak away from actually cooking" },
@@ -126,107 +125,97 @@ const FALLBACK_CAPTIONS: Record<string, { killer_tag: string; praise_line: strin
 
 const ROAST_SYSTEM = `You are DRIPD AI — a chaotic fashion roaster. Someone uploaded a photo with NO human wearing clothes. Generate a hilarious roast about what they uploaded instead. Be funny, not mean. Gen Z humor, meme language.`;
 
+async function waitForReplicatePrediction(predictionUrl: string, apiKey: string, maxWait = 30000): Promise<any> {
+  const start = Date.now();
+  while (Date.now() - start < maxWait) {
+    const res = await fetch(predictionUrl, { headers: { Authorization: `Bearer ${apiKey}` } });
+    const data = await res.json();
+    if (data.status === "succeeded") return data;
+    if (data.status === "failed" || data.status === "canceled") throw new Error(`Prediction ${data.status}: ${data.error || "unknown"}`);
+    await new Promise(r => setTimeout(r, 1000));
+  }
+  throw new Error("Replicate prediction timed out");
+}
+
+function extractJsonFromText(text: string): { killer_tag: string; praise_line: string } | null {
+  try {
+    const m = text.match(/\{[\s\S]*?"killer_tag"[\s\S]*?"praise_line"[\s\S]*?\}/);
+    if (m) {
+      const parsed = JSON.parse(m[0]);
+      if (parsed.killer_tag && parsed.praise_line) return { killer_tag: parsed.killer_tag, praise_line: parsed.praise_line };
+    }
+  } catch {}
+  const tagMatch = text.match(/"killer_tag"\s*:\s*"([^"]+)"/);
+  const praiseMatch = text.match(/"praise_line"\s*:\s*"([^"]+)"/);
+  if (tagMatch && praiseMatch) return { killer_tag: tagMatch[1], praise_line: praiseMatch[1] };
+  return null;
+}
+
+async function callReplicateMistral(prompt: string, apiKey: string): Promise<string> {
+  const res = await fetch("https://api.replicate.com/v1/models/mistralai/mistral-7b-instruct-v0.3/predictions", {
+    method: "POST",
+    headers: { Authorization: `Bearer ${apiKey}`, "Content-Type": "application/json" },
+    body: JSON.stringify({ input: { prompt, max_tokens: 200, temperature: 0.9 } }),
+  });
+  if (res.status === 429) throw { status: 429, message: "Replicate rate limited" };
+  if (!res.ok) {
+    const t = await res.text();
+    console.error(`Replicate error [${res.status}]:`, t.substring(0, 300));
+    throw new Error(`Replicate ${res.status}`);
+  }
+  const prediction = await res.json();
+  const completed = await waitForReplicatePrediction(prediction.urls.get, apiKey);
+  const output = Array.isArray(completed.output) ? completed.output.join("") : String(completed.output || "");
+  console.log("Mistral raw output:", output.substring(0, 300));
+  return output;
+}
+
 async function generateCaption(
   outfitDescription: string,
   dripScore: number,
+  colorScore: number,
+  layeringScore: number,
+  confidenceRating: number,
   gender: string,
   sceneType: string,
   mode: string,
 ): Promise<{ killer_tag: string; praise_line: string }> {
-  const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
-  if (!LOVABLE_API_KEY) {
-    console.error("LOVABLE_API_KEY not configured, using fallback");
+  const REPLICATE_API_KEY = Deno.env.get("REPLICATE_API_KEY");
+  if (!REPLICATE_API_KEY) {
+    console.error("REPLICATE_API_KEY not configured, using fallback");
     return FALLBACK_CAPTIONS[getScoreTier(dripScore)];
   }
 
   const tier = getScoreTier(dripScore);
   const systemPrompt = mode === "savage" ? CAPTION_SYSTEM_SAVAGE : CAPTION_SYSTEM_STANDARD;
-  const userMessage = `Generate a killer_tag (max 5 words, include one emoji) and praise_line (max 20 words, viral caption with setup→twist→punchline).
+  const prompt = `<s>[INST] ${systemPrompt}
+
+Generate a killer_tag (max 5 words, include one emoji) and praise_line (max 20 words, viral caption with setup→twist→punchline).
 
 Outfit: ${outfitDescription}
-Score: ${dripScore}/10 (${tier} tier)
+Drip Score: ${dripScore}/10 (${tier} tier)
+Color Score: ${colorScore}/10
+Layering Score: ${layeringScore}/10
+Confidence: ${confidenceRating}/10
 Gender: ${gender}
 Scene: ${sceneType}
-Mode: ${mode}`;
+Mode: ${mode}
 
-  const body = {
-    model: "google/gemini-2.5-flash",
-    messages: [
-      { role: "system", content: systemPrompt },
-      { role: "user", content: userMessage },
-    ],
-    tools: [{
-      type: "function",
-      function: {
-        name: "generate_caption",
-        description: "Generate a killer tag and viral caption for an outfit photo",
-        parameters: {
-          type: "object",
-          properties: {
-            killer_tag: { type: "string", description: "Max 5 words with one emoji, savage/funny tag for the outfit" },
-            praise_line: { type: "string", description: "Max 20 words, viral caption: relatable setup → twist → punchline" },
-          },
-          required: ["killer_tag", "praise_line"],
-          additionalProperties: false,
-        },
-      },
-    }],
-    tool_choice: { type: "function", function: { name: "generate_caption" } },
-  };
+Return ONLY valid JSON: {"killer_tag":"...","praise_line":"..."} [/INST]`;
 
   for (let attempt = 0; attempt < 2; attempt++) {
     try {
-      const res = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
-        method: "POST",
-        headers: {
-          Authorization: `Bearer ${LOVABLE_API_KEY}`,
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify(body),
-      });
-
-      if (res.status === 429) {
-        console.warn(`Caption Call 2 rate limited (attempt ${attempt + 1})`);
-        if (attempt === 0) { await new Promise(r => setTimeout(r, 1000)); continue; }
-        return FALLBACK_CAPTIONS[tier];
+      const output = await callReplicateMistral(prompt, REPLICATE_API_KEY);
+      const parsed = extractJsonFromText(output);
+      if (parsed) {
+        console.log("Call 2 caption generated:", JSON.stringify(parsed));
+        return parsed;
       }
-      if (res.status === 402) {
-        console.warn("Caption Call 2: credits exhausted");
-        return FALLBACK_CAPTIONS[tier];
-      }
-      if (!res.ok) {
-        const t = await res.text();
-        console.error(`Caption Call 2 error [${res.status}]:`, t.substring(0, 300));
-        if (attempt === 0) continue;
-        return FALLBACK_CAPTIONS[tier];
-      }
-
-      const data = await res.json();
-      // Tool calling response
-      const toolCall = data.choices?.[0]?.message?.tool_calls?.[0];
-      if (toolCall?.function?.arguments) {
-        const parsed = JSON.parse(toolCall.function.arguments);
-        if (parsed.killer_tag && parsed.praise_line) {
-          console.log("Call 2 caption generated:", JSON.stringify(parsed));
-          return { killer_tag: parsed.killer_tag, praise_line: parsed.praise_line };
-        }
-      }
-      // Fallback: try content field
-      const content = data.choices?.[0]?.message?.content;
-      if (content) {
-        try {
-          const cleaned = content.replace(/```json\n?/g, "").replace(/```\n?/g, "").trim();
-          const parsed = JSON.parse(cleaned);
-          if (parsed.killer_tag && parsed.praise_line) {
-            console.log("Call 2 caption from content:", JSON.stringify(parsed));
-            return { killer_tag: parsed.killer_tag, praise_line: parsed.praise_line };
-          }
-        } catch {}
-      }
-      console.warn(`Call 2 invalid response (attempt ${attempt + 1}):`, JSON.stringify(data).substring(0, 300));
+      console.warn(`Call 2 invalid output (attempt ${attempt + 1}):`, output.substring(0, 200));
       if (attempt === 0) continue;
-    } catch (e) {
+    } catch (e: any) {
       console.error(`Call 2 exception (attempt ${attempt + 1}):`, e);
+      if (e?.status === 429) return FALLBACK_CAPTIONS[tier];
       if (attempt === 0) continue;
     }
   }
@@ -239,59 +228,24 @@ async function generateRoastCaption(
   roastCategory: string,
   mode: string,
 ): Promise<{ killer_tag: string; praise_line: string }> {
-  const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
-  if (!LOVABLE_API_KEY) {
+  const REPLICATE_API_KEY = Deno.env.get("REPLICATE_API_KEY");
+  if (!REPLICATE_API_KEY) {
     return { killer_tag: "Nice Try 💀", praise_line: "That's a cool photo but where's the outfit" };
   }
 
-  const userMessage = `Someone uploaded a photo of a ${roastCategory.toLowerCase()} instead of an outfit. Generate a funny roast.
-Mode: ${mode}`;
+  const prompt = `<s>[INST] ${ROAST_SYSTEM}
 
-  const body = {
-    model: "google/gemini-2.5-flash",
-    messages: [
-      { role: "system", content: ROAST_SYSTEM },
-      { role: "user", content: userMessage },
-    ],
-    tools: [{
-      type: "function",
-      function: {
-        name: "generate_caption",
-        description: "Generate a roast caption for a non-outfit photo",
-        parameters: {
-          type: "object",
-          properties: {
-            killer_tag: { type: "string", description: "Max 5 words with one emoji, funny roast tag" },
-            praise_line: { type: "string", description: "Max 20 words, funny roast about uploading this instead of an outfit" },
-          },
-          required: ["killer_tag", "praise_line"],
-          additionalProperties: false,
-        },
-      },
-    }],
-    tool_choice: { type: "function", function: { name: "generate_caption" } },
-  };
+Someone uploaded a photo of a ${roastCategory.toLowerCase()} instead of an outfit. Generate a funny roast.
+Mode: ${mode}
+
+Return ONLY valid JSON: {"killer_tag":"max 5 words with emoji","praise_line":"max 20 words funny roast"} [/INST]`;
 
   try {
-    const res = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
-      method: "POST",
-      headers: {
-        Authorization: `Bearer ${LOVABLE_API_KEY}`,
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify(body),
-    });
-
-    if (res.ok) {
-      const data = await res.json();
-      const toolCall = data.choices?.[0]?.message?.tool_calls?.[0];
-      if (toolCall?.function?.arguments) {
-        const parsed = JSON.parse(toolCall.function.arguments);
-        if (parsed.killer_tag && parsed.praise_line) {
-          console.log("Roast caption generated:", JSON.stringify(parsed));
-          return { killer_tag: parsed.killer_tag, praise_line: parsed.praise_line };
-        }
-      }
+    const output = await callReplicateMistral(prompt, REPLICATE_API_KEY);
+    const parsed = extractJsonFromText(output);
+    if (parsed) {
+      console.log("Roast caption generated:", JSON.stringify(parsed));
+      return parsed;
     }
   } catch (e) {
     console.error("Roast caption failed:", e);
