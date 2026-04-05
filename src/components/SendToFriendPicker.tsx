@@ -66,11 +66,11 @@ const SendToFriendPicker = ({ open, onOpenChange, contentType, content = "", met
       
       if (myParts && myParts.length > 0) {
         const convoIds = myParts.map(p => p.conversation_id);
-        const { data: convos } = await supabase
+        const { data: convos } = await (supabase
           .from("conversations")
           .select("id, name, is_group")
-          .in("id", convoIds)
-          .eq("is_group" as any, true);
+          .in("id", convoIds) as any)
+          .eq("is_group", true);
         setGroups((convos || []).filter((c: any) => c.name).map((c: any) => ({ id: c.id, name: c.name })));
       } else {
         setGroups([]);
