@@ -364,13 +364,15 @@ CRITICAL: Return ONLY valid JSON.`;
       ? getCall2SystemUnfiltered(call1Result.drip_score, gender, faceHidden, sceneType)
       : getCall2System(call1Result.drip_score, gender, faceHidden, sceneType, profileContext);
 
+    const call2Temp = unfiltered ? 1.2 : 0.9;
+    const call2Tokens = unfiltered ? 512 : 256;
     const call2Result = await callGemini(apiKey, [
       { role: "system", content: call2System },
       { role: "user", content: [
         { type: "text", text: "Look at this outfit and generate the killer_tag and praise_line based on the score and vibe rules provided." },
         { type: "image_url", image_url: { url: `data:image/jpeg;base64,${imageBase64}` } },
       ]},
-    ], 0.9, 256);
+    ], call2Temp, call2Tokens);
 
     console.log("Call 2 result:", JSON.stringify(call2Result));
 
