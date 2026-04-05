@@ -528,6 +528,14 @@ const CameraScreen = () => {
                 </div>
               ) : result ? (
                 <div className="relative">
+                  {/* Mode badge */}
+                  <div className="absolute top-3 left-3 z-10">
+                    <span className={`px-2 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider backdrop-blur-sm ${
+                      globalDripState.unfiltered ? "bg-red-500/80 text-white" : "bg-gold/80 text-white"
+                    }`}>
+                      {globalDripState.unfiltered ? "🔥 Savage" : "✨ Standard"}
+                    </span>
+                  </div>
                   <button onClick={clearImage} className="absolute top-3 right-3 z-10 w-8 h-8 rounded-full bg-foreground/60 text-primary-foreground flex items-center justify-center backdrop-blur-sm">
                     <X size={16} />
                   </button>
@@ -546,6 +554,23 @@ const CameraScreen = () => {
                     className="w-full mt-4 py-3 rounded-full bg-card border border-border/40 text-foreground/70 font-medium text-sm active:scale-[0.98] transition-transform flex items-center justify-center gap-2 tracking-wider shadow-lg shadow-black/30">
                     <Camera size={16} /> Try With Different Outfit
                   </motion.button>
+                </div>
+              ) : !analyzing && image ? (
+                <div className="rounded-2xl overflow-hidden relative">
+                  <img src={image} alt="Outfit" className="w-full object-contain" />
+                  <div className="absolute inset-0 bg-background/70 backdrop-blur-sm flex flex-col items-center justify-center gap-4 p-6">
+                    <p className="text-foreground font-medium text-center">Analysis failed — check the error above</p>
+                    <div className="flex gap-3">
+                      <button onClick={() => {
+                        if (fileRef.current) fileRef.current.click();
+                      }} className="px-4 py-2 rounded-xl gradient-gold text-white font-medium text-sm">
+                        Try Again
+                      </button>
+                      <button onClick={clearImage} className="px-4 py-2 rounded-xl bg-card border border-border text-foreground text-sm">
+                        Clear
+                      </button>
+                    </div>
+                  </div>
                 </div>
               ) : null}
             </motion.div>
