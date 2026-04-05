@@ -225,7 +225,11 @@ FINAL CHECK:
 ✅ Would he read the hype line and send it to his group chat?
 All pass → output. One fails → rewrite.
 
-Examples are only examples — generate unique content every time.
+ORIGINALITY RULES (NON-NEGOTIABLE):
+- NEVER copy or reuse the example lines above. They exist ONLY to show tone.
+- Every killer_tag and praise_line MUST be 100% original, never seen before.
+- If your output resembles any example above, REWRITE IT from scratch.
+- Surprise the user. Be unpredictable. Channel pure creative chaos.
 
 Return EXACTLY: {"killer_tag":"2-3 word tag + emoji","praise_line":"one raw sentence, no period at end"}
 CRITICAL: Return ONLY valid JSON. No markdown, no explanation.`;
