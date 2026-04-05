@@ -209,28 +209,17 @@ const saveDripToHistory = async (image: string, result: RatingResult, userId?: s
   }
 };
 
-// Check cache for existing result by image hash
-const checkCache = async (imageHash: string, userId?: string): Promise<RatingResult | null> => {
+// Check cache for existing result by image hash — MODE-AWARE
+const checkCache = async (imageHash: string, userId?: string, unfiltered?: boolean): Promise<RatingResult | null> => {
+  const modeKey = unfiltered ? "savage" : "standard";
   // Check localStorage first
   try {
     const cached = JSON.parse(localStorage.getItem("drip-history") || "[]");
-    const match = cached.find((e: any) => e.imageHash === imageHash);
+    const match = cached.find((e: any) => e.imageHash === imageHash && (e.mode || "standard") === modeKey);
     if (match?.fullResult) return match.fullResult;
   } catch {}
 
-  // Check DB
-  if (userId) {
-    try {
-      const { data } = await supabase
-        .from("drip_history" as any)
-        .select("full_result")
-        .eq("user_id", userId)
-        .eq("image_hash", imageHash)
-        .order("created_at", { ascending: false })
-        .limit(1) as any;
-      if (data?.[0]?.full_result) return data[0].full_result as RatingResult;
-    } catch {}
-  }
+  // Skip DB cache for mode-aware lookups (DB doesn't store mode)
   return null;
 };
 
