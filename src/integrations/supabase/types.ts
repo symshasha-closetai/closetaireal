@@ -47,14 +47,20 @@ export type Database = {
         Row: {
           created_at: string
           id: string
+          is_group: boolean
+          name: string | null
         }
         Insert: {
           created_at?: string
           id?: string
+          is_group?: boolean
+          name?: string | null
         }
         Update: {
           created_at?: string
           id?: string
+          is_group?: boolean
+          name?: string | null
         }
         Relationships: []
       }
