@@ -48,34 +48,7 @@ async function callGemini(apiKey: string, messages: any[], temperature: number, 
   }
 }
 
-async function callLovableAI(messages: any[], temperature: number, maxTokens: number, model: string = "google/gemini-2.5-flash") {
-  const lovableKey = Deno.env.get("LOVABLE_API_KEY");
-  if (!lovableKey) throw new Error("LOVABLE_API_KEY not configured");
-  const res = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
-    method: "POST",
-    headers: { Authorization: `Bearer ${lovableKey}`, "Content-Type": "application/json" },
-    body: JSON.stringify({ model, messages, temperature, max_tokens: maxTokens }),
-  });
-  if (res.status === 429) throw { status: 429, message: "Rate limited, please try again later." };
-  if (res.status === 402) throw { status: 402, message: "AI credits exhausted. Please add funds." };
-  if (!res.ok) {
-    const t = await res.text();
-    console.error("Lovable AI error:", res.status, t);
-    throw new Error(`Lovable AI error: ${res.status}`);
-  }
-  const data = await res.json();
-  const content = data.choices?.[0]?.message?.content || "{}";
-  const cleaned = content.replace(/```json\n?/g, "").replace(/```\n?/g, "").trim();
-  try {
-    return JSON.parse(cleaned);
-  } catch {
-    const m = cleaned.match(/\{[\s\S]*\}/);
-    if (m) {
-      try { return JSON.parse(m[0]); } catch {}
-    }
-    throw new Error("Failed to parse Lovable AI response");
-  }
-}
+// Gateway removed — using direct Gemini API only
 
 const CALL1_SYSTEM = `You analyze outfit photos. Your ONLY job: detect if there's a human wearing clothes, and either score or roast.
 
