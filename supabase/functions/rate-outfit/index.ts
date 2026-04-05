@@ -36,12 +36,24 @@ async function callGemini(apiKey: string, messages: any[], temperature: number, 
   try {
     return JSON.parse(cleaned);
   } catch {
+    // Try to extract a JSON object even if truncated
     const m = cleaned.match(/\{[\s\S]*\}/);
     if (m) {
       try {
         return JSON.parse(m[0]);
-      } catch {
-      }
+      } catch {}
+    }
+    // Handle truncated JSON — try to close it
+    const truncated = cleaned.startsWith("{") ? cleaned : `{${cleaned}`;
+    // Try to extract key-value pairs from truncated JSON
+    const tagMatch = truncated.match(/"killer_tag"\s*:\s*"([^"]*)"/);
+    const praiseMatch = truncated.match(/"praise_line"\s*:\s*"([^"]*)"/);
+    if (tagMatch || praiseMatch) {
+      console.warn("Recovered from truncated JSON response");
+      return {
+        killer_tag: tagMatch?.[1] || "",
+        praise_line: praiseMatch?.[1] || "",
+      };
     }
     console.error("Failed to parse Gemini response:", cleaned.substring(0, 500));
     throw new Error("Failed to parse AI response");
