@@ -1,57 +1,63 @@
 
 
-## Plan: Replace Copy Bank with Live AI Caption Generation
+## Plan: Replace Lovable Gateway with Direct Replicate Mistral 7B for Savage Mode Captions
 
-### Problem
-The current system picks random pre-written captions from a static bank of 248 entries. These don't match the actual outfit — a guy in a suit might get "Bro Lost a Bet 💀". No AI, no sense, no sync.
+### What Changes
 
-### Fix
-Replace the copy bank with a live AI call (Call 2) that sees what Call 1 detected and generates a fresh, contextual killer tag + praise line every single time.
+The current Call 2 (caption generation) uses the Lovable AI Gateway with `google/gemini-2.5-flash`. You want to replace this with a direct call to **Replicate's Mistral 7B** using your existing `REPLICATE_API_KEY` — no Lovable gateway involved. The scores (drip, color, layering, confidence) get passed as inputs, and the Savage Mode badge (🔥) appears on the share card.
 
 ### Architecture
+
 ```text
-CURRENT (broken):
-  Call 1 (scoring) → random pick from 248 static lines → done
-  
-FIXED:
-  Call 1 (scoring + outfit_description) → Call 2 (live AI caption) → done
-  If Call 2 fails → retry once → tiny fallback
+CURRENT:
+  Call 1 (Gemini, scoring) → Call 2 (Lovable Gateway, gemini-2.5-flash) → caption
+
+NEW:
+  Call 1 (Gemini, scoring) → Call 2 (Replicate, Mistral 7B direct) → caption
+  Share card: adds 🔥 Savage Mode badge when mode=savage
 ```
 
-### Changes
+### File Changes
 
-**File: `supabase/functions/rate-outfit/index.ts`**
+#### 1. `supabase/functions/rate-outfit/index.ts`
 
-1. **Delete** the entire `COPY_BANK` object (~248 entries), `pickFromBank()`, `pickRoastFromBank()`, and `getScoreTier()` functions
+**Replace `generateCaption()` function** — remove the Lovable Gateway fetch, replace with a direct Replicate API call to `mistralai/mistral-7b-instruct-v0.3`:
 
-2. **Update Call 1 prompt** — add one field to the JSON output: `outfit_description` (10-15 word description of what the person is wearing). This gives Call 2 real context
+- Use `REPLICATE_API_KEY` (already configured as a secret)
+- Replicate prediction API: `POST https://api.replicate.com/v1/models/mistralai/mistral-7b-instruct-v0.3/predictions`
+- Pass the savage persona system prompt + user message containing: `drip_score`, `color_score`, `layering_score`, `confidence_rating`, `outfit_description`, gender, scene, mode
+- Poll for completion (Replicate is async — poll `GET /predictions/{id}` until `status=succeeded`)
+- Parse the output text for `killer_tag` and `praise_line` (JSON extraction from free text)
+- Keep the same retry + fallback logic (2 attempts, then minimal fallback captions)
 
-3. **Add Call 2** — a new function `generateCaption()` that calls the Lovable AI Gateway (`https://ai.gateway.lovable.dev/v1/chat/completions`) using `google/gemini-2.5-flash`:
-   - System prompt: the exact savage persona (savage best friend, Gen Z humor, chaotic but clever, focus only on outfit/vibe/confidence)
-   - User message: outfit description from Call 1 + score + gender + scene type + mode (standard vs savage)
-   - Uses **tool calling** for structured output — guarantees `{killer_tag, praise_line}` JSON, no parsing failures
-   - Standard mode: witty, fun, clever comparisons
-   - Savage mode: borderline viral, chaotic, "like a friend roasting you publicly"
+**Replace `generateRoastCaption()` function** — same change, direct Replicate call instead of Lovable Gateway.
 
-4. **Add roast Call 2** — for non-human images, generate a live roast caption instead of picking from a static roast bank. Uses the roast category from Call 1 (FOOD/ANIMAL/MEME etc.)
+**Key payload:**
+```typescript
+const input = {
+  prompt: `<s>[INST] ${systemPrompt}\n\nOutfit: ${outfitDescription}\nDrip Score: ${dripScore}/10\nColor Score: ${colorScore}/10\nLayering Score: ${layeringScore}/10\nConfidence: ${confidenceRating}/10\nGender: ${gender}\nScene: ${sceneType}\nMode: ${mode}\n\nReturn JSON: {"killer_tag":"...","praise_line":"..."} [/INST]`,
+  max_tokens: 150,
+  temperature: 0.9
+};
+```
 
-5. **Hybrid fallback** — if Call 2 fails, retry once. If still fails, use 4 minimal generic lines (one per tier) instead of the massive bank
+#### 2. `src/components/OutfitRatingCard.tsx`
 
-### Call 2 Details
+**Add `isSavage` prop** to `Props` type (boolean).
 
-The system prompt enforces:
-- killer_tag: max 5 words, savage/funny
-- praise_line: max 20 words, viral caption
-- Structure: relatable setup → twist → punchline
-- Mode-aware tone: standard = witty, savage = borderline viral chaos
-- Gender-aware: "bro/my guy" for male, "bestie/queen" for female
-- Scene-aware: plural language for couples/groups
+**Share card (`captureCard`)**: When `isSavage` is true, draw a small "🔥 SAVAGE MODE" badge in the top-right corner of the generated 9:16 PNG — gold text on a dark semi-transparent pill.
 
-Tool calling payload ensures structured JSON output — no `JSON.parse` failures.
+**Results UI**: Show a small 🔥 badge next to the killer tag when savage mode is active.
 
-### Expected Result
-- Every caption is fresh, unique, and actually describes what the person is wearing
-- Savage Mode produces genuinely funny, chaotic, screenshot-worthy content that syncs with the scene
-- Adds ~1-1.5s latency (worth it for contextual results)
-- Hybrid fallback ensures the app never breaks
+#### 3. `src/pages/CameraScreen.tsx`
+
+**Pass `isSavage` prop** to `OutfitRatingCard` — `isSavage={globalDripState.unfiltered}`.
+
+### Technical Notes
+
+- Replicate's API is async (returns a prediction ID, must poll for result). The function will poll with 1s intervals, max 30s timeout.
+- Mistral 7B is fast on Replicate (~2-4s for short prompts), so polling should complete quickly.
+- The prompt uses Mistral's `[INST]` format for instruction following.
+- No Lovable gateway involved anywhere — pure direct Replicate API.
+- `REPLICATE_API_KEY` is already in the project secrets.
 
