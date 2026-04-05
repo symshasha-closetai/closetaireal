@@ -140,7 +140,7 @@ const computeImageHash = (base64: string): string => {
 };
 
 // Save drip card to DB + localStorage cache
-const saveDripToHistory = async (image: string, result: RatingResult, userId?: string, imageHash?: string) => {
+const saveDripToHistory = async (image: string, result: RatingResult, userId?: string, imageHash?: string, unfiltered?: boolean) => {
   const entry = {
     id: `drip-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`,
     image,
@@ -148,6 +148,7 @@ const saveDripToHistory = async (image: string, result: RatingResult, userId?: s
     killerTag: result.killer_tag || "",
     praiseLine: result.praise_line || "",
     imageHash: imageHash || "",
+    mode: unfiltered ? "savage" : "standard",
     fullResult: result,
     timestamp: Date.now(),
   };
