@@ -485,6 +485,7 @@ CRITICAL: Return ONLY valid JSON.`;
 
     const call2Temp = unfiltered ? 1.2 : 0.9;
     const call2Tokens = unfiltered ? 512 : 256;
+    const call2Model = unfiltered ? "gemini-2.5-flash" : "gemini-2.5-flash-lite";
     const call2Result = await callGemini(apiKey, [
       { role: "system", content: call2System },
       {
@@ -494,7 +495,7 @@ CRITICAL: Return ONLY valid JSON.`;
           { type: "image_url", image_url: { url: `data:image/jpeg;base64,${imageBase64}` } },
         ],
       },
-    ], call2Temp, call2Tokens);
+    ], call2Temp, call2Tokens, call2Model);
 
     console.log("Call 2 result:", JSON.stringify(call2Result));
 
