@@ -382,8 +382,8 @@ serve(async (req) => {
       });
     }
 
-    const gender = styleProfile?.gender || "unknown";
-    const apiKey = getApiKey();
+    const imgSizeKb = Math.round(imageBase64.length * 3 / 4 / 1024);
+    console.log(`Request: mode=${unfiltered ? "savage" : "standard"}, gender=${gender}, imgSize=${imgSizeKb}KB`);
 
     let profileContext = "";
     if (styleProfile) {
@@ -407,8 +407,16 @@ serve(async (req) => {
       },
     ];
 
-    console.log("Call 1: Human detection + scoring (direct Gemini)...");
-    const call1Result = await callGemini(apiKey, call1Messages, 0.3, 512);
+    let call1Result;
+    try {
+      call1Result = await callGemini(apiKey, call1Messages, 0.3, 512);
+    } catch (e: any) {
+      console.error("Call 1 failed:", e);
+      return new Response(JSON.stringify({ error: e.message || "Call 1 failed", stage: "call1", model: "gemini-2.5-flash-lite", provider_status: e.status }), {
+        status: e.status === 429 || e.status === 402 ? e.status : 500,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
 
     console.log("Call 1 result:", JSON.stringify(call1Result).substring(0, 200));
 
