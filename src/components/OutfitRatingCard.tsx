@@ -223,13 +223,24 @@ const OutfitRatingCard = ({ image, imageBase64, result, wardrobeItems = [],
     ctx.fillStyle = "#0f0f0f";
     ctx.fillRect(0, 0, W, H);
 
-    // Draw outfit image — try fetch blob first, fallback to Image element for CORS
+    // Draw outfit image — prefer imageBase64 (no CORS), fallback to fetch
     const IMG_H = Math.round(H * 0.68);
     let imgBitmap: ImageBitmap | HTMLImageElement;
+    const imgSrc = imageBase64 || image;
     try {
-      const imgResponse = await fetch(image);
-      const imgBlob = await imgResponse.blob();
-      imgBitmap = await createImageBitmap(imgBlob);
+      if (imageBase64) {
+        // Use base64 data URL directly — no CORS issues
+        imgBitmap = await new Promise<HTMLImageElement>((resolve, reject) => {
+          const img = new Image();
+          img.onload = () => resolve(img);
+          img.onerror = () => reject(new Error("Base64 image load failed"));
+          img.src = imageBase64;
+        });
+      } else {
+        const imgResponse = await fetch(image);
+        const imgBlob = await imgResponse.blob();
+        imgBitmap = await createImageBitmap(imgBlob);
+      }
     } catch {
       imgBitmap = await new Promise<HTMLImageElement>((resolve, reject) => {
         const img = new Image();
@@ -565,7 +576,7 @@ const OutfitRatingCard = ({ image, imageBase64, result, wardrobeItems = [],
     <div className="space-y-4">
       {/* Hero Photo Card */}
       <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="rounded-2xl overflow-hidden shadow-lg relative shimmer">
-        <img src={image} alt="Outfit" className="w-full object-contain" />
+        <img src={image} alt="Outfit" className="w-full min-h-[300px] object-contain" />
         
         {/* Dripd branding */}
         <div className="absolute top-4 left-4 z-10">

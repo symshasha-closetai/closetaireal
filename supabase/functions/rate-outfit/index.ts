@@ -225,7 +225,11 @@ FINAL CHECK:
 ✅ Would he read the hype line and send it to his group chat?
 All pass → output. One fails → rewrite.
 
-Examples are only examples — generate unique content every time.
+ORIGINALITY RULES (NON-NEGOTIABLE):
+- NEVER copy or reuse the example lines above. They exist ONLY to show tone.
+- Every killer_tag and praise_line MUST be 100% original, never seen before.
+- If your output resembles any example above, REWRITE IT from scratch.
+- Surprise the user. Be unpredictable. Channel pure creative chaos.
 
 Return EXACTLY: {"killer_tag":"2-3 word tag + emoji","praise_line":"one raw sentence, no period at end"}
 CRITICAL: Return ONLY valid JSON. No markdown, no explanation.`;
@@ -327,13 +331,15 @@ Generate:
 Return EXACTLY: {"killer_tag":"2-3 words + emoji","praise_line":"one sentence roast no period"}
 CRITICAL: Return ONLY valid JSON.`;
 
+      const roastTemp = unfiltered ? 1.2 : 0.9;
+      const roastTokens = unfiltered ? 512 : 256;
       const roastCall2 = await callGemini(apiKey, [
         { role: "system", content: roastPrompt },
         { role: "user", content: [
           { type: "text", text: "Look at this image and generate a funny killer_tag and roast praise_line for it." },
           { type: "image_url", image_url: { url: `data:image/jpeg;base64,${imageBase64}` } },
         ]},
-      ], 0.9, 256);
+      ], roastTemp, roastTokens);
 
       console.log("Roast Call 2 result:", JSON.stringify(roastCall2));
 
@@ -360,13 +366,15 @@ CRITICAL: Return ONLY valid JSON.`;
       ? getCall2SystemUnfiltered(call1Result.drip_score, gender, faceHidden, sceneType)
       : getCall2System(call1Result.drip_score, gender, faceHidden, sceneType, profileContext);
 
+    const call2Temp = unfiltered ? 1.2 : 0.9;
+    const call2Tokens = unfiltered ? 512 : 256;
     const call2Result = await callGemini(apiKey, [
       { role: "system", content: call2System },
       { role: "user", content: [
         { type: "text", text: "Look at this outfit and generate the killer_tag and praise_line based on the score and vibe rules provided." },
         { type: "image_url", image_url: { url: `data:image/jpeg;base64,${imageBase64}` } },
       ]},
-    ], 0.9, 256);
+    ], call2Temp, call2Tokens);
 
     console.log("Call 2 result:", JSON.stringify(call2Result));
 

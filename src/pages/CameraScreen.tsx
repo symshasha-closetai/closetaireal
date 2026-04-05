@@ -450,7 +450,7 @@ const CameraScreen = () => {
               <p className="text-sm text-muted-foreground mt-1">Upload or capture your outfit for styling insights</p>
             </div>
             <div className="flex items-center gap-2">
-              <span className="text-xs text-muted-foreground font-medium">Unfiltered 🔥</span>
+              <span className="text-xs text-muted-foreground font-medium whitespace-nowrap">Savage Mode 😏</span>
               <Switch
                 checked={globalDripState.unfiltered}
                 onCheckedChange={(v) => updateGlobal({ unfiltered: v })}
