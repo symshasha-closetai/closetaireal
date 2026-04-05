@@ -441,7 +441,7 @@ CRITICAL: Return ONLY valid JSON.`;
 
       const roastTemp = unfiltered ? 1.2 : 0.9;
       const roastTokens = unfiltered ? 512 : 256;
-      const roastModel = unfiltered ? "gemini-2.5-flash" : "gemini-2.5-flash-lite";
+      const roastModel = unfiltered ? "gemini-1.5-pro" : "gemini-2.5-flash-lite";
       const roastCall2 = await callGemini(apiKey, [
         { role: "system", content: roastPrompt },
         {
