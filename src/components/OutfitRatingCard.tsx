@@ -1,6 +1,6 @@
 import { useState, useRef, useCallback } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { Share2, ShoppingBag, Shirt, Footprints, Watch, Gem, Loader2, X, Info, Download, Heart, ScanLine, Check, Send } from "lucide-react";
+import { Share2, ShoppingBag, Shirt, Footprints, Watch, Gem, Loader2, X, Info, Download, Heart, ScanLine, Check, Swords } from "lucide-react";
 import SendToFriendPicker from "./SendToFriendPicker";
 import ScoreRing from "./ScoreRing";
 import { toast } from "sonner";
