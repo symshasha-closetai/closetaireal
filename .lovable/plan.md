@@ -1,71 +1,57 @@
 
 
-## Plan: Fix Welcome Toast + Overhaul Savage Mode with AI-Validated Copy Bank
+## Plan: Replace Copy Bank with Live AI Caption Generation
 
-### Two Issues
+### Problem
+The current system picks random pre-written captions from a static bank of 248 entries. These don't match the actual outfit — a guy in a suit might get "Bro Lost a Bet 💀". No AI, no sense, no sync.
 
-**1. Welcome toast fires every session**
-- In `useAuth.tsx` line 72, `toast("Welcome to Dripd!")` fires whenever a profile doesn't exist and gets created. But it also fires on first login after signup (expected) AND can fire if profile fetch returns null due to timing. 
-- Fix: only show it when a brand-new profile row is inserted (first-time user). Use a localStorage flag `dripd_welcomed` so it never repeats.
+### Fix
+Replace the copy bank with a live AI call (Call 2) that sees what Call 1 detected and generates a fresh, contextual killer tag + praise line every single time.
 
-**2. Savage Mode is broken — `gender` variable is undefined**
-- **Root cause found**: In `rate-outfit/index.ts` line 362, the request body destructures `imageBase64, imageUrl, styleProfile, unfiltered` but **never extracts `gender`**. Yet `gender` is used on lines 386, 404, and 513. This means every request sends `gender=undefined` to the AI, breaking the gender-based tone logic that Savage Mode depends on.
-- Fix: extract `gender` from `styleProfile.gender` and default to `"unknown"`.
-
-**3. Replace AI-generated copy with a pre-built bank of 200+ killer tags and praise lines**
-- Instead of relying on Call 2 to generate copy (which fails due to safety filters, truncation, and undefined gender), build a massive bank of lines using AI beforehand, then select from them at runtime.
-- The bank will be organized by: `gender` (male/female/unknown) × `scene_type` (solo/couple/group) × `score_tier` (0-4, 4.1-6, 6.1-8, 8.1-10) × `mode` (standard/savage).
-- Each combination gets ~10-15 unique entries — totaling 200+ entries.
-- Lines will be controversial, hilarious, and screenshot-worthy — pre-validated by AI before inclusion.
-- At runtime: randomly select from the matching bucket, track used entries per user session to prevent repeats.
-
----
-
-### Implementation
-
-#### File 1: `src/hooks/useAuth.tsx`
-- Add localStorage check before showing welcome toast:
-  ```
-  if (!localStorage.getItem("dripd_welcomed")) {
-    localStorage.setItem("dripd_welcomed", "1");
-    toast("Welcome to Dripd!", ...);
-  }
-  ```
-
-#### File 2: `supabase/functions/rate-outfit/index.ts`
-- **Fix gender extraction** (line ~362): `const gender = styleProfile?.gender || "unknown";`
-- **Replace Call 2 entirely** with a lookup from a pre-built copy bank embedded in the function.
-- The bank will be a large constant object keyed by `{mode}_{scene}_{tier}_{gender}`, each containing an array of `{killer_tag, praise_line}` objects.
-- At runtime: pick a random entry from the matching bucket. No more Call 2 API call needed — this eliminates safety blocks, truncation, and latency.
-- Keep `needsCopyFallback()` as a validation layer — if the selected entry somehow fails validation, pick another from the same bucket.
-- **Generate the bank using AI** (one-time script run) with entries like:
-  - Male, Savage, Elite: `{"killer_tag": "Built Different 😈", "praise_line": "no cap you walked in like you own the building and honestly? you might"}`
-  - Female, Savage, Needs Work: `{"killer_tag": "Brave Choice 💀", "praise_line": "lowkey the confidence is doing more work than the outfit and that's saying something"}`
-  - Couple, Standard, Fire: `{"killer_tag": "Power Pair 🔥", "praise_line": "y'all look like the couple everyone secretly wants to be"}`
-
-#### File 3: One-time AI script to generate the copy bank
-- Use `lovable_ai.py` to generate all entries organized by category.
-- Each entry must pass quality checks: has wit, matches tier energy, has slang for savage mode, sounds plural for couples/groups.
-- Output as JSON, then embed directly in the edge function.
-
----
-
-### Architecture Change
-
+### Architecture
 ```text
-BEFORE:
-  Call 1 (scoring) → Call 2 (copy generation) → validate → fallback
-  Problems: Call 2 fails (safety), gender undefined, latency
-
-AFTER:
-  Call 1 (scoring) → lookup from pre-built bank → done
-  Benefits: instant, no safety issues, always works, 200+ unique lines
+CURRENT (broken):
+  Call 1 (scoring) → random pick from 248 static lines → done
+  
+FIXED:
+  Call 1 (scoring + outfit_description) → Call 2 (live AI caption) → done
+  If Call 2 fails → retry once → tiny fallback
 ```
 
-### Expected Outcome
-- Welcome toast shows only once per device, ever.
-- Savage Mode works immediately — no more API failures for copy.
-- Every result has a unique, high-quality, tier-appropriate killer tag and praise line.
-- Response time drops by ~2-3 seconds (no Call 2).
-- Lines are genuinely controversial/funny/shareable as requested.
+### Changes
+
+**File: `supabase/functions/rate-outfit/index.ts`**
+
+1. **Delete** the entire `COPY_BANK` object (~248 entries), `pickFromBank()`, `pickRoastFromBank()`, and `getScoreTier()` functions
+
+2. **Update Call 1 prompt** — add one field to the JSON output: `outfit_description` (10-15 word description of what the person is wearing). This gives Call 2 real context
+
+3. **Add Call 2** — a new function `generateCaption()` that calls the Lovable AI Gateway (`https://ai.gateway.lovable.dev/v1/chat/completions`) using `google/gemini-2.5-flash`:
+   - System prompt: the exact savage persona (savage best friend, Gen Z humor, chaotic but clever, focus only on outfit/vibe/confidence)
+   - User message: outfit description from Call 1 + score + gender + scene type + mode (standard vs savage)
+   - Uses **tool calling** for structured output — guarantees `{killer_tag, praise_line}` JSON, no parsing failures
+   - Standard mode: witty, fun, clever comparisons
+   - Savage mode: borderline viral, chaotic, "like a friend roasting you publicly"
+
+4. **Add roast Call 2** — for non-human images, generate a live roast caption instead of picking from a static roast bank. Uses the roast category from Call 1 (FOOD/ANIMAL/MEME etc.)
+
+5. **Hybrid fallback** — if Call 2 fails, retry once. If still fails, use 4 minimal generic lines (one per tier) instead of the massive bank
+
+### Call 2 Details
+
+The system prompt enforces:
+- killer_tag: max 5 words, savage/funny
+- praise_line: max 20 words, viral caption
+- Structure: relatable setup → twist → punchline
+- Mode-aware tone: standard = witty, savage = borderline viral chaos
+- Gender-aware: "bro/my guy" for male, "bestie/queen" for female
+- Scene-aware: plural language for couples/groups
+
+Tool calling payload ensures structured JSON output — no `JSON.parse` failures.
+
+### Expected Result
+- Every caption is fresh, unique, and actually describes what the person is wearing
+- Savage Mode produces genuinely funny, chaotic, screenshot-worthy content that syncs with the scene
+- Adds ~1-1.5s latency (worth it for contextual results)
+- Hybrid fallback ensures the app never breaks
 
