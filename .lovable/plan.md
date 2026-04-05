@@ -1,63 +1,63 @@
-## Fix Plan: 5 Issues
 
-### 1. Shared Card — Remove sub-scores, minimize whitespace
 
-**File: `src/components/OutfitRatingCard.tsx**` (captureCard function, lines 369-418)
+## Fix: Human Detection Gate + Actually Savage Roasts
 
-Remove the entire sub-scores row and separator from the canvas. Keep only: image, drip score, confidence score, killer tag, praise line, CTA. This removes ~60px of vertical space. Also increase `IMG_H` ratio from `0.68` to `0.78` to give more space to the photo and less to the panel. Reposition praise line directly below the scores row (no sub-scores gap).
+### Problem Analysis
 
-### 2. Analyze-clothing — Only detect items with 40-50%+ visibility; smarter watch handling
+Looking at the screenshot: the image is a **screenshot of an app/text** with a tiny circular profile picture. The AI detected the tiny avatar as "a human" and scored the outfit — giving 6.5 drip and "CLASSIC COOL 😎" to what is essentially a text screenshot. Two failures:
 
-**File: `supabase/functions/analyze-clothing/index.ts**` (system prompt, line 24-35)
+1. **Human Check is too loose** — A tiny avatar/icon in a screenshot should NOT count as "human detected." The person must be the **dominant subject** occupying significant frame space.
+2. **Savage mode roasts are tame** — "I rate fits not meals" energy is NOT savage. The user wants roasts that are genuinely abusive, hilarious, controversial — the kind that make people screenshot and share because they're laughing or outraged.
 
-Update the system prompt to add:
+### Changes
 
-- "Only include items that are at least 40-50% visible in the image. If less than half the item is visible, skip it."
-- "For watches: if the dial/face is not visible, classify as just 'Watch' (not 'Smartwatch' or 'Analog Watch'). Only specify smartwatch/analog if the dial is clearly visible."
-- "For watch image generation context: describe the watch as showing only the strap/band portion visible in the image."
+**File: `supabase/functions/rate-outfit/index.ts`**
 
-### 3. Create Group fails — RLS policy blocks adding other participants
+**1. Fix CALL1_SYSTEM prompt — Dominant subject rule**
 
-**Root cause:** The `conversation_participants` INSERT policy requires `user_id = auth.uid() OR is_conversation_participant(auth.uid(), conversation_id)`. When inserting all participants in a single batch, the creator's own row may not be committed yet, so adding friends fails.
+Add to the human detection step:
 
-**Fix (two-part):**
+```
+DOMINANT SUBJECT RULE (CRITICAL):
+A human counts ONLY if they are the DOMINANT subject of the image — taking up at least 30-40% of the frame and clearly wearing a visible outfit.
+DO NOT count:
+- Tiny profile pictures, avatars, or icons within screenshots
+- Small figures in the background of a landscape
+- Faces in memes, thumbnails, or embedded images
+- People who are less than 20% of the frame
+If the dominant content is text, a screenshot, a diagram, food, an object, etc. — it is NOT a fashion photo. ROAST IT.
+```
 
-**A. Database migration** — Create a `create_group_conversation` SECURITY DEFINER function that atomically:
+**2. Overhaul roast prompts — Make them actually savage**
 
-1. Creates the conversation with `is_group = true` and the group name
-2. Inserts all participants (creator + members) in one transaction
-3. Returns the conversation ID
+Replace the filtered roast prompt (lines 391-404) and the unfiltered roast prompt (`getUnfilteredRoastPrompt`, lines 291-313) with dramatically more aggressive versions:
 
-This bypasses RLS entirely (like `find_or_create_conversation` does for 1:1 chats).
+**Filtered roast** — witty, sarcastic, slightly mean but shareable:
+- Focus ONLY on the dominant thing in the image
+- Funny enough to screenshot
+- Has bite but not truly offensive
 
-**B. File: `src/pages/MessagesScreen.tsx**` (handleCreateGroup, lines 194-235) — Replace the manual insert logic with a single `supabase.rpc("create_group_conversation", { group_name, member_ids })` call.
+**Unfiltered/Savage roast** — genuinely abusive comedy:
+- Think "roast battle" energy, comedy central roast vibes
+- Cuss words encouraged for comedy
+- Should make people either laugh until they cry or get genuinely mad
+- Attack the dominant subject relentlessly
+- Controversial takes that people share because they can't believe an AI said that
+- One-liners that hit like a real person who trash-talks everything
 
-### 4. Wardrobe items fail to save
+Example energy for savage mode:
+- Screenshot → "bro really sent me someone else's screen like I'm tech support 💀"
+- Food → "the only thing getting cooked here is whatever the hell that is on the plate"
+- Random object → "you could've sent literally anything else and it would've been a better use of my time"
 
-**Root cause analysis:** The `processQueue` function has retry logic (3 attempts) for both R2 upload and DB insert. The "Failed to save items" error likely comes from:
+**3. Add dominant-subject instruction to roast Call 2**
 
-- R2 upload timing out or CORS issues on the edge function
-- The `generate-clothing-image` call failing silently (caught with empty `catch {}`)
+Both roast prompts should include: "Focus ONLY on the dominant subject — the thing taking up the most space. Ignore small elements, icons, watermarks, or background details."
 
-**File: `src/pages/WardrobeScreen.tsx**` (processQueue, lines 598-685)
+**4. Strengthen isRoast gate**
 
-- Add better error logging in the empty `catch {}` blocks (lines 615, 625)
-- If `generate-clothing-image` fails, immediately fall back to uploading the compressed original image instead of relying on the retry loop (which re-uploads the same compressed blob without the AI image)
-- Add a toast when individual items fail during background processing so the user knows which items failed
-
-### 5. Drip Check broken image
-
-**Root cause:** The hero image at line 579 uses `image` (which is a blob URL from `URL.createObjectURL`). Blob URLs expire when the page is navigated away and back, or when the object is revoked. The `min-h-[300px]` fix prevents collapse but still shows a broken image icon.
-
-**File: `src/components/OutfitRatingCard.tsx**` (line 579) + `**src/pages/CameraScreen.tsx**`
-
-- In OutfitRatingCard: Use `imageBase64 || image` as the `src` for the hero `<img>`. The `imageBase64` is a data URL that never expires, while `image` (blob URL) can expire.
-- Add an `onError` handler on the `<img>` that falls back to `imageBase64` if the blob URL fails.
+Add an additional check: if `call1Result.drip_reason` or `call1Result.advice` contains "no human" or "not a fashion photo" signals, force roast mode even if sub-scores aren't all zero (in case AI gives non-zero scores despite saying no human).
 
 ### Files to edit
+- `supabase/functions/rate-outfit/index.ts` (CALL1_SYSTEM prompt, roast prompts, isRoast logic)
 
-1. `src/components/OutfitRatingCard.tsx` — Simplify shared card (remove sub-scores) + fix broken image with imageBase64 fallback
-2. `supabase/functions/analyze-clothing/index.ts` — Visibility threshold + watch logic in prompt
-3. New migration SQL — `create_group_conversation` RPC function
-4. `src/pages/MessagesScreen.tsx` — Use new RPC for group creation
-5. `src/pages/WardrobeScreen.tsx` — Better error handling in processQueue
