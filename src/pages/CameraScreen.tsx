@@ -405,7 +405,7 @@ const CameraScreen = () => {
       r.readAsDataURL(file);
     });
     updateGlobal({ image: url, imageBase64: dataUrl, result: null });
-    runAnalysis(file, user?.id, styleProfile, styleProfile?.gender);
+    runAnalysis(file, user?.id, styleProfile, styleProfile?.gender, globalDripState.unfiltered);
   };
 
   const cancelAnalysis = () => {
