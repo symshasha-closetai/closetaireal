@@ -16,11 +16,11 @@ function getApiKey(): string {
   return keys[Math.floor(Math.random() * keys.length)];
 }
 
-async function callGemini(apiKey: string, messages: any[], temperature: number, maxTokens: number) {
+async function callGemini(apiKey: string, messages: any[], temperature: number, maxTokens: number, model: string = "gemini-2.5-flash-lite") {
   const res = await fetch("https://generativelanguage.googleapis.com/v1beta/openai/chat/completions", {
     method: "POST",
     headers: { Authorization: `Bearer ${apiKey}`, "Content-Type": "application/json" },
-    body: JSON.stringify({ model: "gemini-2.5-flash-lite", messages, temperature, max_tokens: maxTokens }),
+    body: JSON.stringify({ model, messages, temperature, max_tokens: maxTokens }),
   });
   if (res.status === 429) throw { status: 429, message: "Rate limited, please try again later." };
   if (res.status === 402) throw { status: 402, message: "AI credits exhausted. Please add funds." };
@@ -441,6 +441,7 @@ CRITICAL: Return ONLY valid JSON.`;
 
       const roastTemp = unfiltered ? 1.2 : 0.9;
       const roastTokens = unfiltered ? 512 : 256;
+      const roastModel = unfiltered ? "gemini-2.5-flash" : "gemini-2.5-flash-lite";
       const roastCall2 = await callGemini(apiKey, [
         { role: "system", content: roastPrompt },
         {
@@ -450,7 +451,7 @@ CRITICAL: Return ONLY valid JSON.`;
             { type: "image_url", image_url: { url: `data:image/jpeg;base64,${imageBase64}` } },
           ],
         },
-      ], roastTemp, roastTokens);
+      ], roastTemp, roastTokens, roastModel);
 
       console.log("Roast Call 2 result:", JSON.stringify(roastCall2));
 
@@ -484,6 +485,7 @@ CRITICAL: Return ONLY valid JSON.`;
 
     const call2Temp = unfiltered ? 1.2 : 0.9;
     const call2Tokens = unfiltered ? 512 : 256;
+    const call2Model = unfiltered ? "gemini-2.5-flash" : "gemini-2.5-flash-lite";
     const call2Result = await callGemini(apiKey, [
       { role: "system", content: call2System },
       {
@@ -493,7 +495,7 @@ CRITICAL: Return ONLY valid JSON.`;
           { type: "image_url", image_url: { url: `data:image/jpeg;base64,${imageBase64}` } },
         ],
       },
-    ], call2Temp, call2Tokens);
+    ], call2Temp, call2Tokens, call2Model);
 
     console.log("Call 2 result:", JSON.stringify(call2Result));
 
