@@ -261,7 +261,7 @@ const runAnalysis = async (file: File, userId: string | undefined, styleProfile:
     // Parallel: check cache + upload to storage
     const imageHash = computeImageHash(imageBase64);
     
-    const cachePromise = checkCache(imageHash, userId);
+    const cachePromise = checkCache(imageHash, userId, unfiltered);
     let uploadPromise: Promise<string | null> = Promise.resolve(null);
     if (userId) {
       const path = `${userId}/drip-${Date.now()}.jpg`;
