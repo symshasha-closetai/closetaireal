@@ -16,11 +16,11 @@ function getApiKey(): string {
   return keys[Math.floor(Math.random() * keys.length)];
 }
 
-async function callGemini(apiKey: string, messages: any[], temperature: number, maxTokens: number) {
+async function callGemini(apiKey: string, messages: any[], temperature: number, maxTokens: number, model: string = "gemini-2.5-flash-lite") {
   const res = await fetch("https://generativelanguage.googleapis.com/v1beta/openai/chat/completions", {
     method: "POST",
     headers: { Authorization: `Bearer ${apiKey}`, "Content-Type": "application/json" },
-    body: JSON.stringify({ model: "gemini-2.5-flash-lite", messages, temperature, max_tokens: maxTokens }),
+    body: JSON.stringify({ model, messages, temperature, max_tokens: maxTokens }),
   });
   if (res.status === 429) throw { status: 429, message: "Rate limited, please try again later." };
   if (res.status === 402) throw { status: 402, message: "AI credits exhausted. Please add funds." };
