@@ -410,6 +410,9 @@ const LeaderboardTab = () => {
     setLoading(false);
     weeklyCache = { entries: combined, friendIds: friends, ts: Date.now() };
     if (user) setCache(CACHE_KEYS.LEADERBOARD_WEEKLY, user.id, { entries: combined, friendIds: friends });
+    // Pre-cache leaderboard images
+    const imageUrls = combined.map(e => e.image_url).filter(Boolean) as string[];
+    precacheImages(imageUrls);
   }, [user?.id]);
 
   useEffect(() => {
