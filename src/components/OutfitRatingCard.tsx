@@ -31,6 +31,7 @@ type Props = {
   image: string;
   imageBase64?: string;
   result: RatingResult;
+  isSavage?: boolean;
   wardrobeItems?: WardrobeItem[];
   wardrobeSuggestions: Suggestion[] | null;
   shoppingSuggestions: Suggestion[] | null;
@@ -66,7 +67,7 @@ const findWardrobeMatch = (suggestion: Suggestion, wardrobeItems: WardrobeItem[]
   );
 };
 
-const OutfitRatingCard = ({ image, imageBase64, result, wardrobeItems = [],
+const OutfitRatingCard = ({ image, imageBase64, result, isSavage = false, wardrobeItems = [],
   wardrobeSuggestions, shoppingSuggestions, detectedItems, suggestionImages, savedSuggestions,
   onWardrobeSuggestionsChange, onShoppingSuggestionsChange, onDetectedItemsChange, onSuggestionImagesChange, onSavedSuggestionsChange
 }: Props) => {
@@ -356,6 +357,22 @@ const OutfitRatingCard = ({ image, imageBase64, result, wardrobeItems = [],
       ctx.fillText(result.killer_tag, (W - tagW) / 2, panelY + 30);
     }
 
+    // 🔥 Savage Mode badge on share card
+    if (isSavage) {
+      const badgeText = "🔥 SAVAGE MODE";
+      ctx.font = "700 11px 'Inter', 'Helvetica', sans-serif";
+      const badgeW = ctx.measureText(badgeText).width + 16;
+      const badgeH = 22;
+      const badgeX = W - badgeW - 16;
+      const badgeY = 16;
+      ctx.fillStyle = "rgba(0,0,0,0.7)";
+      ctx.beginPath();
+      ctx.roundRect(badgeX, badgeY, badgeW, badgeH, 11);
+      ctx.fill();
+      ctx.fillStyle = "#FFD700";
+      ctx.fillText(badgeText, badgeX + 8, badgeY + 15);
+    }
+
     // Praise line — directly after scores (no sub-scores)
     if (result.praise_line) {
       ctx.fillStyle = "rgba(255,255,255,0.8)";
@@ -564,7 +581,13 @@ const OutfitRatingCard = ({ image, imageBase64, result, wardrobeItems = [],
                 initial={{ opacity: 0, scale: 0.8 }}
                 animate={{ opacity: 1, scale: 1 }}
                 transition={{ delay: 0.5, type: "spring", stiffness: 200 }}
+                className="flex flex-col items-center gap-1"
               >
+                {isSavage && (
+                  <span className="text-[9px] font-bold uppercase tracking-[0.15em] px-2 py-0.5 rounded-full bg-black/60 text-amber-400 backdrop-blur-sm">
+                    🔥 Savage
+                  </span>
+                )}
                 <span className="text-[12px] font-semibold uppercase tracking-[0.15em] text-white" style={{ textShadow: "0 1px 6px rgba(0,0,0,0.9), 0 0 2px rgba(0,0,0,0.7)" }}>
                   {result.killer_tag}
                 </span>
