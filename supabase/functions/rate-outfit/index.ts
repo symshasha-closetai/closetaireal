@@ -55,7 +55,7 @@ IF HUMAN DETECTED — score the outfit:
 - posture_score (0-10): posture, stance, pose, body language, confidence
 - layering_score (0-10): layering, accessories, styling details, texture mix
 - face_score (0-10): facial expression, smile, energy, vibe
-- drip_score = color_score*0.3 + posture_score*0.3 + layering_score*0.25 + face_score*0.15
+- drip_score: set to 0 (will be calculated server-side from sub-scores)
 - confidence_rating (0-10): overall confidence/body language
 - Provide a short reason for each score and a 1-line practical styling tip as "advice"
 - Detect: solo/couple/group, face hidden or visible
