@@ -541,7 +541,7 @@ const CameraScreen = () => {
                     <X size={16} />
                   </button>
                   <OutfitRatingCard
-                    image={image} imageBase64={imageBase64 || undefined} result={result} wardrobeItems={wardrobeItems}
+                    image={image} imageBase64={imageBase64 || undefined} result={result} isSavage={globalDripState.unfiltered} wardrobeItems={wardrobeItems}
                     wardrobeSuggestions={wardrobeSuggestions} shoppingSuggestions={shoppingSuggestions}
                     detectedItems={detectedItems} suggestionImages={suggestionImages} savedSuggestions={savedSuggestions}
                     onWardrobeSuggestionsChange={(v) => updateGlobal({ wardrobeSuggestions: v })}

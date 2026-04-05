@@ -425,7 +425,7 @@ serve(async (req) => {
     const outfitDescription = call1Result.outfit_description || "person wearing an outfit";
     console.log(`Caption gen: mode=${mode}, scene=${sceneType}, gender=${gender}, score=${call1Result.drip_score}, outfit="${outfitDescription}"`);
 
-    const copy = await generateCaption(outfitDescription, call1Result.drip_score, gender, sceneType, mode);
+    const copy = await generateCaption(outfitDescription, call1Result.drip_score, call1Result.color_score || 0, call1Result.layering_score || 0, call1Result.confidence_rating || 0, gender, sceneType, mode);
     console.log("Generated caption:", JSON.stringify(copy));
 
     const finalResult = {

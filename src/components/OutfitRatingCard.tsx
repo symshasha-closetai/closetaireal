@@ -581,7 +581,13 @@ const OutfitRatingCard = ({ image, imageBase64, result, isSavage = false, wardro
                 initial={{ opacity: 0, scale: 0.8 }}
                 animate={{ opacity: 1, scale: 1 }}
                 transition={{ delay: 0.5, type: "spring", stiffness: 200 }}
+                className="flex flex-col items-center gap-1"
               >
+                {isSavage && (
+                  <span className="text-[9px] font-bold uppercase tracking-[0.15em] px-2 py-0.5 rounded-full bg-black/60 text-amber-400 backdrop-blur-sm">
+                    🔥 Savage
+                  </span>
+                )}
                 <span className="text-[12px] font-semibold uppercase tracking-[0.15em] text-white" style={{ textShadow: "0 1px 6px rgba(0,0,0,0.9), 0 0 2px rgba(0,0,0,0.7)" }}>
                   {result.killer_tag}
                 </span>
