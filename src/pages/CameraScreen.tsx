@@ -535,7 +535,7 @@ const CameraScreen = () => {
                   <motion.button initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.3 }}
                     onClick={clearImage}
                     className="w-full mt-4 py-3 rounded-full border border-border/40 text-foreground/70 font-medium text-sm active:scale-[0.98] transition-transform flex items-center justify-center gap-2 tracking-wider">
-                    <Camera size={16} /> Check Another Photo
+                    <Camera size={16} /> Try With Different Outfit
                   </motion.button>
                 </div>
               ) : null}

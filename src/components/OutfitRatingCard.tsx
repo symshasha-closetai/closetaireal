@@ -817,59 +817,6 @@ const OutfitRatingCard = ({ image, imageBase64, result, wardrobeItems = [],
           </div>
         )}
 
-        {shoppingSuggestions === null ? (
-          <button
-            onClick={() => fetchSuggestions("shopping")}
-            disabled={loadingShopping}
-            className="w-full flex items-center justify-center gap-2.5 py-3.5 rounded-2xl bg-card border border-border/30 text-sm font-medium text-foreground/80 active:scale-[0.98] transition-transform disabled:opacity-60"
-          >
-            {loadingShopping ? <Loader2 size={16} className="animate-spin" /> : <ShoppingBag size={16} />}
-            {loadingShopping ? "Finding items..." : "Get Shopping Suggestions"}
-          </button>
-        ) : shoppingSuggestions.length > 0 ? (
-          <div className="rounded-2xl bg-card border border-border/30 p-5 space-y-3">
-            <h3 className="text-xs uppercase tracking-[0.15em] text-foreground/50">Shopping Suggestions</h3>
-            <div className="space-y-2">
-              {shoppingSuggestions.map((s, i) => {
-                const Icon = categoryIcon(s.category);
-                const imgSrc = suggestionImages[i];
-                const isLoading = loadingImages[i];
-                if (s.image_prompt && suggestionImages[i] === undefined && !loadingImages[i]) {
-                  generateSuggestionImage(i, s.image_prompt);
-                }
-                return (
-                  <div key={i} className="border border-border/20 rounded-xl p-4 flex gap-3">
-                    {isLoading ? (
-                      <div className="w-12 h-12 rounded-lg bg-muted flex items-center justify-center flex-shrink-0">
-                        <Loader2 size={14} className="animate-spin text-muted-foreground" />
-                      </div>
-                    ) : imgSrc ? (
-                      <img src={imgSrc} alt={s.item_name} className="w-12 h-12 rounded-lg object-cover flex-shrink-0" />
-                    ) : (
-                      <div className="w-12 h-12 rounded-lg bg-muted flex items-center justify-center flex-shrink-0">
-                        <Icon size={18} className="text-muted-foreground" />
-                      </div>
-                    )}
-                    <div className="flex-1 min-w-0">
-                      <div className="flex items-center gap-2 mb-1">
-                        <span className="text-sm font-medium text-foreground truncate">{s.item_name}</span>
-                        <span className="text-[9px] uppercase tracking-wider text-muted-foreground/60 border border-border/30 rounded-full px-2 py-0.5 flex-shrink-0">{s.category}</span>
-                      </div>
-                      <p className="text-xs text-muted-foreground">{s.reason}</p>
-                    </div>
-                    <button onClick={() => handleSaveSuggestion("shopping", s, i)} className="flex-shrink-0 self-center active:scale-90 transition-transform">
-                      <Heart size={16} className={savedSuggestions.includes(`shopping-${s.item_name}`) ? "fill-primary text-primary" : "text-muted-foreground"} />
-                    </button>
-                  </div>
-                );
-              })}
-            </div>
-          </div>
-        ) : (
-          <div className="rounded-2xl bg-card border border-border/30 p-5 text-center">
-            <p className="text-xs text-muted-foreground">No shopping suggestions found</p>
-          </div>
-        )}
       </motion.div>
 
     </div>
