@@ -418,7 +418,7 @@ const OutfitRatingCard = ({ image, imageBase64, result, wardrobeItems = [],
 
     ctx.fillStyle = "rgba(255,255,255,0.5)";
     ctx.font = "500 10px 'Inter', 'Helvetica', sans-serif";
-    const app = "DRIPD.APP";
+    const app = "DRIPD.ME";
     const appW = ctx.measureText(app).width;
     ctx.fillText(app, (W - appW) / 2, H - 22);
 
