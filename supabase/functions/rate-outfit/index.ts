@@ -502,9 +502,7 @@ CRITICAL: Return ONLY valid JSON.`;
         ],
       },
     ];
-    const call2Result = unfiltered
-      ? await callLovableAI(call2Messages, call2Temp, call2Tokens, "google/gemini-2.5-flash")
-      : await callGemini(apiKey, call2Messages, call2Temp, call2Tokens);
+    const call2Result = await callGemini(apiKey, call2Messages, call2Temp, call2Tokens, unfiltered ? "gemini-2.5-flash" : "gemini-2.5-flash-lite");
 
     console.log("Call 2 result:", JSON.stringify(call2Result));
 
