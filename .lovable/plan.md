@@ -1,37 +1,47 @@
+## Fix Drip Check AI + Challenge Send + No-Crop Photos
 
+### What's changing
 
-## Fix Notification Button + Message Badge + Push Notifications
+1. **Rewrite the AI prompt** in `rate-outfit` edge function using your exact prompt (killer tag + praise line as primary outputs, scores as secondary)
+2. **Change "Send" to "Challenge"** with provocative CTA ("Beat my drip 🔥")
+3. **Shared card shows drip score + confidence only** (already does, keeping it)
+4. **Drip card in messages opens fullscreen** when tapped
+5. **No cropping anywhere** — photos use `object-contain` with auto-sized containers
 
-### Problems
-
-1. **Notification bell badge includes unread messages** — the `totalBadge` combines friend requests + unread message count. Messages should only show on the message button.
-2. **Message button has no badge** — unread count is tracked inside `NotificationDropdown` but never exposed to the message button in `AppHeader`.
-3. **Unread messages show inside the notification dropdown** — they shouldn't; notifications = friend requests/accepts only.
-4. **Badge doesn't vanish on view** — opening the dropdown doesn't mark notifications as "seen."
-5. **No push notifications received** — the `push_subscriptions` table is empty. Users haven't been prompted to enable push. The toggle exists only buried in profile settings. Need to prompt users to enable push after sign-up or on first app load.
-
-### Implementation
-
-**1. Remove message count from NotificationDropdown (`src/components/NotificationDropdown.tsx`)**
-
-- Remove `fetchUnreadMessages`, `unreadMsgCount` state, the realtime `messages` channel subscription, and the unread messages UI row
-- Change `totalBadge` to only count `friend_request` notifications
-- Add a `seen` state — when dropdown opens, mark all current notifications as "seen" so badge clears. Store seen IDs in a `useRef` set (session-only, no DB needed)
-
-**2. Add unread badge to message button (`src/components/AppHeader.tsx`)**
-
-- Add `unreadMsgCount` state and fetch logic (moved from NotificationDropdown)
-- Add realtime subscription for new messages
-- Show badge on the message button (MessageCircle icon)
-- Clear the badge when user navigates to `/messages` (use a simple approach: reset count when navigating)
-
-**3. Auto-prompt push notification permission (`src/hooks/useAuth.tsx` or `src/components/AppHeader.tsx`)**
-
-- After first successful login, if `Notification.permission === "default"`, show a one-time in-app prompt (not the browser prompt directly) asking "Enable notifications to stay in the loop?"
-- On accept, call `subscribeToPush(userId)` which triggers the browser permission prompt and saves to `push_subscriptions`
-- Store a flag in localStorage so the prompt only shows once per device
+No SQL changes needed. This is all prompt + UI work.
 
 ### Files to edit
-- `src/components/NotificationDropdown.tsx` — remove message tracking, add seen-on-open behavior
-- `src/components/AppHeader.tsx` — add unread message badge to message button, add push prompt logic
 
+**1. `supabase/functions/rate-outfit/index.ts**` — Rewrite prompt
+
+- Replace the entire system prompt with the user's provided prompt verbatim
+- Keep the scoring JSON fields (drip_score, color_score, posture_score, layering_score, face_score, confidence_rating, drip_reason, confidence_reason, color_reason, posture_reason, layering_reason, face_reason, advice) in the "human detected" format
+- Add killer_tag and praise_line as the primary creative outputs using the user's exact step-by-step instructions
+- The roast mode returns `{killer_tag: null, praise_line: null, error: "roast", roast_line: "..."}`  plus zeroed scores
+- Keep same API call structure (system/user message split, gemini-2.5-flash-lite, temperature 0.9)
+
+**2. `src/components/OutfitRatingCard.tsx**` — Challenge button + no-crop
+
+- Change the Send button label to "Challenge" with a swords icon
+- Update `SendToFriendPicker` content to `"Beat my drip 🔥"` as the message text
+- Hero image: change from `object-contain max-h-[70vh]` to `object-contain w-full` with no forced aspect ratio (container auto-sizes to image)
+- Share card (`captureCard`): instead of cover-fit cropping, contain-fit the image preserving full aspect ratio with letterboxing on dark background
+
+**3. `src/components/MessageBubble.tsx**` — Fullscreen drip card + no-crop
+
+- For `drip_card` content type: make the card tappable → opens a fullscreen overlay with the image, scores, and killer tag
+- Change `aspect-[3/4] object-cover` to `object-contain w-full` so the image isn't cropped in the chat bubble
+- Add a fullscreen modal state that renders the drip card large when tapped
+- Show the challenge text ("Beat my drip 🔥") below the card in the bubble
+
+**4. `src/pages/CameraScreen.tsx**` — No-crop during analysis
+
+- Line 487: change `aspect-[3/4] object-cover` to `object-contain w-full` on the analyzing preview image so nothing gets cut off during the loading state
+
+### Technical details
+
+- The prompt rewrite uses the user's exact structure with Steps 0-6 and the Final Test
+- Score calculation formula stays: `drip_score = color(30%) + posture(30%) + layering(25%) + face(15%)`
+- The fullscreen drip card in messages will be a simple fixed overlay with backdrop blur, dismissible by tap
+- Challenge metadata will include `confidence_rating` alongside existing `score` and `killer_tag`
+- Deploy edge function after editing
