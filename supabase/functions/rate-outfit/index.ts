@@ -180,24 +180,17 @@ async function generateRoastCaption(
   roastCategory: string,
   mode: string,
 ): Promise<{ killer_tag: string; praise_line: string }> {
-  const REPLICATE_API_KEY = Deno.env.get("REPLICATE_API_KEY");
-  if (!REPLICATE_API_KEY) {
-    return { killer_tag: "Nice Try 💀", praise_line: "That's a cool photo but where's the outfit" };
-  }
-
-  const prompt = `<s>[INST] ${ROAST_SYSTEM}
-
-Someone uploaded a photo of a ${roastCategory.toLowerCase()} instead of an outfit. Generate a funny roast.
-Mode: ${mode}
-
-Return ONLY valid JSON: {"killer_tag":"max 5 words with emoji","praise_line":"max 20 words funny roast"} [/INST]`;
+  const messages = [
+    { role: "system", content: ROAST_SYSTEM },
+    { role: "user", content: `Someone uploaded a photo of a ${roastCategory.toLowerCase()} instead of an outfit. Generate a funny roast.\nMode: ${mode}` },
+  ];
 
   try {
-    const output = await callReplicateMistral(prompt, REPLICATE_API_KEY);
-    const parsed = extractJsonFromText(output);
-    if (parsed) {
+    const apiKey = getApiKey();
+    const parsed = await callGemini(apiKey, messages, 0.9, 150, "gemini-2.5-flash");
+    if (parsed.killer_tag && parsed.praise_line) {
       console.log("Roast caption generated:", JSON.stringify(parsed));
-      return parsed;
+      return { killer_tag: parsed.killer_tag, praise_line: parsed.praise_line };
     }
   } catch (e) {
     console.error("Roast caption failed:", e);
