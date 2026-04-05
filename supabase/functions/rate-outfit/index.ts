@@ -22,41 +22,43 @@ async function callGemini(apiKey: string, messages: any[], temperature: number, 
     headers: { Authorization: `Bearer ${apiKey}`, "Content-Type": "application/json" },
     body: JSON.stringify({ model, messages, temperature, max_tokens: maxTokens }),
   });
-  if (res.status === 429) throw { status: 429, message: "Rate limited, please try again later." };
-  if (res.status === 402) throw { status: 402, message: "AI credits exhausted. Please add funds." };
+  if (res.status === 429) throw { status: 429, message: "Rate limited, please try again later.", stage: "gemini_call" };
+  if (res.status === 402) throw { status: 402, message: "AI credits exhausted.", stage: "gemini_call" };
   if (!res.ok) {
     const t = await res.text();
-    console.error(`Gemini error [${res.status}] model=${model}:`, t);
-    throw new Error(`Gemini error ${res.status}: ${t.substring(0, 300)}`);
+    console.error(`Gemini error [${res.status}] model=${model}:`, t.substring(0, 500));
+    // Check for safety block
+    if (t.includes("SAFETY") || t.includes("blocked") || t.includes("HarmCategory")) {
+      throw { status: res.status, message: "Content blocked by safety filter", stage: "safety_block", model, provider_body: t.substring(0, 300) };
+    }
+    throw { status: res.status, message: `Gemini ${res.status}: ${t.substring(0, 200)}`, stage: "provider_error", model };
   }
   const data = await res.json();
-  const content = data.choices?.[0]?.message?.content || "{}";
-  console.log("Gemini raw content:", content.substring(0, 300));
+  const content = data.choices?.[0]?.message?.content || "";
+  const finishReason = data.choices?.[0]?.finish_reason || "unknown";
+  console.log(`Gemini raw (model=${model}, finish=${finishReason}):`, content.substring(0, 300));
+  
+  if (!content.trim()) {
+    throw { status: 200, message: "Empty response from AI", stage: "empty_response", model, finish_reason: finishReason };
+  }
+  
   const cleaned = content.replace(/```json\n?/g, "").replace(/```\n?/g, "").trim();
   try {
     return JSON.parse(cleaned);
   } catch {
-    // Try to extract a JSON object even if truncated
     const m = cleaned.match(/\{[\s\S]*\}/);
     if (m) {
-      try {
-        return JSON.parse(m[0]);
-      } catch {}
+      try { return JSON.parse(m[0]); } catch {}
     }
-    // Handle truncated JSON — try to close it
-    const truncated = cleaned.startsWith("{") ? cleaned : `{${cleaned}`;
-    // Try to extract key-value pairs from truncated JSON
-    const tagMatch = truncated.match(/"killer_tag"\s*:\s*"([^"]*)"/);
-    const praiseMatch = truncated.match(/"praise_line"\s*:\s*"([^"]*)"/);
+    // Recover key-value pairs from truncated JSON
+    const tagMatch = cleaned.match(/"killer_tag"\s*:\s*"([^"]*)"/);
+    const praiseMatch = cleaned.match(/"praise_line"\s*:\s*"([^"]*)"/);
     if (tagMatch || praiseMatch) {
       console.warn("Recovered from truncated JSON response");
-      return {
-        killer_tag: tagMatch?.[1] || "",
-        praise_line: praiseMatch?.[1] || "",
-      };
+      return { killer_tag: tagMatch?.[1] || "", praise_line: praiseMatch?.[1] || "" };
     }
-    console.error("Failed to parse Gemini response:", cleaned.substring(0, 500));
-    throw new Error("Failed to parse AI response");
+    console.error("JSON parse failed:", cleaned.substring(0, 500));
+    throw { status: 200, message: "Failed to parse AI response as JSON", stage: "json_parse", model, raw_preview: cleaned.substring(0, 200) };
   }
 }
 
