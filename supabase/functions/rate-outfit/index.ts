@@ -123,7 +123,7 @@ FINAL TEST (mental check before output):
 If any fail → rewrite.
 
 Return EXACTLY this JSON:
-{"killer_tag":"2-3 word tag","praise_line":"one sentence no period at end"}
+{"killer_tag":"2-3 word tag + emoji","praise_line":"one sentence no period at end"}
 
 CRITICAL: Return ONLY valid JSON. No markdown, no explanation.`;
 }
