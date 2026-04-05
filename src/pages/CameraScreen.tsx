@@ -299,52 +299,52 @@ const runAnalysis = async (file: File, userId: string | undefined, styleProfile:
     if (activeAbort?.signal.aborted) return;
     clearStageTimers();
 
+    // --- REAL ERROR HANDLING: never mask failures with fake results ---
     if (error) {
-      console.error("rate-outfit error:", error);
-      toast.error("AI rating failed: " + (error.message || "Unknown error — check edge function deployment"));
-    }
-
-    // Roast mode now returns a full result card (scores at 0, with killer_tag + praise_line)
-    // No special interception needed — flows through as normal result
-
-    if (error || data?.error || !data?.result) {
-      if (data?.error) {
-        console.error("rate-outfit returned error:", data.error);
-        toast.error("AI returned error: " + (typeof data.error === 'string' ? data.error : JSON.stringify(data.error)));
-      }
-      const fallback = clientFallbackResult(gender);
-      updateGlobal({ result: fallback, analyzing: false, progress: 0, stage: "", analysisSteps: [] });
-      saveDripToHistory(globalDripState.image || "", fallback, userId, imageHash, unfiltered);
+      console.error("rate-outfit network/invoke error:", error);
+      const msg = error.message || "Network error — check your connection";
+      toast.error("Drip Check failed: " + msg, { duration: 6000, action: { label: "Retry", onClick: () => runAnalysis(file, userId, styleProfile, gender, unfiltered) } });
+      updateGlobal({ result: null, analyzing: false, progress: 0, stage: "", analysisSteps: [] });
       return;
     }
-    if (data?.result) {
-      updateGlobal({ result: data.result, analyzing: false, progress: 0, stage: "", analysisSteps: [] });
-      if (userId) {
-        saveDripToHistory(globalDripState.image || "", data.result, userId, imageHash, unfiltered);
-      }
-      // Update streak on successful drip check (synced with HomeScreen format)
-      if (userId) {
-        try {
-          const today = new Date().toDateString();
-          const yesterday = new Date(Date.now() - 86400000).toDateString();
-          let newStreak = 1;
-          const raw = localStorage.getItem(`streak-${userId}`);
-          if (raw) {
-            const { count, lastDate } = JSON.parse(raw);
-            if (lastDate === yesterday) newStreak = count + 1;
-            else if (lastDate === today) newStreak = count;
-            else newStreak = 1;
-          }
-          localStorage.setItem(`streak-${userId}`, JSON.stringify({ count: newStreak, lastDate: today }));
-        } catch {}
-      }
+
+    if (data?.error || !data?.result) {
+      const errDetail = data?.error;
+      const stage = data?.stage || "unknown";
+      const model = data?.model || "unknown";
+      console.error("rate-outfit backend error:", { error: errDetail, stage, model });
+      const userMsg = typeof errDetail === "string" ? errDetail : "AI analysis failed";
+      toast.error(`${userMsg} (stage: ${stage})`, { duration: 6000, action: { label: "Retry", onClick: () => runAnalysis(file, userId, styleProfile, gender, unfiltered) } });
+      updateGlobal({ result: null, analyzing: false, progress: 0, stage: "", analysisSteps: [] });
+      return;
+    }
+
+    // Success path
+    const aiResult = data.result;
+    updateGlobal({ result: aiResult, analyzing: false, progress: 0, stage: "", analysisSteps: [] });
+    // Save to history for both guest and signed-in users
+    saveDripToHistory(globalDripState.image || "", aiResult, userId, imageHash, unfiltered);
+    // Update streak on successful drip check
+    if (userId) {
+      try {
+        const today = new Date().toDateString();
+        const yesterday = new Date(Date.now() - 86400000).toDateString();
+        let newStreak = 1;
+        const raw = localStorage.getItem(`streak-${userId}`);
+        if (raw) {
+          const { count, lastDate } = JSON.parse(raw);
+          if (lastDate === yesterday) newStreak = count + 1;
+          else if (lastDate === today) newStreak = count;
+          else newStreak = 1;
+        }
+        localStorage.setItem(`streak-${userId}`, JSON.stringify({ count: newStreak, lastDate: today }));
+      } catch {}
     }
   } catch (err: any) {
     if (err?.name === "AbortError" || activeAbort?.signal.aborted) return;
-    console.error("Rating error:", err);
-    const fallback = clientFallbackResult(gender);
-    updateGlobal({ result: fallback, analyzing: false, progress: 0, stage: "", analysisSteps: [] });
-    saveDripToHistory(globalDripState.image || "", fallback, userId);
+    console.error("Rating network error:", err);
+    toast.error("Connection error — please try again", { duration: 6000, action: { label: "Retry", onClick: () => runAnalysis(file, userId, styleProfile, gender, unfiltered) } });
+    updateGlobal({ result: null, analyzing: false, progress: 0, stage: "", analysisSteps: [] });
   } finally {
     activeAbort = null;
     clearStageTimers();
