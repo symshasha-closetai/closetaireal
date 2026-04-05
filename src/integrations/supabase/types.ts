@@ -123,6 +123,7 @@ export type Database = {
       }
       drip_history: {
         Row: {
+          analysis_status: string | null
           confidence_score: number | null
           created_at: string
           full_result: Json | null
@@ -131,11 +132,13 @@ export type Database = {
           image_url: string | null
           kept: boolean
           killer_tag: string | null
+          mode: string | null
           praise_line: string | null
           score: number
           user_id: string
         }
         Insert: {
+          analysis_status?: string | null
           confidence_score?: number | null
           created_at?: string
           full_result?: Json | null
@@ -144,11 +147,13 @@ export type Database = {
           image_url?: string | null
           kept?: boolean
           killer_tag?: string | null
+          mode?: string | null
           praise_line?: string | null
           score: number
           user_id: string
         }
         Update: {
+          analysis_status?: string | null
           confidence_score?: number | null
           created_at?: string
           full_result?: Json | null
@@ -157,6 +162,7 @@ export type Database = {
           image_url?: string | null
           kept?: boolean
           killer_tag?: string | null
+          mode?: string | null
           praise_line?: string | null
           score?: number
           user_id?: string
