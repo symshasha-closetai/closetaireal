@@ -87,6 +87,7 @@ type DripState = {
   detectedItems: DetectedItem[] | null;
   suggestionImages: Record<number, string | null>;
   savedSuggestions: string[];
+  unfiltered: boolean;
 };
 
 const ANALYSIS_STEP_LABELS = [
