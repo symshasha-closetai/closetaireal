@@ -458,9 +458,7 @@ CRITICAL: Return ONLY valid JSON.`;
           ],
         },
       ];
-      const roastCall2 = unfiltered
-        ? await callLovableAI(roastMessages, roastTemp, roastTokens, "google/gemini-2.5-flash")
-        : await callGemini(apiKey, roastMessages, roastTemp, roastTokens);
+      const roastCall2 = await callGemini(apiKey, roastMessages, roastTemp, roastTokens, unfiltered ? "gemini-2.5-flash" : "gemini-2.5-flash-lite");
 
       console.log("Roast Call 2 result:", JSON.stringify(roastCall2));
 
