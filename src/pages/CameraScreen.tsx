@@ -441,7 +441,14 @@ const CameraScreen = () => {
               <span className="text-xs text-muted-foreground font-medium whitespace-nowrap">Savage Mode 😏</span>
               <Switch
                 checked={globalDripState.unfiltered}
-                onCheckedChange={(v) => updateGlobal({ unfiltered: v })}
+                onCheckedChange={(v) => {
+                  updateGlobal({ unfiltered: v });
+                  // If there's a loaded image with a result, clear the result to force re-analysis
+                  if (globalDripState.image && globalDripState.result && !globalDripState.analyzing) {
+                    updateGlobal({ result: null });
+                    toast.info(v ? "Savage Mode ON — re-upload to analyze" : "Standard Mode — re-upload to analyze");
+                  }
+                }}
               />
             </div>
           </div>
