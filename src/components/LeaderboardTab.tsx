@@ -51,6 +51,7 @@ type LeaderboardEntry = {
 type ViewMode = "daily" | "weekly";
 
 import { getCache, setCache, CACHE_KEYS } from "@/lib/deviceCache";
+import { precacheImages, getCachedImageUrl } from "@/lib/imageCache";
 
 type LeaderboardCache = { entries: LeaderboardEntry[]; friendIds: string[] };
 let dailyCache: (LeaderboardCache & { ts: number }) | null = null;
