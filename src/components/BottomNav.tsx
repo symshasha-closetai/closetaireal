@@ -51,13 +51,6 @@ const BottomNav = () => {
                   isActive ? "text-gold" : "text-muted-foreground"
                 }`}
               />
-              <span
-                className={`text-[10px] font-medium transition-colors duration-300 ${
-                  isActive ? "text-foreground" : "text-muted-foreground"
-                }`}
-              >
-                {tab.label}
-              </span>
             </button>
           );
         })}

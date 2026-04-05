@@ -175,17 +175,41 @@ serve(async (req) => {
       || (call1Result.face_score === 0 && call1Result.posture_score === 0);
 
     if (isRoast) {
-      console.log("Roast mode — no human detected, skipping Call 2");
+      console.log("Roast mode — generating funny killer_tag + roast praise_line via Call 2");
+      const roastCategory = call1Result.roast_line || "I don't know what this is, but it's not a fit.";
+      
+      const roastCall2 = await callGemini(apiKey, [
+        { role: "system", content: `You generate funny, shareable content for non-outfit images submitted to a fashion rating app called DRIPD.
+
+The image is NOT a person wearing clothes. The roast category is: "${roastCategory}"
+
+Generate:
+1. killer_tag: A hilarious 2-3 word tag. Must be witty, screenshot-worthy. Think meme energy but clean.
+   Examples by category: Food → "Not A Fit", "Drip Or Dip", "Wrong Menu" | Animal → "Fur Coat Only", "Wrong Model" | Diagram → "Study Break" | Car → "Wrong Flex"
+   DO NOT reuse these examples. Be original every time.
+
+2. praise_line: One sentence roast. Funny, not mean. The kind of line someone would screenshot and send to friends. Use the roast category as inspiration but make it feel fresh and personal to what you see in the image.
+
+Return EXACTLY: {"killer_tag":"2-3 words","praise_line":"one sentence roast no period"}
+CRITICAL: Return ONLY valid JSON.` },
+        { role: "user", content: [
+          { type: "text", text: "Look at this image and generate a funny killer_tag and roast praise_line for it." },
+          { type: "image_url", image_url: { url: `data:image/jpeg;base64,${imageBase64}` } },
+        ]},
+      ], 0.9, 256);
+
+      console.log("Roast Call 2 result:", JSON.stringify(roastCall2));
+
       const roastResult = {
         drip_score: 0, drip_reason: "No human detected",
         confidence_rating: 0, confidence_reason: "No human detected",
-        killer_tag: null, color_score: 0, color_reason: "N/A",
+        killer_tag: roastCall2.killer_tag || "Not A Fit",
+        color_score: 0, color_reason: "N/A",
         posture_score: 0, posture_reason: "N/A",
         layering_score: 0, layering_reason: "N/A",
         face_score: 0, face_reason: "N/A",
         advice: "Upload a photo with you wearing an outfit",
-        praise_line: null, error: "roast",
-        roast_line: call1Result.roast_line || "I don't know what this is, but it's not a fit.",
+        praise_line: roastCall2.praise_line || roastCategory,
       };
       return new Response(JSON.stringify({ result: roastResult }), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
     }
