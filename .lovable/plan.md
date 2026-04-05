@@ -1,51 +1,45 @@
 
 
-## Multiple Fixes: Emojis, Wardrobe Button, Leaderboard Tags, Share Card Branding, Image Caching, Domain
+## Fixes: "Try With Different Outfit" Button Style, Share Card Image Cropping, Couple-Aware Creative Output
 
-### Issues identified
+### Issues from screenshots
 
-1. **Killer tag + praise line need emojis** — current prompt says "No emojis" explicitly
-2. **"Add items to wardrobe" is plain text** — should be a clickable button that navigates to `/wardrobe`
-3. **Leaderboard images not cached** — images fetch from DB every time; need browser Cache API integration
-4. **Leaderboard rank tags not hierarchical** — current tags are random vibes (Drip God, Style Titan, Fit Assassin), need a clear hierarchy from best to worst
-5. **Share card uses old branding** — imports `closetai-logo.webp`, shows old logo
-6. **Domain shows "DRIPD.APP"** — needs to be "DRIPD.ME" everywhere
-7. **Share card from leaderboard looks bad** — the screenshots show score `/100` format, small image, old logo, no killer tag prominence
+1. **"Try With Different Outfit" button** looks flat — no shadow, no visual weight compared to buttons above it. Needs shadow/elevation to match.
+2. **Share card crops the photo** — line 244 uses `Math.max` for cover-fit, cutting off parts of the image. Must switch to `object-contain` (use `Math.min`) so the full photo is always visible.
+3. **Couple photos get generic tags** — the SOCIAL CONTEXT section in the prompt exists but is too vague ("chemistry + fit energy"). Needs explicit couple-specific examples that are screenshot-worthy, witty, and Instagram-shareable.
+4. **Drip score 1.5 on a food photo** — the roast detection is still leaking scores through. Need to tighten the server-side validation.
 
 ### Changes
 
-**1. `supabase/functions/rate-outfit/index.ts`** — Add emojis to killer tag + praise line
-- Call 2 prompt: Remove "No emojis" rule, add: "Include 1 relevant emoji at the end of the killer_tag" and "Can include 1-2 emojis in the praise_line where they feel natural"
-- Roast Call 2: Same emoji rules
+**1. `src/pages/CameraScreen.tsx`** — Style the "Try With Different Outfit" button
+- Line 537: Add `shadow-lg shadow-black/30 bg-card` classes to match the visual weight of the buttons above it
+- Change from `border border-border/40` flat look to elevated card-like style
 
-**2. `src/components/OutfitRatingCard.tsx`** — Wardrobe button + domain fix
-- Line 770-774: Replace static text with a `<button>` that navigates to `/wardrobe` using `useNavigate`
-- Line 421: Change `"DRIPD.APP"` to `"DRIPD.ME"`
+**2. `src/components/OutfitRatingCard.tsx`** — Fix share card image cropping
+- Line 244: Change `Math.max` to `Math.min` so image is contain-fit (no cropping)
+- Fill letterbox bars with the dark background color (#0f0f0f) which already covers the canvas
+- This ensures the full photo is always visible — couples, groups, no parts cut off
 
-**3. `src/components/LeaderboardTab.tsx`** — Multiple fixes
-- **RANK_TAGS**: Replace with hierarchical titles:
-  - 1: "Drip God 👑", 2: "Style Icon ✨", 3: "Fashion Elite 🔥", 4: "Trend Leader 💫", 5: "Vibe Master 🎯", 6: "Clean Machine ⚡", 7: "Rising Star 🌟", 8: "Style Scout 👀", 9: "Fresh Start 🌱", 10: "New Wave 🫧"
-- **Logo import**: Change from `closetai-logo.webp` to `dripd-logo.webp`
-- **ShareCard**: Redesign — use new Dripd logo, show killer_tag prominently, add user avatar/name, change CTA to "BEAT MY DRIP 🔥", change domain to "dripd.me"
-- **Image caching**: Use the existing `cacheImage` / `getCachedImageUrl` from `src/lib/imageCache.ts` — cache leaderboard entry images on fetch, use cached URLs for display. Add `useCachedImage` pattern to podium and list items.
-- **Score display**: Keep `/100` format on share card but make it more prominent
+**3. `supabase/functions/rate-outfit/index.ts`** — Enhance couple/group creative output
+- Expand the SOCIAL CONTEXT section in Call 2 prompt with explicit couple examples:
+  - Couple killer_tag examples: "Power Duo", "Main Characters", "Matched Energy", "Couple Goals"
+  - Couple praise_line examples: "y'all walked in and the room got nervous", "this duo doesn't need a caption", "the coordination is giving soulmate energy"
+- Add instruction: "For couples, the tag and line MUST reference the duo/pair dynamic — never treat it as a solo shot"
+- Add similar group-specific examples for squad energy
+- Strengthen the "screenshot test" — add: "Would someone tag their partner/friend in this?"
 
-**4. `src/pages/WardrobeScreen.tsx`** — Domain fix
-- Line 1444: Change `dripd.app` to `dripd.me`
-
-**5. Copy new Dripd logo** — Copy `user-uploads://WhatsApp_Image_2026-04-05_at_9.11.17_AM.jpeg` to `src/assets/dripd-logo-new.png` for use in the leaderboard share card
-
-### Technical details
-
-- Image caching uses the existing `imageCache.ts` utility (Cache API) — `precacheImages()` called after leaderboard fetch, `getCachedImageUrl()` used in image `src` attributes via a small hook
-- The wardrobe empty-state button uses `useNavigate()` from react-router-dom
-- Share card logo will use the new uploaded Dripd logo (dark navy D on gold — will work well on the dark card background)
-- Emoji in killer_tag: prompt instructs "exactly 1 emoji at the end" to keep it clean and screenshot-worthy
-- All `closetai` references removed from the codebase
+**4. `supabase/functions/rate-outfit/index.ts`** — Tighten roast detection
+- The food photo got drip_score 1.5 instead of 0 — the server-side validation (line ~185) checks `face_score === 0 && posture_score === 0` but the AI gave non-zero scores
+- Add additional check: if `drip_score < 2` AND `color_score + posture_score + layering_score + face_score < 3`, force roast mode
+- This catches edge cases where the AI leaks tiny scores for non-human images
 
 ### Files to edit
-- `supabase/functions/rate-outfit/index.ts` (emoji rules in prompts)
-- `src/components/OutfitRatingCard.tsx` (wardrobe button + domain)
-- `src/components/LeaderboardTab.tsx` (rank tags, logo, share card, image caching, domain)
-- `src/pages/WardrobeScreen.tsx` (domain)
+- `src/pages/CameraScreen.tsx` (button styling — 1 line)
+- `src/components/OutfitRatingCard.tsx` (share card image: `Math.max` → `Math.min` — 1 line)
+- `supabase/functions/rate-outfit/index.ts` (couple-aware prompt + tighter roast gate)
+
+### Technical details
+- Contain-fit uses `Math.min(W / imgW, IMG_H / imgH)` — this scales the image to fit entirely within the frame, with dark bars filling any gaps (already the canvas background)
+- The couple/group detection comes from Call 1's `scene_type` field which is already passed to Call 2
+- The tighter roast gate (`drip_score < 2 && total_sub < 3`) won't affect real outfit photos since even a bad outfit would score 3+ across sub-scores
 
