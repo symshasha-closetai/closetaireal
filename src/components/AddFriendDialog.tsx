@@ -1,9 +1,9 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { toast } from "sonner";
-import { Search, UserPlus, Loader2, X } from "lucide-react";
+import { Search, UserPlus, Loader2, Check } from "lucide-react";
 
 type SearchResult = {
   user_id: string;
@@ -25,6 +25,24 @@ const AddFriendDialog = ({ open, onOpenChange, existingFriendIds, onFriendAdded 
   const [results, setResults] = useState<SearchResult[]>([]);
   const [searching, setSearching] = useState(false);
   const [adding, setAdding] = useState<string | null>(null);
+  const [pendingIds, setPendingIds] = useState<string[]>([]);
+
+  // Fetch pending requests sent by this user
+  useEffect(() => {
+    if (!open || !user) return;
+    const fetchPending = async () => {
+      const { data } = await supabase
+        .from("friends")
+        .select("friend_id, user_id")
+        .or(`user_id.eq.${user.id},friend_id.eq.${user.id}`)
+        .eq("status", "pending");
+      const ids = (data || []).map((f) =>
+        f.user_id === user.id ? f.friend_id : f.user_id
+      );
+      setPendingIds(ids);
+    };
+    fetchPending();
+  }, [open, user?.id]);
 
   const handleSearch = async () => {
     if (!query.trim() || query.trim().length < 2) return;
@@ -58,12 +76,14 @@ const AddFriendDialog = ({ open, onOpenChange, existingFriendIds, onFriendAdded 
       else toast.error("Failed to send request");
     } else {
       toast.success("Friend request sent! 📩");
+      setPendingIds((prev) => [...prev, friendUserId]);
       onFriendAdded();
     }
     setAdding(null);
   };
 
   const isFriend = (userId: string) => existingFriendIds.includes(userId);
+  const isPending = (userId: string) => pendingIds.includes(userId);
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -107,7 +127,13 @@ const AddFriendDialog = ({ open, onOpenChange, existingFriendIds, onFriendAdded 
                   <p className="text-[10px] text-muted-foreground">@{r.username}</p>
                 </div>
                 {isFriend(r.user_id) ? (
-                  <span className="text-[10px] text-muted-foreground px-2 py-1 rounded-full bg-muted">Added</span>
+                  <span className="text-[10px] text-muted-foreground px-2 py-1 rounded-full bg-muted flex items-center gap-1">
+                    <Check size={10} /> Added
+                  </span>
+                ) : isPending(r.user_id) ? (
+                  <span className="text-[10px] text-accent px-2 py-1 rounded-full bg-accent/10 flex items-center gap-1">
+                    <Check size={10} /> Sent
+                  </span>
                 ) : (
                   <button onClick={() => handleAdd(r.user_id)} disabled={adding === r.user_id}
                     className="w-8 h-8 rounded-full gradient-accent flex items-center justify-center">

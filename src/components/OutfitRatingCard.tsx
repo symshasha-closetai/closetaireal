@@ -339,7 +339,7 @@ const OutfitRatingCard = ({ image, imageBase64, result, wardrobeItems = [],
 
     // Killer tag centered
     if (result.killer_tag) {
-      ctx.fillStyle = "rgba(255,255,255,0.85)";
+      ctx.fillStyle = "#FFFFFF";
       ctx.font = "600 14px 'Inter', 'Helvetica', sans-serif";
       const tagW = ctx.measureText(result.killer_tag).width;
       ctx.fillText(result.killer_tag, (W - tagW) / 2, panelY + 30);
@@ -357,10 +357,10 @@ const OutfitRatingCard = ({ image, imageBase64, result, wardrobeItems = [],
 
     // Sub-scores row
     const subScores = [
-      { label: "COLOR", score: result.color_score, color: "#8B9A7B" },
-      { label: "POSTURE", score: result.posture_score ?? result.style_score ?? 0, color: "#C9A96E" },
-      { label: "LAYERING", score: result.layering_score ?? result.fit_score ?? 0, color: "#B08B8B" },
-      { label: "FACE", score: result.face_score ?? 0, color: "#7B8FA8" },
+      { label: "COLOR", score: result.color_score, color: "#FFFFFF" },
+      { label: "POSTURE", score: result.posture_score ?? result.style_score ?? 0, color: "#FFFFFF" },
+      { label: "LAYERING", score: result.layering_score ?? result.fit_score ?? 0, color: "#FFFFFF" },
+      { label: "FACE", score: result.face_score ?? 0, color: "#FFFFFF" },
     ];
     const subY = sepY + 36;
     const colW = (W - 56) / subScores.length;
@@ -368,17 +368,12 @@ const OutfitRatingCard = ({ image, imageBase64, result, wardrobeItems = [],
       const cx = 28 + colW * i + colW / 2;
       const scoreVal = Number.isInteger(s.score) ? String(s.score) : s.score.toFixed(1);
       
-      // Subtle glow on sub-scores
-      ctx.save();
-      ctx.shadowColor = s.color + "80";
-      ctx.shadowBlur = 10;
-      ctx.fillStyle = s.color;
+      ctx.fillStyle = "#FFFFFF";
       ctx.font = "700 24px 'Inter', 'Helvetica', sans-serif";
       const sW = ctx.measureText(scoreVal).width;
       ctx.fillText(scoreVal, cx - sW / 2, subY);
-      ctx.restore();
 
-      ctx.fillStyle = "rgba(255,255,255,0.35)";
+      ctx.fillStyle = "rgba(255,255,255,0.6)";
       ctx.font = "600 8px 'Inter', 'Helvetica', sans-serif";
       ctx.letterSpacing = "1px";
       const lW = ctx.measureText(s.label).width;
@@ -388,7 +383,7 @@ const OutfitRatingCard = ({ image, imageBase64, result, wardrobeItems = [],
 
     // Praise line
     if (result.praise_line) {
-      ctx.fillStyle = "rgba(255,255,255,0.45)";
+      ctx.fillStyle = "rgba(255,255,255,0.8)";
       ctx.font = "italic 400 13px 'Inter', 'Helvetica', sans-serif";
       const praiseY = subY + 42;
       const maxW = W - 56;
@@ -412,8 +407,8 @@ const OutfitRatingCard = ({ image, imageBase64, result, wardrobeItems = [],
       }
     }
 
-    // CTA at bottom
-    ctx.fillStyle = "rgba(201,169,110,0.5)";
+    // CTA at bottom — gold at full opacity
+    ctx.fillStyle = "#C9A96E";
     ctx.font = "600 11px 'Inter', 'Helvetica', sans-serif";
     ctx.letterSpacing = "3px";
     const cta = "BEAT MY DRIP";
@@ -421,7 +416,7 @@ const OutfitRatingCard = ({ image, imageBase64, result, wardrobeItems = [],
     ctx.fillText(cta, (W - ctaW) / 2, H - 40);
     ctx.letterSpacing = "0px";
 
-    ctx.fillStyle = "rgba(255,255,255,0.25)";
+    ctx.fillStyle = "rgba(255,255,255,0.5)";
     ctx.font = "500 10px 'Inter', 'Helvetica', sans-serif";
     const app = "DRIPD.APP";
     const appW = ctx.measureText(app).width;
