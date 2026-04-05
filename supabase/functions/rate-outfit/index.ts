@@ -485,7 +485,7 @@ CRITICAL: Return ONLY valid JSON.`;
 
     const call2Temp = unfiltered ? 1.2 : 0.9;
     const call2Tokens = unfiltered ? 512 : 256;
-    const call2Model = unfiltered ? "gemini-2.5-flash" : "gemini-2.5-flash-lite";
+    const call2Model = unfiltered ? "gemini-1.5-pro" : "gemini-2.5-flash-lite";
     const call2Result = await callGemini(apiKey, [
       { role: "system", content: call2System },
       {
