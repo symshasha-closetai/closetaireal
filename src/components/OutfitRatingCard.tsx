@@ -67,7 +67,7 @@ const findWardrobeMatch = (suggestion: Suggestion, wardrobeItems: WardrobeItem[]
   );
 };
 
-const OutfitRatingCard = ({ image, imageBase64, result, wardrobeItems = [],
+const OutfitRatingCard = ({ image, imageBase64, result, isSavage = false, wardrobeItems = [],
   wardrobeSuggestions, shoppingSuggestions, detectedItems, suggestionImages, savedSuggestions,
   onWardrobeSuggestionsChange, onShoppingSuggestionsChange, onDetectedItemsChange, onSuggestionImagesChange, onSavedSuggestionsChange
 }: Props) => {
