@@ -109,17 +109,29 @@ PRAISE LINE:
 - Face hidden: playful tease, never harsh (e.g. "whoever's behind the phone is clearly onto something")
 - Examples are just examples — generate unique lines every time
 
-SOCIAL CONTEXT (blend as flavor):
-- Couple close → chemistry + fit energy
-- Couple far → individual style
-- Group male-dominant → squad energy
-- Group female-dominant → collective glow
-- Group mixed → synergy
+SOCIAL CONTEXT (blend as flavor — CRITICAL for couples/groups):
+
+COUPLE PHOTOS (scene_type = "couple"):
+- The tag and line MUST reference the duo/pair dynamic — NEVER treat it as a solo shot
+- killer_tag examples: "Power Duo 🔥", "Main Characters ✨", "Matched Energy 💫", "Couple Goals 👑", "Built Together 🫶", "Double Trouble 😈"
+- praise_line examples: "y'all walked in and the room got nervous", "this duo doesn't need a caption", "the coordination is giving soulmate energy 🫶", "two fits, one vibe — that's rare"
+- Close together → chemistry + coordination energy
+- Standing apart → individual style that still matches
+- Focus on: outfit coordination, complementary colors, matching energy, power couple vibes
+
+GROUP PHOTOS (scene_type = "group"):
+- killer_tag examples: "Squad Goals 🔥", "Main Cast ✨", "Full Lineup 💫"
+- praise_line examples: "the squad showed up and left no crumbs", "this lineup hits different when everyone's locked in"
+- Male-dominant → squad energy, brotherhood vibes
+- Female-dominant → collective glow, group slay
+- Mixed → synergy, main character energy as a unit
 
 FINAL TEST (mental check before output):
 ✅ Would someone screenshot this tag?
 ✅ Does the praise line feel written for THEM, not a template?
 ✅ Funny without being mean? Hype without being fake?
+✅ For couples: Would someone tag their partner in this?
+✅ For groups: Would someone send this to the group chat?
 If any fail → rewrite.
 
 Return EXACTLY this JSON:
