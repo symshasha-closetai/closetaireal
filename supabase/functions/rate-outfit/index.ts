@@ -52,7 +52,7 @@ async function callGemini(apiKey: string, messages: any[], temperature: number, 
   }
 }
 
-// ===== LIVE CAPTION GENERATION via Replicate Mistral 7B =====
+// ===== LIVE CAPTION GENERATION via Gemini 2.5 Flash =====
 
 const CAPTION_SYSTEM_STANDARD = `You are DRIPD AI — a witty, clever fashion commentator. You create fun, memorable captions for outfit photos.
 
@@ -77,7 +77,9 @@ GENDER TONE:
 
 SCENE:
 - couple: reference them as a pair, "y'all", "power couple"
-- group: "squad", "the whole crew", plural language`;
+- group: "squad", "the whole crew", plural language
+
+Return ONLY valid JSON: {"killer_tag":"max 5 words with one emoji","praise_line":"max 20 words, viral caption with setup→twist→punchline"}`;
 
 const CAPTION_SYSTEM_SAVAGE = `You are DRIPD AI in SAVAGE MODE — a chaotic, brutally honest fashion roaster. You sound like a savage best friend in a group chat who has zero filter.
 
@@ -107,7 +109,9 @@ GENDER TONE:
 
 SCENE:
 - couple: roast/hype them as a unit, "y'all", competitive energy
-- group: "the squad", "main characters", collective chaos`;
+- group: "the squad", "main characters", collective chaos
+
+Return ONLY valid JSON: {"killer_tag":"max 5 words with one emoji","praise_line":"max 20 words, viral caption with setup→twist→punchline"}`;
 
 function getScoreTier(score: number): string {
   if (score <= 4) return "low";
@@ -123,52 +127,9 @@ const FALLBACK_CAPTIONS: Record<string, { killer_tag: string; praise_line: strin
   elite: { killer_tag: "Absolutely Unreal 🔥", praise_line: "This outfit should come with a warning label" },
 };
 
-const ROAST_SYSTEM = `You are DRIPD AI — a chaotic fashion roaster. Someone uploaded a photo with NO human wearing clothes. Generate a hilarious roast about what they uploaded instead. Be funny, not mean. Gen Z humor, meme language.`;
+const ROAST_SYSTEM = `You are DRIPD AI — a chaotic fashion roaster. Someone uploaded a photo with NO human wearing clothes. Generate a hilarious roast about what they uploaded instead. Be funny, not mean. Gen Z humor, meme language.
 
-async function waitForReplicatePrediction(predictionUrl: string, apiKey: string, maxWait = 30000): Promise<any> {
-  const start = Date.now();
-  while (Date.now() - start < maxWait) {
-    const res = await fetch(predictionUrl, { headers: { Authorization: `Bearer ${apiKey}` } });
-    const data = await res.json();
-    if (data.status === "succeeded") return data;
-    if (data.status === "failed" || data.status === "canceled") throw new Error(`Prediction ${data.status}: ${data.error || "unknown"}`);
-    await new Promise(r => setTimeout(r, 1000));
-  }
-  throw new Error("Replicate prediction timed out");
-}
-
-function extractJsonFromText(text: string): { killer_tag: string; praise_line: string } | null {
-  try {
-    const m = text.match(/\{[\s\S]*?"killer_tag"[\s\S]*?"praise_line"[\s\S]*?\}/);
-    if (m) {
-      const parsed = JSON.parse(m[0]);
-      if (parsed.killer_tag && parsed.praise_line) return { killer_tag: parsed.killer_tag, praise_line: parsed.praise_line };
-    }
-  } catch {}
-  const tagMatch = text.match(/"killer_tag"\s*:\s*"([^"]+)"/);
-  const praiseMatch = text.match(/"praise_line"\s*:\s*"([^"]+)"/);
-  if (tagMatch && praiseMatch) return { killer_tag: tagMatch[1], praise_line: praiseMatch[1] };
-  return null;
-}
-
-async function callReplicateMistral(prompt: string, apiKey: string): Promise<string> {
-  const res = await fetch("https://api.replicate.com/v1/models/mistralai/mistral-7b-instruct-v0.3/predictions", {
-    method: "POST",
-    headers: { Authorization: `Bearer ${apiKey}`, "Content-Type": "application/json" },
-    body: JSON.stringify({ input: { prompt, max_tokens: 200, temperature: 0.9 } }),
-  });
-  if (res.status === 429) throw { status: 429, message: "Replicate rate limited" };
-  if (!res.ok) {
-    const t = await res.text();
-    console.error(`Replicate error [${res.status}]:`, t.substring(0, 300));
-    throw new Error(`Replicate ${res.status}`);
-  }
-  const prediction = await res.json();
-  const completed = await waitForReplicatePrediction(prediction.urls.get, apiKey);
-  const output = Array.isArray(completed.output) ? completed.output.join("") : String(completed.output || "");
-  console.log("Mistral raw output:", output.substring(0, 300));
-  return output;
-}
+Return ONLY valid JSON: {"killer_tag":"max 5 words with one emoji","praise_line":"max 20 words funny roast"}`;
 
 async function generateCaption(
   outfitDescription: string,
@@ -180,43 +141,34 @@ async function generateCaption(
   sceneType: string,
   mode: string,
 ): Promise<{ killer_tag: string; praise_line: string }> {
-  const REPLICATE_API_KEY = Deno.env.get("REPLICATE_API_KEY");
-  if (!REPLICATE_API_KEY) {
-    console.error("REPLICATE_API_KEY not configured, using fallback");
-    return FALLBACK_CAPTIONS[getScoreTier(dripScore)];
-  }
-
   const tier = getScoreTier(dripScore);
   const systemPrompt = mode === "savage" ? CAPTION_SYSTEM_SAVAGE : CAPTION_SYSTEM_STANDARD;
-  const prompt = `<s>[INST] ${systemPrompt}
-
-Generate a killer_tag (max 5 words, include one emoji) and praise_line (max 20 words, viral caption with setup→twist→punchline).
-
-Outfit: ${outfitDescription}
+  const userMessage = `Outfit: ${outfitDescription}
 Drip Score: ${dripScore}/10 (${tier} tier)
 Color Score: ${colorScore}/10
 Layering Score: ${layeringScore}/10
 Confidence: ${confidenceRating}/10
 Gender: ${gender}
 Scene: ${sceneType}
-Mode: ${mode}
+Mode: ${mode}`;
 
-Return ONLY valid JSON: {"killer_tag":"...","praise_line":"..."} [/INST]`;
+  const messages = [
+    { role: "system", content: systemPrompt },
+    { role: "user", content: userMessage },
+  ];
 
   for (let attempt = 0; attempt < 2; attempt++) {
     try {
-      const output = await callReplicateMistral(prompt, REPLICATE_API_KEY);
-      const parsed = extractJsonFromText(output);
-      if (parsed) {
+      const apiKey = getApiKey();
+      const parsed = await callGemini(apiKey, messages, 0.9, 150, "gemini-2.5-flash");
+      if (parsed.killer_tag && parsed.praise_line) {
         console.log("Call 2 caption generated:", JSON.stringify(parsed));
-        return parsed;
+        return { killer_tag: parsed.killer_tag, praise_line: parsed.praise_line };
       }
-      console.warn(`Call 2 invalid output (attempt ${attempt + 1}):`, output.substring(0, 200));
-      if (attempt === 0) continue;
+      console.warn(`Call 2 invalid output (attempt ${attempt + 1}):`, JSON.stringify(parsed).substring(0, 200));
     } catch (e: any) {
       console.error(`Call 2 exception (attempt ${attempt + 1}):`, e);
       if (e?.status === 429) return FALLBACK_CAPTIONS[tier];
-      if (attempt === 0) continue;
     }
   }
 
@@ -228,24 +180,17 @@ async function generateRoastCaption(
   roastCategory: string,
   mode: string,
 ): Promise<{ killer_tag: string; praise_line: string }> {
-  const REPLICATE_API_KEY = Deno.env.get("REPLICATE_API_KEY");
-  if (!REPLICATE_API_KEY) {
-    return { killer_tag: "Nice Try 💀", praise_line: "That's a cool photo but where's the outfit" };
-  }
-
-  const prompt = `<s>[INST] ${ROAST_SYSTEM}
-
-Someone uploaded a photo of a ${roastCategory.toLowerCase()} instead of an outfit. Generate a funny roast.
-Mode: ${mode}
-
-Return ONLY valid JSON: {"killer_tag":"max 5 words with emoji","praise_line":"max 20 words funny roast"} [/INST]`;
+  const messages = [
+    { role: "system", content: ROAST_SYSTEM },
+    { role: "user", content: `Someone uploaded a photo of a ${roastCategory.toLowerCase()} instead of an outfit. Generate a funny roast.\nMode: ${mode}` },
+  ];
 
   try {
-    const output = await callReplicateMistral(prompt, REPLICATE_API_KEY);
-    const parsed = extractJsonFromText(output);
-    if (parsed) {
+    const apiKey = getApiKey();
+    const parsed = await callGemini(apiKey, messages, 0.9, 150, "gemini-2.5-flash");
+    if (parsed.killer_tag && parsed.praise_line) {
       console.log("Roast caption generated:", JSON.stringify(parsed));
-      return parsed;
+      return { killer_tag: parsed.killer_tag, praise_line: parsed.praise_line };
     }
   } catch (e) {
     console.error("Roast caption failed:", e);
