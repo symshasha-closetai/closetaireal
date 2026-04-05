@@ -46,6 +46,35 @@ async function callGemini(apiKey: string, messages: any[], temperature: number, 
   }
 }
 
+async function callLovableAI(messages: any[], temperature: number, maxTokens: number, model: string = "google/gemini-2.5-flash") {
+  const lovableKey = Deno.env.get("LOVABLE_API_KEY");
+  if (!lovableKey) throw new Error("LOVABLE_API_KEY not configured");
+  const res = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
+    method: "POST",
+    headers: { Authorization: `Bearer ${lovableKey}`, "Content-Type": "application/json" },
+    body: JSON.stringify({ model, messages, temperature, max_tokens: maxTokens }),
+  });
+  if (res.status === 429) throw { status: 429, message: "Rate limited, please try again later." };
+  if (res.status === 402) throw { status: 402, message: "AI credits exhausted. Please add funds." };
+  if (!res.ok) {
+    const t = await res.text();
+    console.error("Lovable AI error:", res.status, t);
+    throw new Error(`Lovable AI error: ${res.status}`);
+  }
+  const data = await res.json();
+  const content = data.choices?.[0]?.message?.content || "{}";
+  const cleaned = content.replace(/```json\n?/g, "").replace(/```\n?/g, "").trim();
+  try {
+    return JSON.parse(cleaned);
+  } catch {
+    const m = cleaned.match(/\{[\s\S]*\}/);
+    if (m) {
+      try { return JSON.parse(m[0]); } catch {}
+    }
+    throw new Error("Failed to parse Lovable AI response");
+  }
+}
+
 const CALL1_SYSTEM = `You analyze outfit photos. Your ONLY job: detect if there's a human wearing clothes, and either score or roast.
 
 STEP 1: DOMINANT SUBJECT CHECK (CRITICAL — READ THIS FIRST):
@@ -441,8 +470,7 @@ CRITICAL: Return ONLY valid JSON.`;
 
       const roastTemp = unfiltered ? 1.2 : 0.9;
       const roastTokens = unfiltered ? 512 : 256;
-      const roastModel = unfiltered ? "gemini-1.5-pro" : "gemini-2.5-flash-lite";
-      const roastCall2 = await callGemini(apiKey, [
+      const roastMessages = [
         { role: "system", content: roastPrompt },
         {
           role: "user",
@@ -451,7 +479,10 @@ CRITICAL: Return ONLY valid JSON.`;
             { type: "image_url", image_url: { url: `data:image/jpeg;base64,${imageBase64}` } },
           ],
         },
-      ], roastTemp, roastTokens, roastModel);
+      ];
+      const roastCall2 = unfiltered
+        ? await callLovableAI(roastMessages, roastTemp, roastTokens, "google/gemini-2.5-flash")
+        : await callGemini(apiKey, roastMessages, roastTemp, roastTokens);
 
       console.log("Roast Call 2 result:", JSON.stringify(roastCall2));
 
@@ -485,8 +516,7 @@ CRITICAL: Return ONLY valid JSON.`;
 
     const call2Temp = unfiltered ? 1.2 : 0.9;
     const call2Tokens = unfiltered ? 512 : 256;
-    const call2Model = unfiltered ? "gemini-1.5-pro" : "gemini-2.5-flash-lite";
-    const call2Result = await callGemini(apiKey, [
+    const call2Messages = [
       { role: "system", content: call2System },
       {
         role: "user",
@@ -495,7 +525,10 @@ CRITICAL: Return ONLY valid JSON.`;
           { type: "image_url", image_url: { url: `data:image/jpeg;base64,${imageBase64}` } },
         ],
       },
-    ], call2Temp, call2Tokens, call2Model);
+    ];
+    const call2Result = unfiltered
+      ? await callLovableAI(call2Messages, call2Temp, call2Tokens, "google/gemini-2.5-flash")
+      : await callGemini(apiKey, call2Messages, call2Temp, call2Tokens);
 
     console.log("Call 2 result:", JSON.stringify(call2Result));
 
