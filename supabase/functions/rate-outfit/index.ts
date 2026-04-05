@@ -81,6 +81,7 @@ VOICE RULES:
 - No cuss words. No cringe reassurance ("you're beautiful no matter what!")
 - Witty ≠ mean. Warm ≠ basic.
 - Avoid repetition across tag + praise line
+- EMOJIS: Include exactly 1 relevant emoji at the END of the killer_tag. Can include 1-2 emojis in the praise_line where they feel natural.
 - The tag and praise line should feel like they were made together
 
 KILLER TAG (MOST IMPORTANT OUTPUT):
