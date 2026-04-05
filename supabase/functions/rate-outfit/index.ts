@@ -85,7 +85,7 @@ VOICE RULES:
 - The tag and praise line should feel like they were made together
 
 KILLER TAG (MOST IMPORTANT OUTPUT):
-- Exactly 2–3 words. No more. No emojis.
+- Exactly 2–3 words. Include exactly 1 relevant emoji at the END.
 - Must feel like a vibe, not a sentence. Screenshot-worthy.
 - Feels personal, not generic. Never reuse examples verbatim.
 - Use the drip_score to set the tone:
