@@ -1,66 +1,39 @@
 
 
-## Fix AI: Enforce Human Check + Killer Tag/Praise Line Reliability
+## Roast Mode Full Result Card + Wardrobe-Only Suggestions + UI Tweaks
 
-### The Problem
+### What's changing
 
-From the screenshot: a chemistry diagram (neutron flow) was rated with actual scores (color: 2, posture: 4, layering: 1.5, face: 0) instead of being roasted. The AI model is ignoring the "HARD GATE" because the single prompt is too long and complex for `gemini-2.5-flash-lite` to follow reliably.
-
-### Solution: Two-Call Architecture
-
-Split into two separate AI calls matching the user's provided prompt structure:
-
-**Call 1: Score + Human Check** — Focused purely on detecting humans and calculating scores. Short, strict prompt. Returns scores OR roast.
-
-**Call 2: Killer Tag + Praise Line** — Only runs if Call 1 detected a human. Takes the `drip_score` as input (exactly as the user's prompt specifies). This dedicated call produces higher quality creative output because the model only focuses on one task.
-
-**Server-side validation** — After Call 1, if any of these are true, force roast mode regardless of what the AI returned:
-- `drip_score === 0` and all sub-scores are 0
-- `face_score === 0` and `posture_score === 0` (no human indicators)
-- Response contains `error: "roast"`
+1. **Roast mode shows full result card** (not just a toast) — image displayed with all scores at 0, a funny killer_tag, and the roast as the praise_line. This makes it shareable/screenshot-worthy.
+2. **Suggestions only from wardrobe** — remove shopping suggestions entirely. If wardrobe is empty, show "Add items to your wardrobe to get styling suggestions."
+3. **"Check Another Photo" → "Try With Different Outfit"**
+4. **Remove text labels from bottom nav** — icons only
 
 ### Files to edit
 
-**1. `supabase/functions/rate-outfit/index.ts`** — Complete rewrite
+**1. `supabase/functions/rate-outfit/index.ts`** — Roast returns a full result instead of error-only
+- When roast mode is triggered, still run Call 2 but with a roast-specific prompt that generates a funny killer_tag (2-3 words, category-aware humor) and uses the roast_line as the praise_line
+- Return full result shape with all scores at 0 but with killer_tag and praise_line populated
+- Remove the `error: "roast"` field so the frontend treats it as a normal result card (scores just happen to be 0)
 
-Call 1 prompt (scoring):
-```
-You analyze outfit photos. Check if there's a human wearing clothes.
+**2. `src/pages/CameraScreen.tsx`** — Stop intercepting roast as special case
+- Lines 317-324: Remove the roast toast-and-clear logic. Let roast results flow through as normal results so the full card renders
+- Line 545: Change "Check Another Photo" to "Try With Different Outfit"
 
-IF NO HUMAN: Return {"error":"roast","roast_line":"...","drip_score":0,...all scores 0}
-Match roast category: Food, Furniture, Nature, Animal, Meme, Vehicle, Object.
+**3. `src/components/OutfitRatingCard.tsx`** — Wardrobe-only suggestions
+- Remove the entire shopping suggestions section (lines 815-867)
+- Remove the `fetchSuggestions("shopping")` button and `shoppingSuggestions` rendering
+- When wardrobe is empty (`wardrobeItems.length === 0`), replace the "Get Wardrobe Suggestions" button with a styled message: "Add items to your wardrobe to unlock styling suggestions"
+- Keep wardrobe suggestions flow as-is when items exist
 
-IF HUMAN: Return scores only:
-- color_score (0-10): color coordination
-- posture_score (0-10): stance, pose, confidence  
-- layering_score (0-10): layers, accessories, details
-- face_score (0-10): expression, energy
-- drip_score = color(30%) + posture(30%) + layering(25%) + face(15%)
-- confidence_rating (0-10)
-```
-
-Call 2 prompt (creative — uses user's exact prompt verbatim):
-```
-You are DRIPD AI — a Gen-Z fashion intelligence engine.
-Input: drip_score: {score}, user_gender: {gender}
-[User's exact Steps 1-6 for killer_tag and praise_line]
-```
-
-Server-side validation between calls:
-- If Call 1 returns all zero scores → force roast, skip Call 2
-- If Call 1 returns `error: "roast"` → return immediately, skip Call 2  
-- Merge Call 2 results (killer_tag, praise_line) into Call 1 results for final response
-
-**2. No frontend changes needed** — The response shape stays the same, just higher quality and more reliable.
+**4. `src/components/BottomNav.tsx`** — Remove text labels
+- Remove the `<span>` elements (lines 54-60) that show "Camera", "Home", "Wardrobe", "Profile" text
+- Keep icons only, adjust padding/gap
 
 ### Technical details
 
-- Both calls use `gemini-2.5-flash-lite` for speed
-- Call 1: `temperature: 0.3` (deterministic scoring)
-- Call 2: `temperature: 0.9` (creative output)  
-- Call 1 max_tokens: 512 (just JSON scores)
-- Call 2 max_tokens: 256 (just tag + line)
-- Total latency: ~3-4s (parallel would break the dependency, so sequential but each call is faster due to shorter prompts)
-- Roast categories and lines are identical to the user's provided list
-- The edge function will be redeployed after editing
+- The roast-mode Call 2 prompt will be: "Generate a funny 2-3 word killer_tag for a non-human image that was submitted as an outfit. The image is [category]. Make it witty and shareable. The praise_line should be the roast itself."
+- The edge function will identify the roast category in Call 1, then pass it to a modified Call 2 for creative roast output
+- Result shape stays identical — frontend doesn't need to know it's a roast vs real outfit. Scores are just 0.
+- Props cleanup: remove `shoppingSuggestions`, `onShoppingSuggestionsChange`, `loadingShopping` from OutfitRatingCard if they become unused
 
