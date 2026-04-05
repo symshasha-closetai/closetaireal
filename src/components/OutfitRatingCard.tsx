@@ -767,7 +767,12 @@ const OutfitRatingCard = ({ image, imageBase64, result, wardrobeItems = [],
 
       {/* On-Demand Suggestion Buttons */}
       <motion.div initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.2 }} className="space-y-3">
-        {wardrobeSuggestions === null ? (
+        {wardrobeItems.length === 0 ? (
+          <div className="rounded-2xl bg-card border border-border/30 p-6 text-center space-y-2">
+            <Shirt size={20} className="mx-auto text-muted-foreground/50" />
+            <p className="text-xs text-muted-foreground">Add items to your wardrobe to unlock styling suggestions</p>
+          </div>
+        ) : wardrobeSuggestions === null ? (
           <button
             onClick={() => fetchSuggestions("wardrobe")}
             disabled={loadingWardrobe}
