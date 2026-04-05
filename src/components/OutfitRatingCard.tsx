@@ -307,9 +307,9 @@ const OutfitRatingCard = ({ image, imageBase64, result, wardrobeItems = [],
 
     // Confidence Score — right aligned with silver glow
     const confStr = String(result.confidence_rating);
-    ctx.font = "800 56px 'Inter', 'Helvetica', sans-serif";
+    ctx.font = "800 48px 'Inter', 'Helvetica', sans-serif";
     const confMetrics = ctx.measureText(confStr);
-    ctx.font = "400 20px 'Inter', 'Helvetica', sans-serif";
+    ctx.font = "400 18px 'Inter', 'Helvetica', sans-serif";
     const slashMetrics = ctx.measureText("/10");
     const confBlockW = confMetrics.width + 4 + slashMetrics.width;
     const confX = W - 28 - confBlockW;
@@ -319,22 +319,22 @@ const OutfitRatingCard = ({ image, imageBase64, result, wardrobeItems = [],
     ctx.shadowColor = "rgba(180,180,200,0.5)";
     ctx.shadowBlur = 20;
     ctx.fillStyle = "#A0A0A0";
-    ctx.font = "800 56px 'Inter', 'Helvetica', sans-serif";
+    ctx.font = "800 48px 'Inter', 'Helvetica', sans-serif";
     ctx.fillText(confStr, confX, scoreBaseY);
-    ctx.fillText(confStr, confX, scoreBaseY); // double-draw for stronger glow
+    ctx.fillText(confStr, confX, scoreBaseY);
     ctx.restore();
 
     ctx.fillStyle = "rgba(255,255,255,0.3)";
-    ctx.font = "400 20px 'Inter', 'Helvetica', sans-serif";
+    ctx.font = "400 18px 'Inter', 'Helvetica', sans-serif";
     ctx.fillText("/10", confX + confMetrics.width + 4, scoreBaseY);
 
     // "CONFIDENCE" label
     ctx.fillStyle = "rgba(160,160,160,0.6)";
-    ctx.font = "700 10px 'Inter', 'Helvetica', sans-serif";
+    ctx.font = "700 9px 'Inter', 'Helvetica', sans-serif";
     ctx.letterSpacing = "2px";
     const confLabel = "CONFIDENCE";
     const confLabelW = ctx.measureText(confLabel).width;
-    ctx.fillText(confLabel, W - 28 - confLabelW, scoreBaseY + 18);
+    ctx.fillText(confLabel, W - 28 - confLabelW, scoreBaseY + 16);
     ctx.letterSpacing = "0px";
 
     // Killer tag centered
