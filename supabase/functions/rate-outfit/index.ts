@@ -27,6 +27,14 @@ async function callGemini(apiKey: string, messages: any[], temperature: number, 
   if (!res.ok) {
     const t = await res.text();
     console.error("AI error:", res.status, t);
+    if (res.status === 400 && t.includes("Unable to process input image")) {
+      throw {
+        status: 400,
+        code: "IMAGE_PROCESSING_FAILED",
+        retryWithGateway: true,
+        message: "Unable to process input image",
+      };
+    }
     throw new Error(`AI error: ${res.status}`);
   }
   const data = await res.json();
@@ -407,7 +415,7 @@ serve(async (req) => {
     }
 
     console.log("Call 1: Human detection + scoring...");
-    const call1Result = await callGemini(apiKey, [
+    const call1Messages = [
       { role: "system", content: CALL1_SYSTEM },
       {
         role: "user",
@@ -416,7 +424,19 @@ serve(async (req) => {
           { type: "image_url", image_url: { url: `data:image/jpeg;base64,${imageBase64}` } },
         ],
       },
-    ], 0.3, 512);
+    ];
+
+    let call1Result;
+    try {
+      call1Result = await callGemini(apiKey, call1Messages, 0.3, 512);
+    } catch (e: any) {
+      if (e?.retryWithGateway) {
+        console.warn("Call 1 image failed on direct Gemini API, retrying through Lovable AI Gateway");
+        call1Result = await callLovableAI(call1Messages, 0.3, 512, "google/gemini-2.5-flash");
+      } else {
+        throw e;
+      }
+    }
 
     console.log("Call 1 result:", JSON.stringify(call1Result).substring(0, 200));
 
