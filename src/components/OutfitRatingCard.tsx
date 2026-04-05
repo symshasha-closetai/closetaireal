@@ -224,7 +224,7 @@ const OutfitRatingCard = ({ image, imageBase64, result, wardrobeItems = [],
     ctx.fillRect(0, 0, W, H);
 
     // Draw outfit image — try fetch blob first, fallback to Image element for CORS
-    const IMG_H = Math.round(H * 0.58);
+    const IMG_H = Math.round(H * 0.68);
     let imgBitmap: ImageBitmap | HTMLImageElement;
     try {
       const imgResponse = await fetch(image);
