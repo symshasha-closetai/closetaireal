@@ -1,46 +1,66 @@
-## Multiple Fixes: Gold CTA, White Card Text, Unique User ID, Groups, Duplicate Friend Requests
 
-### 1. Gold "Create My Account" button (`SignUpPromptDialog.tsx`)
 
-- Change the CTA button from default primary to gold accent: `className="w-full rounded-xl h-11 font-medium gradient-accent text-accent-foreground"`
-- The app's gold is `--accent: 42 45% 52%` and `gradient-accent` is already defined
+## Fix AI: Enforce Human Check + Killer Tag/Praise Line Reliability
 
-### 2. White text on shared card (`OutfitRatingCard.tsx` — `captureCard`)
+### The Problem
 
-- User said "white rgb #000" — likely means white text (`#FFFFFF`) on the dark card. The current card text uses varying opacities of white. Will ensure all text labels (killer tag, praise line, sub-scores, CTA) use full white `#FFFFFF` or near-white instead of muted colors
-- "BEAT MY DRIP" CTA text on the canvas card: change from `rgba(201,169,110,0.5)` to gold `#C9A96E` at full opacity for the "gold standard" look, as used in the whole app
+From the screenshot: a chemistry diagram (neutron flow) was rated with actual scores (color: 2, posture: 4, layering: 1.5, face: 0) instead of being roasted. The AI model is ignoring the "HARD GATE" because the single prompt is too long and complex for `gemini-2.5-flash-lite` to follow reliably.
 
-### 3. Unique user_id enforcement
+### Solution: Two-Call Architecture
 
-- `user_id` in profiles already references `auth.users(id)` which is inherently unique. Username uniqueness is already enforced via `profiles_username_unique` index. No changes needed here — this is already handled.
+Split into two separate AI calls matching the user's provided prompt structure:
 
-### 4. Prevent duplicate friend requests (`AddFriendDialog.tsx`)
+**Call 1: Score + Human Check** — Focused purely on detecting humans and calculating scores. Short, strict prompt. Returns scores OR roast.
 
-- Currently checks `existingFriendIds` for accepted friends only, but doesn't check pending requests
-- Add a check: before searching, also fetch all pending friend requests sent by the user (`friends` table where `user_id = me` and `status = 'pending'`)
-- Track `pendingIds` state alongside `existingFriendIds`
-- In the search results, if a user has a pending request, show "Sent" label (like the "Added" label) instead of the add button
-- Also add a DB-level unique constraint migration for `(LEAST(user_id, friend_id), GREATEST(user_id, friend_id))` to prevent bidirectional duplicates
+**Call 2: Killer Tag + Praise Line** — Only runs if Call 1 detected a human. Takes the `drip_score` as input (exactly as the user's prompt specifies). This dedicated call produces higher quality creative output because the model only focuses on one task.
 
-### 5. Group messaging (`MessagesScreen.tsx`, DB migration)
-
-- **DB**: Add `name` and `is_group` columns to `conversations` table
-- **New Conversation dialog**: Add a "Create Group" option that lets user select multiple friends, enter a group name, and creates a conversation with multiple participants
-- **MessagesScreen**: Show group name and multi-avatar for group conversations
-- **Challenge (SendToFriendPicker)**: Add groups to the friend picker list, allowing challenges to be sent to groups
+**Server-side validation** — After Call 1, if any of these are true, force roast mode regardless of what the AI returned:
+- `drip_score === 0` and all sub-scores are 0
+- `face_score === 0` and `posture_score === 0` (no human indicators)
+- Response contains `error: "roast"`
 
 ### Files to edit
 
-- `src/components/SignUpPromptDialog.tsx` — gold CTA button
-- `src/components/OutfitRatingCard.tsx` — white text + gold CTA on canvas card
-- `src/components/AddFriendDialog.tsx` — pending request tracking, "Sent" state
-- `src/pages/MessagesScreen.tsx` — group creation flow
-- `src/components/SendToFriendPicker.tsx` — include groups in challenge picker
-- **DB migration**: Add `name`/`is_group` to conversations, add bidirectional unique constraint on friends
+**1. `supabase/functions/rate-outfit/index.ts`** — Complete rewrite
+
+Call 1 prompt (scoring):
+```
+You analyze outfit photos. Check if there's a human wearing clothes.
+
+IF NO HUMAN: Return {"error":"roast","roast_line":"...","drip_score":0,...all scores 0}
+Match roast category: Food, Furniture, Nature, Animal, Meme, Vehicle, Object.
+
+IF HUMAN: Return scores only:
+- color_score (0-10): color coordination
+- posture_score (0-10): stance, pose, confidence  
+- layering_score (0-10): layers, accessories, details
+- face_score (0-10): expression, energy
+- drip_score = color(30%) + posture(30%) + layering(25%) + face(15%)
+- confidence_rating (0-10)
+```
+
+Call 2 prompt (creative — uses user's exact prompt verbatim):
+```
+You are DRIPD AI — a Gen-Z fashion intelligence engine.
+Input: drip_score: {score}, user_gender: {gender}
+[User's exact Steps 1-6 for killer_tag and praise_line]
+```
+
+Server-side validation between calls:
+- If Call 1 returns all zero scores → force roast, skip Call 2
+- If Call 1 returns `error: "roast"` → return immediately, skip Call 2  
+- Merge Call 2 results (killer_tag, praise_line) into Call 1 results for final response
+
+**2. No frontend changes needed** — The response shape stays the same, just higher quality and more reliable.
 
 ### Technical details
 
-- The bidirectional friend uniqueness constraint: `CREATE UNIQUE INDEX friends_pair_unique ON friends (LEAST(user_id, friend_id), GREATEST(user_id, friend_id));` — prevents A→B and B→A duplicates
-- Group conversations reuse existing `conversation_participants` table (multiple rows per conversation)
-- The `find_or_create_conversation` RPC is for 1:1 only; groups will use direct insert into `conversations` + `conversation_participants`
-- Canvas card text changes are purely in the `captureCard` callback — all `ctx.fillStyle` values for text will become `#FFFFFF` with appropriate opacity, and the "BEAT MY DRIP" line becomes `#C9A96E` at full opacity
+- Both calls use `gemini-2.5-flash-lite` for speed
+- Call 1: `temperature: 0.3` (deterministic scoring)
+- Call 2: `temperature: 0.9` (creative output)  
+- Call 1 max_tokens: 512 (just JSON scores)
+- Call 2 max_tokens: 256 (just tag + line)
+- Total latency: ~3-4s (parallel would break the dependency, so sequential but each call is faster due to shorter prompts)
+- Roast categories and lines are identical to the user's provided list
+- The edge function will be redeployed after editing
+
