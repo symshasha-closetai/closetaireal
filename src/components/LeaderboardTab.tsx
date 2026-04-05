@@ -26,15 +26,15 @@ import {
 
 const RANK_TAGS: Record<number, string> = {
   1: "Drip God 👑",
-  2: "Style Titan ⚡",
-  3: "Trend Sniper 🎯",
-  4: "Fit Assassin 🔪",
-  5: "Clean Killer 🧼",
-  6: "Aura Builder ✨",
-  7: "Street Scholar 🧠",
-  8: "Fit Flexer 💪",
-  9: "Style Rookie 🚀",
-  10: "Drip Starter 🔥",
+  2: "Style Icon ✨",
+  3: "Fashion Elite 🔥",
+  4: "Trend Leader 💫",
+  5: "Vibe Master 🎯",
+  6: "Clean Machine ⚡",
+  7: "Rising Star 🌟",
+  8: "Style Scout 👀",
+  9: "Fresh Start 🌱",
+  10: "New Wave 🫧",
 };
 
 type LeaderboardEntry = {
