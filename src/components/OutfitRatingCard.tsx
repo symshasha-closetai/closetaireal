@@ -274,35 +274,35 @@ const OutfitRatingCard = ({ image, imageBase64, result, wardrobeItems = [],
     ctx.letterSpacing = "0px";
 
     // === Bottom panel content ===
-    const panelY = IMG_H + 10;
+    const panelY = IMG_H + 4;
 
     // Drip Score — large display with gold glow
     ctx.textBaseline = "alphabetic";
     const scoreStr = String(result.drip_score);
     const scoreX = 28;
-    const scoreBaseY = panelY + 52;
+    const scoreBaseY = panelY + 42;
 
     // Gold glow effect
     ctx.save();
     ctx.shadowColor = "rgba(201,169,110,0.6)";
     ctx.shadowBlur = 24;
     ctx.fillStyle = "#C9A96E";
-    ctx.font = "800 56px 'Inter', 'Helvetica', sans-serif";
+    ctx.font = "800 48px 'Inter', 'Helvetica', sans-serif";
     const scoreMetrics = ctx.measureText(scoreStr);
     ctx.fillText(scoreStr, scoreX, scoreBaseY);
-    ctx.fillText(scoreStr, scoreX, scoreBaseY); // double-draw for stronger glow
+    ctx.fillText(scoreStr, scoreX, scoreBaseY);
     ctx.restore();
 
     // "/10" next to score
     ctx.fillStyle = "rgba(255,255,255,0.3)";
-    ctx.font = "400 20px 'Inter', 'Helvetica', sans-serif";
+    ctx.font = "400 18px 'Inter', 'Helvetica', sans-serif";
     ctx.fillText("/10", scoreX + scoreMetrics.width + 4, scoreBaseY);
 
     // "DRIP SCORE" label
     ctx.fillStyle = "rgba(201,169,110,0.6)";
-    ctx.font = "700 10px 'Inter', 'Helvetica', sans-serif";
+    ctx.font = "700 9px 'Inter', 'Helvetica', sans-serif";
     ctx.letterSpacing = "2px";
-    ctx.fillText("DRIP SCORE", scoreX, scoreBaseY + 18);
+    ctx.fillText("DRIP SCORE", scoreX, scoreBaseY + 16);
     ctx.letterSpacing = "0px";
 
     // Confidence Score — right aligned with silver glow
