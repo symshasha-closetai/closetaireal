@@ -55,7 +55,7 @@ IF HUMAN DETECTED — score the outfit:
 - posture_score (0-10): posture, stance, pose, body language, confidence
 - layering_score (0-10): layering, accessories, styling details, texture mix
 - face_score (0-10): facial expression, smile, energy, vibe
-- drip_score = color_score*0.3 + posture_score*0.3 + layering_score*0.25 + face_score*0.15
+- drip_score: set to 0 (will be calculated server-side from sub-scores)
 - confidence_rating (0-10): overall confidence/body language
 - Provide a short reason for each score and a 1-line practical styling tip as "advice"
 - Detect: solo/couple/group, face hidden or visible
@@ -65,9 +65,27 @@ Return EXACTLY:
 
 CRITICAL: Return ONLY valid JSON. No markdown, no explanation.`;
 
+// ── Tier helper ──
+function getScoreTier(score: number): string {
+  if (score < 4) return "NEEDS WORK";
+  if (score < 7) return "DECENT";
+  if (score < 8.5) return "FIRE";
+  return "ELITE";
+}
+
 // ── CALL 2: Killer Tag + Praise Line ──
 function getCall2System(dripScore: number, gender: string, faceHidden: boolean, sceneType: string, profileContext: string) {
+  const tier = getScoreTier(dripScore);
   return `You are DRIPD AI — a Gen-Z fashion intelligence engine. You create two outputs: a KILLER TAG and a PRAISE LINE.
+
+CRITICAL TONE GATE (NON-NEGOTIABLE):
+The drip_score is ${dripScore.toFixed(1)} which falls in the "${tier}" tier.
+Your killer_tag and praise_line MUST match this tier's energy:
+- NEEDS WORK (< 4): The outfit is NOT good. Tag and line must be gently critical or self-aware. NEVER praise or hype a bad outfit.
+- DECENT (4-6.9): Decent but not amazing. Tag and line should be chill, not over-the-top.
+- FIRE (7-8.4): Genuinely good. Confident praise is appropriate.
+- ELITE (≥ 8.5): Exceptional. Full hype is appropriate.
+DO NOT praise a low score. DO NOT roast a high score. The tone MUST sync with the number.
 
 INPUT DATA:
 - drip_score: ${dripScore.toFixed(1)}
@@ -142,9 +160,19 @@ CRITICAL: Return ONLY valid JSON. No markdown, no explanation.`;
 
 // ── CALL 2 UNFILTERED: Raw Gen-Z hype engine ──
 function getCall2SystemUnfiltered(dripScore: number, gender: string, faceHidden: boolean, sceneType: string) {
+  const tier = getScoreTier(dripScore);
   return `You are DRIPD AI — a RAW, UNFILTERED Gen-Z hype engine.
 You do NOT sound safe. You do NOT sound corporate.
 You sound like that one friend who sees your fit and literally cannot keep it together.
+
+CRITICAL TONE GATE (NON-NEGOTIABLE):
+The drip_score is ${dripScore.toFixed(1)} which falls in the "${tier}" tier.
+Your killer_tag and praise_line MUST match this tier's energy:
+- NEEDS WORK (< 4): The outfit is NOT good. Be brutally honest. Roast it. NEVER praise or hype a bad outfit.
+- DECENT (4-6.9): It's okay. Chill energy, not over-the-top.
+- FIRE (7-8.4): Genuinely good. Go hard with the hype.
+- ELITE (≥ 8.5): Exceptional. Full unhinged hype mode.
+DO NOT praise a low score. DO NOT go easy on a high score. The tone MUST sync with the number.
 
 INPUT:
 - drip_score: ${dripScore.toFixed(1)}
@@ -302,6 +330,16 @@ serve(async (req) => {
     ], 0.3, 512);
 
     console.log("Call 1 result:", JSON.stringify(call1Result).substring(0, 200));
+
+    // ── SERVER-SIDE DRIP SCORE: Override AI's math with correct weighted formula ──
+    const calculatedDrip = Math.round(
+      ((call1Result.color_score || 0) * 0.3 +
+       (call1Result.posture_score || 0) * 0.3 +
+       (call1Result.layering_score || 0) * 0.25 +
+       (call1Result.face_score || 0) * 0.15) * 10
+    ) / 10;
+    console.log(`Server-side drip: ${calculatedDrip} (AI said: ${call1Result.drip_score})`);
+    call1Result.drip_score = calculatedDrip;
 
     // ── SERVER-SIDE VALIDATION: Force roast if no human indicators ──
     const subScoreTotal = (call1Result.color_score || 0) + (call1Result.posture_score || 0) + (call1Result.layering_score || 0) + (call1Result.face_score || 0);
