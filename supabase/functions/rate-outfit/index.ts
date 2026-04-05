@@ -470,6 +470,7 @@ CRITICAL: Return ONLY valid JSON.`;
 
       const roastTemp = unfiltered ? 1.2 : 0.9;
       const roastTokens = unfiltered ? 512 : 256;
+      const roastModel = unfiltered ? "gemini-2.5-flash" : "gemini-2.5-flash-lite";
       const roastMessages = [
         { role: "system", content: roastPrompt },
         {
@@ -480,24 +481,24 @@ CRITICAL: Return ONLY valid JSON.`;
           ],
         },
       ];
-      const roastCall2 = await callGemini(apiKey, roastMessages, roastTemp, roastTokens, unfiltered ? "gemini-2.5-flash" : "gemini-2.5-flash-lite");
+      
+      let roastCall2;
+      try {
+        roastCall2 = await callGemini(apiKey, roastMessages, roastTemp, roastTokens, roastModel);
+      } catch (e: any) {
+        console.error("Roast Call 2 failed:", e);
+        // Use fallback roast copy instead of failing entirely
+        roastCall2 = { killer_tag: "Not A Fit 💀", praise_line: `you really sent a ${roastCategory} to a fashion app` };
+      }
 
       console.log("Roast Call 2 result:", JSON.stringify(roastCall2));
 
       const roastResult = {
-        drip_score: 0,
-        drip_reason: "No human detected",
-        confidence_rating: 0,
-        confidence_reason: "No human detected",
-        killer_tag: roastCall2.killer_tag || "Not A Fit",
-        color_score: 0,
-        color_reason: "N/A",
-        posture_score: 0,
-        posture_reason: "N/A",
-        layering_score: 0,
-        layering_reason: "N/A",
-        face_score: 0,
-        face_reason: "N/A",
+        drip_score: 0, drip_reason: "No human detected",
+        confidence_rating: 0, confidence_reason: "No human detected",
+        killer_tag: roastCall2.killer_tag || "Not A Fit 💀",
+        color_score: 0, color_reason: "N/A", posture_score: 0, posture_reason: "N/A",
+        layering_score: 0, layering_reason: "N/A", face_score: 0, face_reason: "N/A",
         advice: "Upload a photo with you wearing an outfit",
         praise_line: roastCall2.praise_line || roastCategory,
       };
