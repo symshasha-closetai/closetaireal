@@ -346,7 +346,7 @@ const OutfitRatingCard = ({ image, imageBase64, result, wardrobeItems = [],
     }
 
     // Separator line
-    const sepY = scoreBaseY + 34;
+    const sepY = scoreBaseY + 28;
     const sepGrad = ctx.createLinearGradient(28, 0, W - 28, 0);
     sepGrad.addColorStop(0, "rgba(201,169,110,0.05)");
     sepGrad.addColorStop(0.3, "rgba(201,169,110,0.3)");
@@ -362,22 +362,22 @@ const OutfitRatingCard = ({ image, imageBase64, result, wardrobeItems = [],
       { label: "LAYERING", score: result.layering_score ?? result.fit_score ?? 0, color: "#FFFFFF" },
       { label: "FACE", score: result.face_score ?? 0, color: "#FFFFFF" },
     ];
-    const subY = sepY + 36;
+    const subY = sepY + 28;
     const colW = (W - 56) / subScores.length;
     subScores.forEach((s, i) => {
       const cx = 28 + colW * i + colW / 2;
       const scoreVal = Number.isInteger(s.score) ? String(s.score) : s.score.toFixed(1);
       
       ctx.fillStyle = "#FFFFFF";
-      ctx.font = "700 24px 'Inter', 'Helvetica', sans-serif";
+      ctx.font = "700 20px 'Inter', 'Helvetica', sans-serif";
       const sW = ctx.measureText(scoreVal).width;
       ctx.fillText(scoreVal, cx - sW / 2, subY);
 
       ctx.fillStyle = "rgba(255,255,255,0.6)";
-      ctx.font = "600 8px 'Inter', 'Helvetica', sans-serif";
+      ctx.font = "600 7px 'Inter', 'Helvetica', sans-serif";
       ctx.letterSpacing = "1px";
       const lW = ctx.measureText(s.label).width;
-      ctx.fillText(s.label, cx - lW / 2, subY + 16);
+      ctx.fillText(s.label, cx - lW / 2, subY + 14);
       ctx.letterSpacing = "0px";
     });
 
