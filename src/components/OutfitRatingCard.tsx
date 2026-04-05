@@ -240,8 +240,8 @@ const OutfitRatingCard = ({ image, imageBase64, result, wardrobeItems = [],
       });
     }
 
-    // Cover-fit the image
-    const imgScale = Math.max(W / imgBitmap.width, IMG_H / imgBitmap.height);
+    // Contain-fit the image (no cropping)
+    const imgScale = Math.min(W / imgBitmap.width, IMG_H / imgBitmap.height);
     const sw = imgBitmap.width * imgScale;
     const sh = imgBitmap.height * imgScale;
     ctx.save();
