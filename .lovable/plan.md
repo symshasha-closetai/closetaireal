@@ -1,69 +1,63 @@
+## Fix Plan: 5 Issues
 
+### 1. Shared Card — Remove sub-scores, minimize whitespace
 
-## Fix: Score-Creative Sync + Server-Side Drip Score Calculation
+**File: `src/components/OutfitRatingCard.tsx**` (captureCard function, lines 369-418)
 
-### Root Causes
+Remove the entire sub-scores row and separator from the canvas. Keep only: image, drip score, confidence score, killer tag, praise line, CTA. This removes ~60px of vertical space. Also increase `IMG_H` ratio from `0.68` to `0.78` to give more space to the photo and less to the panel. Reposition praise line directly below the scores row (no sub-scores gap).
 
-1. **Drip score is wrong (2.5)** — The AI calculates `drip_score` itself in Call 1, but it miscalculates. Looking at the screenshot sub-scores: color=3, posture=7.5, layering=1, face=8 → the correct formula gives `3×0.3 + 7.5×0.3 + 1×0.25 + 8×0.15 = 4.6`, NOT 2.5. The AI is bad at math. **Fix: compute drip_score server-side** from the sub-scores after Call 1 returns, overriding whatever the AI says.
+### 2. Analyze-clothing — Only detect items with 40-50%+ visibility; smarter watch handling
 
-2. **Killer tag and praise line don't match the score** — "CLASSIC VIBES ✨" and a praising line for a 2.5 score is wrong. The Call 2 prompt has score-tier mappings but the AI ignores them. The prompt needs a harder gate: repeat the score tier in all-caps before the generation instruction, and add a "TONE MUST match score" enforcement with negative examples.
+**File: `supabase/functions/analyze-clothing/index.ts**` (system prompt, line 24-35)
 
-3. **Toggle label** — Code already says "Savage Mode 😏" (line 453). The screenshot may be from before the last deploy.
+Update the system prompt to add:
 
-### Changes
+- "Only include items that are at least 40-50% visible in the image. If less than half the item is visible, skip it."
+- "For watches: if the dial/face is not visible, classify as just 'Watch' (not 'Smartwatch' or 'Analog Watch'). Only specify smartwatch/analog if the dial is clearly visible."
+- "For watch image generation context: describe the watch as showing only the strap/band portion visible in the image."
 
-**1. `supabase/functions/rate-outfit/index.ts`** — Server-side drip_score calculation
+### 3. Create Group fails — RLS policy blocks adding other participants
 
-After Call 1 returns, recalculate `drip_score` from the sub-scores using the exact weighted formula, overriding the AI's value:
+**Root cause:** The `conversation_participants` INSERT policy requires `user_id = auth.uid() OR is_conversation_participant(auth.uid(), conversation_id)`. When inserting all participants in a single batch, the creator's own row may not be committed yet, so adding friends fails.
 
-```typescript
-// Override AI's drip_score with correct calculation
-const calculatedDrip = Math.round(
-  ((call1Result.color_score || 0) * 0.3 +
-   (call1Result.posture_score || 0) * 0.3 +
-   (call1Result.layering_score || 0) * 0.25 +
-   (call1Result.face_score || 0) * 0.15) * 10
-) / 10;
-call1Result.drip_score = calculatedDrip;
-```
+**Fix (two-part):**
 
-This ensures the drip score always matches the sub-scores. Apply this right after line 304 (after Call 1 result is logged), before the roast gate check.
+**A. Database migration** — Create a `create_group_conversation` SECURITY DEFINER function that atomically:
 
-**2. `supabase/functions/rate-outfit/index.ts`** — Enforce score-tone sync in Call 2 prompts
+1. Creates the conversation with `is_group = true` and the group name
+2. Inserts all participants (creator + members) in one transaction
+3. Returns the conversation ID
 
-In both `getCall2System` and `getCall2SystemUnfiltered`, add a hard enforcement block at the top:
+This bypasses RLS entirely (like `find_or_create_conversation` does for 1:1 chats).
 
-```
-CRITICAL TONE GATE:
-The drip_score is ${dripScore.toFixed(1)} which falls in the "${tierLabel}" tier.
-Your killer_tag and praise_line MUST match this tier's energy.
-- Score < 4 = the outfit is NOT good. Tag and line must be gently critical or self-aware. NEVER praise or hype.
-- Score 4-6.9 = decent but not amazing. Tag and line should be chill, not over-the-top.
-- Score 7-8.4 = genuinely good. Confident praise is appropriate.
-- Score ≥ 8.5 = exceptional. Full hype is appropriate.
-DO NOT praise a low score. DO NOT roast a high score. The tone MUST sync with the number.
-```
+**B. File: `src/pages/MessagesScreen.tsx**` (handleCreateGroup, lines 194-235) — Replace the manual insert logic with a single `supabase.rpc("create_group_conversation", { group_name, member_ids })` call.
 
-Add a helper to compute the tier label string from the score.
+### 4. Wardrobe items fail to save
 
-**3. Same file** — Update Call 1 prompt to NOT compute drip_score
+**Root cause analysis:** The `processQueue` function has retry logic (3 attempts) for both R2 upload and DB insert. The "Failed to save items" error likely comes from:
 
-Remove the formula instruction from `CALL1_SYSTEM` since we compute it server-side. Change:
-```
-- drip_score = color_score*0.3 + posture_score*0.3 + layering_score*0.25 + face_score*0.15
-```
-to:
-```
-- drip_score: will be calculated server-side, just return 0 for this field
-```
+- R2 upload timing out or CORS issues on the edge function
+- The `generate-clothing-image` call failing silently (caught with empty `catch {}`)
 
-This prevents the AI from spending tokens on math it gets wrong.
+**File: `src/pages/WardrobeScreen.tsx**` (processQueue, lines 598-685)
+
+- Add better error logging in the empty `catch {}` blocks (lines 615, 625)
+- If `generate-clothing-image` fails, immediately fall back to uploading the compressed original image instead of relying on the retry loop (which re-uploads the same compressed blob without the AI image)
+- Add a toast when individual items fail during background processing so the user knows which items failed
+
+### 5. Drip Check broken image
+
+**Root cause:** The hero image at line 579 uses `image` (which is a blob URL from `URL.createObjectURL`). Blob URLs expire when the page is navigated away and back, or when the object is revoked. The `min-h-[300px]` fix prevents collapse but still shows a broken image icon.
+
+**File: `src/components/OutfitRatingCard.tsx**` (line 579) + `**src/pages/CameraScreen.tsx**`
+
+- In OutfitRatingCard: Use `imageBase64 || image` as the `src` for the hero `<img>`. The `imageBase64` is a data URL that never expires, while `image` (blob URL) can expire.
+- Add an `onError` handler on the `<img>` that falls back to `imageBase64` if the blob URL fails.
 
 ### Files to edit
-- `supabase/functions/rate-outfit/index.ts` (server-side score calc + tone enforcement in both Call 2 prompts + simplify Call 1)
 
-### Technical details
-- The weighted formula: `color×0.3 + posture×0.3 + layering×0.25 + face×0.15`, rounded to 1 decimal
-- Tier labels: "needs work" (<4), "decent" (4-6.9), "fire" (7-8.4), "elite" (≥8.5)
-- Server-side calc is placed before the roast gate so the gate also uses the correct score
-
+1. `src/components/OutfitRatingCard.tsx` — Simplify shared card (remove sub-scores) + fix broken image with imageBase64 fallback
+2. `supabase/functions/analyze-clothing/index.ts` — Visibility threshold + watch logic in prompt
+3. New migration SQL — `create_group_conversation` RPC function
+4. `src/pages/MessagesScreen.tsx` — Use new RPC for group creation
+5. `src/pages/WardrobeScreen.tsx` — Better error handling in processQueue
