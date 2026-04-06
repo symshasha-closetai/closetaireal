@@ -541,6 +541,7 @@ serve(async (req) => {
       dominance_score: call1Result.dominance_score, dominance_reason: call1Result.dominance_reason,
       approachability_score: call1Result.approachability_score, approachability_reason: call1Result.approachability_reason,
       advice: call1Result.advice,
+      styling_tips: Array.isArray(call1Result.styling_tips) ? call1Result.styling_tips : [],
       praise_line: copy.praise_line,
     };
 
