@@ -356,20 +356,30 @@ const OutfitRatingCard = ({ image, imageBase64, result, wardrobeItems = [],
       ctx.fillText(result.killer_tag, (W - tagW) / 2, panelY + 30);
     }
 
-    // 🔥 Savage Mode badge on share card
-    if (isSavage) {
-      const badgeText = "🔥 SAVAGE MODE";
-      ctx.font = "700 11px 'Inter', 'Helvetica', sans-serif";
-      const badgeW = ctx.measureText(badgeText).width + 16;
-      const badgeH = 22;
-      const badgeX = W - badgeW - 16;
-      const badgeY = 16;
-      ctx.fillStyle = "rgba(0,0,0,0.7)";
-      ctx.beginPath();
-      ctx.roundRect(badgeX, badgeY, badgeW, badgeH, 11);
-      ctx.fill();
-      ctx.fillStyle = "#FFD700";
-      ctx.fillText(badgeText, badgeX + 8, badgeY + 15);
+    // Sub-scores row in share card
+    const subLabels = ["ALLURE", "PRESTIGE", "AUTHORITY", "CHARISMA"];
+    const subValues = [
+      result.attractiveness_score ?? result.color_score ?? 0,
+      result.status_score ?? result.posture_score ?? 0,
+      result.dominance_score ?? result.layering_score ?? 0,
+      result.approachability_score ?? result.face_score ?? 0,
+    ];
+    const subColors = ["#C9A96E", "#8B9A7B", "#B08B8B", "#7B8FA8"];
+    const subY = scoreBaseY + 20;
+    const subSpacing = W / 4;
+    for (let i = 0; i < 4; i++) {
+      const cx = subSpacing * i + subSpacing / 2;
+      ctx.fillStyle = subColors[i];
+      ctx.font = "700 16px 'Inter', 'Helvetica', sans-serif";
+      const valStr = Number.isInteger(subValues[i]) ? String(subValues[i]) : subValues[i].toFixed(1);
+      const valW = ctx.measureText(valStr).width;
+      ctx.fillText(valStr, cx - valW / 2, subY + 16);
+      ctx.fillStyle = "#FFFFFF";
+      ctx.font = "600 7px 'Inter', 'Helvetica', sans-serif";
+      ctx.letterSpacing = "1px";
+      const lblW = ctx.measureText(subLabels[i]).width;
+      ctx.fillText(subLabels[i], cx - lblW / 2, subY + 28);
+      ctx.letterSpacing = "0px";
     }
 
     // Praise line — directly after scores (no sub-scores)
