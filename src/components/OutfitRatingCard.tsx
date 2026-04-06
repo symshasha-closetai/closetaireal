@@ -78,6 +78,7 @@ const OutfitRatingCard = ({ image, imageBase64, result, wardrobeItems = [],
   const [loadingImages, setLoadingImages] = useState<Record<number, boolean>>({});
   const [sharing, setSharing] = useState(false);
   const [downloading, setDownloading] = useState(false);
+  const [challengeUploading, setChallengeUploading] = useState(false);
 
   // On-demand suggestion state
   const [loadingWardrobe, setLoadingWardrobe] = useState(false);
