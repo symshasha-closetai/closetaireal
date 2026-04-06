@@ -541,10 +541,10 @@ const OutfitRatingCard = ({ image, imageBase64, result, wardrobeItems = [],
   };
 
   const subScores = [
-    { key: "color", score: result.color_score, label: "Color", strokeColor: "#8B9A7B", reason: result.color_reason },
-    { key: "posture", score: result.posture_score ?? result.style_score ?? 0, label: "Posture", strokeColor: "#C9A96E", reason: result.posture_reason ?? result.style_reason },
-    { key: "layering", score: result.layering_score ?? result.fit_score ?? 0, label: "Layering", strokeColor: "#B08B8B", reason: result.layering_reason ?? result.fit_reason },
-    { key: "face", score: result.face_score ?? 0, label: "Face", strokeColor: "#7B8FA8", reason: result.face_reason },
+    { key: "attractiveness", score: result.attractiveness_score ?? result.color_score ?? 0, label: "Allure", strokeColor: "#C9A96E", reason: result.attractiveness_reason ?? result.color_reason },
+    { key: "status", score: result.status_score ?? result.posture_score ?? 0, label: "Prestige", strokeColor: "#8B9A7B", reason: result.status_reason ?? result.posture_reason },
+    { key: "dominance", score: result.dominance_score ?? result.layering_score ?? 0, label: "Authority", strokeColor: "#B08B8B", reason: result.dominance_reason ?? result.layering_reason },
+    { key: "approachability", score: result.approachability_score ?? result.face_score ?? 0, label: "Charisma", strokeColor: "#7B8FA8", reason: result.approachability_reason ?? result.face_reason },
   ];
 
   const mainScores = [
