@@ -1,58 +1,110 @@
+## Plan: Praise Line Tone Update, Group Fix, Wardrobe Images, and Calendar Improvements
 
+### 1. Update Praise Line Tone Logic
 
-## Plan: Fix Challenge Sharing, Group Creation, and Expert Fashion Advice
+**File: `supabase/functions/rate-outfit/index.ts**`
 
-### 1. Fix Challenge Sharing (shared card + gender text)
+Rewrite the CAPTION_SYSTEM prompt's STEP 3 PRAISE LINE section:
 
-**Problem**: When "Challenge" is tapped, `SendToFriendPicker` sends only metadata (image_url, score, killer_tag) as a `drip_card` message. The friend sees a minimal preview, not the actual generated share card. Also, the share text says "Beat me if you can" instead of a gender-aware challenge line, and no text accompanies the card on WhatsApp/native share.
+**Males (solo) — ALL tiers get funny/roasted/exaggerated praise:**
 
-**Fix**:
+- 0-4: Sarcastic roast, funny self-aware burns
+- 4.1-6: Funny exaggeration, supportive but still roasting
+- 6.1-8: Exaggerated hype with comedic twist
+- 8.1+: Over-the-top exaggerated praise, still funny/roasting energy
 
-**A. OutfitRatingCard.tsx** — When Challenge is tapped, generate the canvas card blob first, upload it to R2 storage, then pass the R2 URL as the shared image:
-- Before opening `SendToFriendPicker`, call `captureCard()` to generate the blob
-- Upload blob to R2 via `r2.upload()` to get a public URL
-- Pass that URL as `metadata.card_image_url` to `SendToFriendPicker`
-- Change the `content` text to be gender-aware: `"Let's Drop His Drip 🔥"` or `"Let's Drop Her Drip 🔥"` based on `styleProfile.gender` (default to "His" if unknown)
+**Females (solo):**
 
-**B. SendToFriendPicker.tsx** — No structural changes needed, it already sends `content` and `metadata` as-is.
+- 0-6.9: Funny roasting (same as males below 7)
+- 7+: Awesomely praised lines that make her smile instantly — "glad you came here, else I would've died seeing ugly faces" energy. Warm, empowering, makes her want to screenshot and post
 
-**C. MessageBubble.tsx** — Update the `drip_card` renderer to prefer `metadata.card_image_url` over `metadata.image_url` for displaying the card. This shows the actual generated card instead of the raw outfit photo.
+**Couples/Groups/Family:** Keep existing logic (chemistry, power, etc.). Again it should be creative one which user want to share across socials.
 
-**D. OutfitRatingCard.tsx (handleShare)** — Update `navigator.share` call to include the gender-aware text: `"Let's Drop His/Her Drip 🔥"` as the share title/text so it appears in WhatsApp and other apps alongside the image.
+### 2. Fix Group Creation — RLS Bypass Issue
 
----
+The `create_group_conversation` function is SECURITY DEFINER, which should bypass RLS. However, the `conversations` INSERT policy has a `WITH CHECK` that checks `auth.uid() IS NOT NULL`. SECURITY DEFINER functions in Supabase may still have `auth.uid()` available from the calling context, but the issue is likely that the function owner doesn't pass the auth context properly.
 
-### 2. Fix Group Creation
+**Fix: Database migration** — The conversations INSERT policy `WITH CHECK (auth.uid() IS NOT NULL)` might be interfering. Since the function is already SECURITY DEFINER (which means it runs with owner privileges), the fix is to ensure RLS doesn't block the owner. We need to either:
 
-**Problem**: "Unable to create group" error. The `create_group_conversation` RPC is SECURITY DEFINER and looks correct syntactically. The likely issue is a stale function definition or a constraint conflict.
+- Grant the function owner role bypass, OR
+- More likely: check if there's a different error. Let me test by calling the function directly first.
 
-**Fix**:
+Actually, looking more carefully: SECURITY DEFINER in Supabase runs as the `postgres` role which bypasses RLS. The real issue might be something else. I'll add a migration that drops and recreates the function with better error surfacing, and also check if `conversations` table has a `NOT NULL` constraint on `name` — it doesn't (nullable). The `is_group` has a default of `false` but we're passing `true`.
 
-**A. Database migration** — `DROP` and recreate `create_group_conversation` with the same logic but adding explicit error handling (`EXCEPTION WHEN` blocks) around each INSERT to surface the actual failure reason.
+Wait — looking at the RPC call in `MessagesScreen.tsx`, the parameters are `group_name` and `member_ids`. The types.ts file defines the RPC signature. If the generated types don't include the updated function signature, the client might be sending wrong parameters.
 
-**B. MessagesScreen.tsx** — Improve error reporting: log the full error object and surface `error.message` in the toast instead of a generic "Failed to create group". Also lower the minimum member requirement from `< 2` to `< 1` (a group with 1 other person + creator = 2 total is valid).
+**Fix approach:**
 
----
+- Create a new migration that drops and recreates the function with explicit `RAISE NOTICE` debugging
+- The function itself looks correct. The most likely issue is that the Supabase types file doesn't have the updated RPC signature, causing the client to fail silently. Since we can't edit types.ts, we need to cast the RPC call.
 
-### 3. Replace Generic Suggestions with Expert Fashion Advice
+**File: `src/pages/MessagesScreen.tsx**` — Cast the RPC call to avoid type issues:
 
-**Problem**: The advice line after drip check gives one generic sentence. User wants image-aware, expert-level fashion advice that analyzes what's visible (top, bottom, colors, body shape) and gives specific styling tips.
+```typescript
+const { data: convoId, error } = await (supabase.rpc as any)("create_group_conversation", {
+  group_name: groupName.trim(),
+  member_ids: selectedMembers,
+});
+```
 
-**Fix**:
+### 3. Wardrobe Images — Use Original Photo Cutout Instead of AI Generation
 
-**A. supabase/functions/rate-outfit/index.ts** — Expand the `CALL1_SYSTEM` prompt to generate a new field `styling_tips` (array of 2-3 strings) alongside the existing `advice` field. Each tip should:
-- Identify what's visible (top, bottom, accessory, colors, patterns)
-- Give specific, actionable advice referencing the actual outfit
-- Sound like a fashion expert, not generic AI
-- Examples: "This top has flowy patterns → works better with structured bottoms", "Contrast is strong → avoid overly baggy denim"
+**Problem:** Generating a full mannequin image via Replicate is slow/expensive and often fails. User wants to just use the person's cutout from the original uploaded photo with punchy/vivid background colors.
 
-**B. CameraScreen.tsx** — Add `styling_tips?: string[]` to the `RatingResult` type.
+**Approach:** Instead of calling `generate-clothing-image` (Replicate), use the original uploaded image directly with a vibrant colored background. This is faster, cheaper, and more reliable.
 
-**C. OutfitRatingCard.tsx** — Replace the single `{result.advice}` paragraph with a styled list of `result.styling_tips`. Each tip rendered as a compact card with a small icon. Fallback to `result.advice` if `styling_tips` is empty/undefined (backward compat with cached results).
+**File: `src/pages/WardrobeScreen.tsx**` — In `processQueue()`:
 
-### Technical Details
+- Skip the `generate-clothing-image` edge function call entirely
+- Use the original compressed image directly
+- Apply a punchy colored background via canvas manipulation: draw the image on a vibrant gradient background
+- Create a simple client-side function that takes the original image blob and wraps it with a randomly selected punchy color background (hot pink, electric blue, lime green, orange, purple, etc.)
+- The image stays as-is (the person/clothing cutout from the photo) but gets a vivid backdrop
 
-**Files changed**: `supabase/functions/rate-outfit/index.ts`, `src/components/OutfitRatingCard.tsx`, `src/components/MessageBubble.tsx`, `src/pages/CameraScreen.tsx`, `src/pages/MessagesScreen.tsx`, + 1 database migration.
+**New helper function** in WardrobeScreen or a shared util:
 
-**No new dependencies**. R2 upload for card image uses existing `r2.upload()`. Gender detection uses existing `styleProfile.gender` from auth context.
+```typescript
+async function addPunchyBackground(imageBlob: Blob): Promise<Blob> {
+  // Load image, draw on canvas with vibrant gradient bg
+  // Colors: #FF6B6B, #4ECDC4, #45B7D1, #F7DC6F, #BB8FCE, #FF8A5C, #00D2FF
+}
+```
 
+**File: `supabase/functions/generate-clothing-image/index.ts**` — No changes needed (keep for retry/manual regeneration), but the default flow won't call it.
+
+### 4. Dripd Calendar — Show All Items + Cache Properly
+
+**Problem A: Only 2 of 3 items shown.** In the calendar card preview (`HomeScreen.tsx` line 801-806), items are rendered via `itemImages.slice(0, 3)` which is correct. The issue is that `allWardrobeItems.find(w => w.id === id)` fails to find the 3rd item because the AI returned an item ID that doesn't match any wardrobe item (hallucinated ID).
+
+**Fix:** Strengthen the prompt in `generate-outfit-calendar/index.ts` to be stricter about using ONLY exact IDs from the provided list. Add validation server-side to filter out invalid IDs.
+
+**Problem B: Calendar refreshes every time.** The cache is already implemented via `deviceCache` with `CACHE_KEYS.CALENDAR`, and there's a 24-hour cooldown. But the `fetchCalendar` function always queries Supabase (line 484-504), overwriting cached data. If the DB has items but some IDs don't resolve, it looks like "refreshing."
+
+**Fix in `HomeScreen.tsx`:** 
+
+- When loading from cache, don't re-fetch from DB unless cache is empty or stale
+- In the calendar card, show ALL matched items (remove the `slice(0, 3)` limit on the detail view)
+- In the preview cards, dynamically size the grid based on item count (3, 4, or more items)
+
+**File: `supabase/functions/generate-outfit-calendar/index.ts`:**
+
+- Add stricter prompt: "CRITICAL: Use ONLY the exact IDs listed. Do NOT invent IDs."
+- Add server-side validation: filter each outfit's items array to only include IDs that exist in the provided wardrobeItems
+- Return only outfits that have at least 2 valid items after filtering
+
+**File: `src/pages/HomeScreen.tsx`:**
+
+- Calendar detail view (line 1031-1039): Remove `slice` limit, show all items
+- Calendar preview cards (line 801-809): Show all matched items instead of capping at 3
+- Improve cache-first logic: if cache exists and has ≥3 items, don't fetch from DB
+
+### Technical Summary
+
+**Files changed:**
+
+1. `supabase/functions/rate-outfit/index.ts` — Update praise line tone rules
+2. `src/pages/MessagesScreen.tsx` — Cast RPC call to fix type mismatch
+3. `src/pages/WardrobeScreen.tsx` — Replace AI image generation with original photo + punchy background
+4. `supabase/functions/generate-outfit-calendar/index.ts` — Stricter ID validation
+5. `src/pages/HomeScreen.tsx` — Show all calendar items, improve caching
+6. Database migration — Recreate group conversation function (if needed after RPC cast fix)
