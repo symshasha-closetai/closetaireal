@@ -457,11 +457,14 @@ const OutfitRatingCard = ({ image, imageBase64, result, wardrobeItems = [],
       const file = new File([blob], "dripd-result.png", { type: "image/png" });
       
       // Check Web Share API support with file sharing
+      const genderText = styleProfile?.gender === "female" ? "Her" : "His";
+      const shareText = `Let's Drop ${genderText} Drip 🔥`;
+
       if (typeof navigator.share === "function") {
         try {
           const canShare = navigator.canShare?.({ files: [file] });
           if (canShare) {
-            await navigator.share({ title: "My Style Analysis — Dripd", files: [file] });
+            await navigator.share({ title: shareText, text: shareText, files: [file] });
             return;
           }
         } catch {
