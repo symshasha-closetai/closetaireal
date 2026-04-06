@@ -5,7 +5,6 @@ import LeaderboardTab from "../components/LeaderboardTab";
 import AppHeader from "../components/AppHeader";
 import OutfitRatingCard from "../components/OutfitRatingCard";
 import SignUpPromptDialog from "../components/SignUpPromptDialog";
-import { Switch } from "@/components/ui/switch";
 import { supabase } from "@/integrations/supabase/client";
 import { r2 } from "@/lib/r2Storage";
 import { useAuth } from "@/hooks/useAuth";
@@ -22,17 +21,17 @@ const FALLBACK_PRAISE = [
 function clientFallbackResult(_gender?: string | null): RatingResult {
   const r = (min: number, max: number) => Math.round((Math.random() * (max - min) + min) * 10) / 10;
   const pick = <T,>(a: T[]) => a[Math.floor(Math.random() * a.length)];
-  const color = r(7, 9.5), posture = r(7, 9.5), layering = r(7, 9.5), face = r(7, 9.5);
+  const attr = r(7, 9.5), status = r(7, 9.5), dom = r(7, 9.5), appr = r(7, 9.5);
   return {
-    drip_score: Math.round((color * 0.30 + posture * 0.30 + layering * 0.25 + face * 0.15) * 10) / 10,
-    drip_reason: "Great color coordination that creates visual harmony",
+    drip_score: Math.round((attr * 0.30 + status * 0.25 + dom * 0.25 + appr * 0.20) * 10) / 10,
+    drip_reason: "Great overall style that creates visual harmony",
     confidence_rating: r(7.5, 9.5),
     confidence_reason: "This look shows intentional styling choices",
     killer_tag: pick(FALLBACK_TAGS),
-    color_score: color, color_reason: "Colors complement each other beautifully",
-    posture_score: posture, posture_reason: "Strong stance that conveys confidence",
-    layering_score: layering, layering_reason: "Well-layered with complementary accessories",
-    face_score: face, face_reason: "Great expression that ties the look together",
+    attractiveness_score: attr, attractiveness_reason: "Strong visual appeal and grooming",
+    status_score: status, status_reason: "Outfit carries a premium, put-together look",
+    dominance_score: dom, dominance_reason: "Commanding presence in the frame",
+    approachability_score: appr, approachability_reason: "Warm and inviting energy",
     advice: "Keep experimenting with your personal style — you're on the right track!",
     praise_line: pick(FALLBACK_PRAISE),
   };
@@ -44,20 +43,28 @@ export type RatingResult = {
   confidence_rating: number;
   confidence_reason?: string;
   killer_tag?: string;
-  color_score: number;
-  color_reason?: string;
-  posture_score: number;
-  posture_reason?: string;
-  layering_score: number;
-  layering_reason?: string;
-  face_score: number;
-  face_reason?: string;
+  attractiveness_score: number;
+  attractiveness_reason?: string;
+  status_score: number;
+  status_reason?: string;
+  dominance_score: number;
+  dominance_reason?: string;
+  approachability_score: number;
+  approachability_reason?: string;
   advice: string;
   praise_line?: string;
   // Roast mode fields (no human detected)
   error?: string;
   roast_line?: string;
   // Legacy fields for backward compat with old results
+  color_score?: number;
+  color_reason?: string;
+  posture_score?: number;
+  posture_reason?: string;
+  layering_score?: number;
+  layering_reason?: string;
+  face_score?: number;
+  face_reason?: string;
   style_score?: number;
   style_reason?: string;
   fit_score?: number;
@@ -87,14 +94,13 @@ type DripState = {
   detectedItems: DetectedItem[] | null;
   suggestionImages: Record<number, string | null>;
   savedSuggestions: string[];
-  unfiltered: boolean;
 };
 
 const ANALYSIS_STEP_LABELS = [
-  "Detecting colors...",
-  "Understanding outfit style...",
+  "Scanning your look...",
+  "Evaluating presence...",
   "Calculating drip score...",
-  "Generating confidence score...",
+  "Generating your verdict...",
 ];
 
 const globalDripState: DripState = {
@@ -111,7 +117,6 @@ const globalDripState: DripState = {
   detectedItems: null,
   suggestionImages: {},
   savedSuggestions: [],
-  unfiltered: false,
 };
 
 let globalListeners: Set<() => void> = new Set();
@@ -122,7 +127,7 @@ const updateGlobal = (patch: Partial<DripState>) => {
   notifyListeners();
 };
 
-// Improved image hash for cache lookups — samples evenly across the string
+// Improved image hash for cache lookups
 const computeImageHash = (base64: string): string => {
   const len = base64.length;
   const sampleSize = 1000;
@@ -140,7 +145,7 @@ const computeImageHash = (base64: string): string => {
 };
 
 // Save drip card to DB + localStorage cache
-const saveDripToHistory = async (image: string, result: RatingResult, userId?: string, imageHash?: string, unfiltered?: boolean) => {
+const saveDripToHistory = async (image: string, result: RatingResult, userId?: string, imageHash?: string) => {
   const entry = {
     id: `drip-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`,
     image,
@@ -148,32 +153,26 @@ const saveDripToHistory = async (image: string, result: RatingResult, userId?: s
     killerTag: result.killer_tag || "",
     praiseLine: result.praise_line || "",
     imageHash: imageHash || "",
-    mode: unfiltered ? "savage" : "standard",
     fullResult: result,
     timestamp: Date.now(),
   };
 
-  // Save to localStorage as cache
   try {
     const existing = JSON.parse(localStorage.getItem("drip-history") || "[]");
     const updated = [entry, ...existing].slice(0, 20);
     localStorage.setItem("drip-history", JSON.stringify(updated));
   } catch { /* quota */ }
 
-  // Save to DB if user is logged in
   if (userId) {
     try {
-      // Upload image to storage
       let imageUrl: string | null = null;
       try {
         const response = await fetch(image);
         const blob = await response.blob();
         const path = `${userId}/drip-${Date.now()}.jpg`;
         const { publicUrl, error: uploadErr } = await r2.upload(path, blob, { contentType: "image/jpeg" });
-        if (!uploadErr) {
-          imageUrl = publicUrl;
-        }
-      } catch { /* storage upload failed, continue without image */ }
+        if (!uploadErr) imageUrl = publicUrl;
+      } catch { /* storage upload failed */ }
 
       const { error: dbErr } = await supabase.from("drip_history").insert({
         user_id: userId,
@@ -184,24 +183,18 @@ const saveDripToHistory = async (image: string, result: RatingResult, userId?: s
         full_result: result as any,
         image_hash: imageHash || null,
         confidence_score: result.confidence_rating || null,
-        mode: unfiltered ? "savage" : "standard",
       });
       if (dbErr) {
         console.error("Failed to save drip to DB:", dbErr);
         toast.error("Score saved locally but failed to sync to leaderboard");
       } else {
-        // Invalidate all leaderboard caches (device + module)
         try {
           localStorage.removeItem("leaderboard-daily-cache");
-          // Clear device cache entries for leaderboard
           const keys = Object.keys(localStorage);
           for (const key of keys) {
-            if (key.startsWith("dripd_leaderboard")) {
-              localStorage.removeItem(key);
-            }
+            if (key.startsWith("dripd_leaderboard")) localStorage.removeItem(key);
           }
         } catch {}
-        // Signal to LeaderboardTab to force refresh
         window.dispatchEvent(new CustomEvent("drip-saved"));
       }
     } catch (err) {
@@ -211,23 +204,18 @@ const saveDripToHistory = async (image: string, result: RatingResult, userId?: s
   }
 };
 
-// Check cache for existing result by image hash — MODE-AWARE
-const checkCache = async (imageHash: string, userId?: string, unfiltered?: boolean): Promise<RatingResult | null> => {
-  const modeKey = unfiltered ? "savage" : "standard";
-  // Check localStorage first
+// Check cache for existing result by image hash
+const checkCache = async (imageHash: string, _userId?: string): Promise<RatingResult | null> => {
   try {
     const cached = JSON.parse(localStorage.getItem("drip-history") || "[]");
-    const match = cached.find((e: any) => e.imageHash === imageHash && (e.mode || "standard") === modeKey);
+    const match = cached.find((e: any) => e.imageHash === imageHash);
     if (match?.fullResult) return match.fullResult;
   } catch {}
-
-  // Skip DB cache for mode-aware lookups (DB doesn't store mode)
   return null;
 };
 
 // Run analysis globally so it survives navigation
 let activeAbort: AbortController | null = null;
-
 let stageTimers: ReturnType<typeof setTimeout>[] = [];
 
 const startStagedAnimation = () => {
@@ -250,31 +238,25 @@ const clearStageTimers = () => {
   stageTimers = [];
 };
 
-const runAnalysis = async (file: File, userId: string | undefined, styleProfile: any, gender?: string | null, unfiltered?: boolean) => {
+const runAnalysis = async (file: File, userId: string | undefined, styleProfile: any, gender?: string | null) => {
   activeAbort = new AbortController();
   updateGlobal({ analyzing: true, progress: 5, stage: "Compressing image...", analysisSteps: [] });
 
   try {
     const { blob, base64: imageBase64 } = await compressImage(file, 1024, 1024, 0.7, 300);
-
     if (activeAbort?.signal.aborted) return;
 
-    // Parallel: check cache + upload to storage
     const imageHash = computeImageHash(imageBase64);
-    
-    const cachePromise = checkCache(imageHash, userId, unfiltered);
+    const cachePromise = checkCache(imageHash, userId);
     let uploadPromise: Promise<string | null> = Promise.resolve(null);
     if (userId) {
       const path = `${userId}/drip-${Date.now()}.jpg`;
       uploadPromise = r2.upload(path, blob, { contentType: "image/jpeg" })
-        .then(({ publicUrl, error: uploadErr }) => {
-          if (uploadErr) return null;
-          return publicUrl;
-        })
+        .then(({ publicUrl, error: uploadErr }) => uploadErr ? null : publicUrl)
         .catch(() => null);
     }
 
-    const [cachedResult, uploadedUrl] = await Promise.all([cachePromise, uploadPromise]);
+    const [cachedResult] = await Promise.all([cachePromise, uploadPromise]);
 
     if (cachedResult) {
       if (activeAbort?.signal.aborted) return;
@@ -285,14 +267,11 @@ const runAnalysis = async (file: File, userId: string | undefined, styleProfile:
 
     if (activeAbort?.signal.aborted) return;
 
-    // Start staged animation and AI call in parallel
     startStagedAnimation();
     const minDelay = new Promise((r) => setTimeout(r, 5000));
 
-    const aiCallBody = { imageBase64, styleProfile: styleProfile || undefined, unfiltered: !!unfiltered };
-
     const aiCall = supabase.functions.invoke("rate-outfit", {
-      body: aiCallBody,
+      body: { imageBase64, styleProfile: styleProfile || undefined },
     });
 
     const [{ data, error }] = await Promise.all([aiCall, minDelay]) as [any, any];
@@ -300,11 +279,10 @@ const runAnalysis = async (file: File, userId: string | undefined, styleProfile:
     if (activeAbort?.signal.aborted) return;
     clearStageTimers();
 
-    // --- REAL ERROR HANDLING: never mask failures with fake results ---
     if (error) {
       console.error("rate-outfit network/invoke error:", error);
       const msg = error.message || "Network error — check your connection";
-      toast.error("Drip Check failed: " + msg, { duration: 6000, action: { label: "Retry", onClick: () => runAnalysis(file, userId, styleProfile, gender, unfiltered) } });
+      toast.error("Drip Check failed: " + msg, { duration: 6000, action: { label: "Retry", onClick: () => runAnalysis(file, userId, styleProfile, gender) } });
       updateGlobal({ result: null, analyzing: false, progress: 0, stage: "", analysisSteps: [] });
       return;
     }
@@ -315,17 +293,14 @@ const runAnalysis = async (file: File, userId: string | undefined, styleProfile:
       const model = data?.model || "unknown";
       console.error("rate-outfit backend error:", { error: errDetail, stage, model });
       const userMsg = typeof errDetail === "string" ? errDetail : "AI analysis failed";
-      toast.error(`${userMsg} (stage: ${stage})`, { duration: 6000, action: { label: "Retry", onClick: () => runAnalysis(file, userId, styleProfile, gender, unfiltered) } });
+      toast.error(`${userMsg} (stage: ${stage})`, { duration: 6000, action: { label: "Retry", onClick: () => runAnalysis(file, userId, styleProfile, gender) } });
       updateGlobal({ result: null, analyzing: false, progress: 0, stage: "", analysisSteps: [] });
       return;
     }
 
-    // Success path
     const aiResult = data.result;
     updateGlobal({ result: aiResult, analyzing: false, progress: 0, stage: "", analysisSteps: [] });
-    // Save to history for both guest and signed-in users
-    saveDripToHistory(globalDripState.image || "", aiResult, userId, imageHash, unfiltered);
-    // Update streak on successful drip check
+    saveDripToHistory(globalDripState.image || "", aiResult, userId, imageHash);
     if (userId) {
       try {
         const today = new Date().toDateString();
@@ -344,7 +319,7 @@ const runAnalysis = async (file: File, userId: string | undefined, styleProfile:
   } catch (err: any) {
     if (err?.name === "AbortError" || activeAbort?.signal.aborted) return;
     console.error("Rating network error:", err);
-    toast.error("Connection error — please try again", { duration: 6000, action: { label: "Retry", onClick: () => runAnalysis(file, userId, styleProfile, gender, unfiltered) } });
+    toast.error("Connection error — please try again", { duration: 6000, action: { label: "Retry", onClick: () => runAnalysis(file, userId, styleProfile, gender) } });
     updateGlobal({ result: null, analyzing: false, progress: 0, stage: "", analysisSteps: [] });
   } finally {
     activeAbort = null;
@@ -359,7 +334,6 @@ const CameraScreen = () => {
   const fileRef = useRef<HTMLInputElement>(null);
   const cameraFileRef = useRef<HTMLInputElement>(null);
 
-  // Subscribe to global state changes
   useEffect(() => {
     const listener = () => forceUpdate((n) => n + 1);
     globalListeners.add(listener);
@@ -369,14 +343,13 @@ const CameraScreen = () => {
   const { image, imageBase64, analyzing, result, wardrobeItems, analysisSteps,
     wardrobeSuggestions, shoppingSuggestions, detectedItems, suggestionImages, savedSuggestions } = globalDripState;
 
-  // Show sign-up prompt for guests after result loads
   useEffect(() => {
     if (isGuest && result && !analyzing) {
       const timer = setTimeout(() => setShowSignUpPrompt(true), 2000);
       return () => clearTimeout(timer);
     }
   }, [isGuest, result, analyzing]);
-  // Fetch user's actual wardrobe items on mount
+
   useEffect(() => {
     if (!user?.id) return;
     supabase.from("wardrobe").select("id, name, type, color, material, image_url").eq("user_id", user.id)
@@ -394,7 +367,7 @@ const CameraScreen = () => {
       r.readAsDataURL(file);
     });
     updateGlobal({ image: url, imageBase64: dataUrl, result: null });
-    runAnalysis(file, user?.id, styleProfile, styleProfile?.gender, globalDripState.unfiltered);
+    runAnalysis(file, user?.id, styleProfile, styleProfile?.gender);
   };
 
   const cancelAnalysis = () => {
@@ -433,25 +406,9 @@ const CameraScreen = () => {
         ) : (
         <>
         <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.05 }}>
-          <div className="flex items-center justify-between">
-            <div>
-              <h1 className="font-display text-2xl font-semibold text-foreground">Drip Check</h1>
-              <p className="text-sm text-muted-foreground mt-1">Upload or capture your outfit for styling insights</p>
-            </div>
-            <div className="flex items-center gap-2">
-              <span className="text-xs text-muted-foreground font-medium whitespace-nowrap">Savage Mode 😏</span>
-              <Switch
-                checked={globalDripState.unfiltered}
-                onCheckedChange={(v) => {
-                  updateGlobal({ unfiltered: v });
-                  // If there's a loaded image with a result, clear the result to force re-analysis
-                  if (globalDripState.image && globalDripState.result && !globalDripState.analyzing) {
-                    updateGlobal({ result: null });
-                    toast.info(v ? "Savage Mode ON — re-upload to analyze" : "Standard Mode — re-upload to analyze");
-                  }
-                }}
-              />
-            </div>
+          <div>
+            <h1 className="font-display text-2xl font-semibold text-foreground">Drip Check</h1>
+            <p className="text-sm text-muted-foreground mt-1">Upload or capture your outfit for styling insights</p>
           </div>
         </motion.div>
 
@@ -529,19 +486,11 @@ const CameraScreen = () => {
                 </div>
               ) : result ? (
                 <div className="relative">
-                  {/* Mode badge */}
-                  <div className="absolute top-3 left-3 z-10">
-                    <span className={`px-2 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider backdrop-blur-sm ${
-                      globalDripState.unfiltered ? "bg-red-500/80 text-white" : "bg-gold/80 text-white"
-                    }`}>
-                      {globalDripState.unfiltered ? "🔥 Savage" : "✨ Standard"}
-                    </span>
-                  </div>
                   <button onClick={clearImage} className="absolute top-3 right-3 z-10 w-8 h-8 rounded-full bg-foreground/60 text-primary-foreground flex items-center justify-center backdrop-blur-sm">
                     <X size={16} />
                   </button>
                   <OutfitRatingCard
-                    image={image} imageBase64={imageBase64 || undefined} result={result} isSavage={globalDripState.unfiltered} wardrobeItems={wardrobeItems}
+                    image={image} imageBase64={imageBase64 || undefined} result={result} wardrobeItems={wardrobeItems}
                     wardrobeSuggestions={wardrobeSuggestions} shoppingSuggestions={shoppingSuggestions}
                     detectedItems={detectedItems} suggestionImages={suggestionImages} savedSuggestions={savedSuggestions}
                     onWardrobeSuggestionsChange={(v) => updateGlobal({ wardrobeSuggestions: v })}

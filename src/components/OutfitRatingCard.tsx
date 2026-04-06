@@ -31,7 +31,6 @@ type Props = {
   image: string;
   imageBase64?: string;
   result: RatingResult;
-  isSavage?: boolean;
   wardrobeItems?: WardrobeItem[];
   wardrobeSuggestions: Suggestion[] | null;
   shoppingSuggestions: Suggestion[] | null;
@@ -67,7 +66,7 @@ const findWardrobeMatch = (suggestion: Suggestion, wardrobeItems: WardrobeItem[]
   );
 };
 
-const OutfitRatingCard = ({ image, imageBase64, result, isSavage = false, wardrobeItems = [],
+const OutfitRatingCard = ({ image, imageBase64, result, wardrobeItems = [],
   wardrobeSuggestions, shoppingSuggestions, detectedItems, suggestionImages, savedSuggestions,
   onWardrobeSuggestionsChange, onShoppingSuggestionsChange, onDetectedItemsChange, onSuggestionImagesChange, onSavedSuggestionsChange
 }: Props) => {
@@ -225,7 +224,7 @@ const OutfitRatingCard = ({ image, imageBase64, result, isSavage = false, wardro
     ctx.fillRect(0, 0, W, H);
 
     // Draw outfit image — prefer imageBase64 (no CORS), fallback to fetch
-    const IMG_H = Math.round(H * 0.78);
+    const IMG_H = Math.round(H * 0.75);
     let imgBitmap: ImageBitmap | HTMLImageElement;
     const imgSrc = imageBase64 || image;
     try {
@@ -357,27 +356,37 @@ const OutfitRatingCard = ({ image, imageBase64, result, isSavage = false, wardro
       ctx.fillText(result.killer_tag, (W - tagW) / 2, panelY + 30);
     }
 
-    // 🔥 Savage Mode badge on share card
-    if (isSavage) {
-      const badgeText = "🔥 SAVAGE MODE";
-      ctx.font = "700 11px 'Inter', 'Helvetica', sans-serif";
-      const badgeW = ctx.measureText(badgeText).width + 16;
-      const badgeH = 22;
-      const badgeX = W - badgeW - 16;
-      const badgeY = 16;
-      ctx.fillStyle = "rgba(0,0,0,0.7)";
-      ctx.beginPath();
-      ctx.roundRect(badgeX, badgeY, badgeW, badgeH, 11);
-      ctx.fill();
-      ctx.fillStyle = "#FFD700";
-      ctx.fillText(badgeText, badgeX + 8, badgeY + 15);
+    // Sub-scores row in share card
+    const subLabels = ["ALLURE", "PRESTIGE", "AUTHORITY", "CHARISMA"];
+    const subValues = [
+      result.attractiveness_score ?? result.color_score ?? 0,
+      result.status_score ?? result.posture_score ?? 0,
+      result.dominance_score ?? result.layering_score ?? 0,
+      result.approachability_score ?? result.face_score ?? 0,
+    ];
+    const subColors = ["#C9A96E", "#8B9A7B", "#B08B8B", "#7B8FA8"];
+    const subY = scoreBaseY + 20;
+    const subSpacing = W / 4;
+    for (let i = 0; i < 4; i++) {
+      const cx = subSpacing * i + subSpacing / 2;
+      ctx.fillStyle = subColors[i];
+      ctx.font = "700 16px 'Inter', 'Helvetica', sans-serif";
+      const valStr = Number.isInteger(subValues[i]) ? String(subValues[i]) : subValues[i].toFixed(1);
+      const valW = ctx.measureText(valStr).width;
+      ctx.fillText(valStr, cx - valW / 2, subY + 16);
+      ctx.fillStyle = "#FFFFFF";
+      ctx.font = "600 7px 'Inter', 'Helvetica', sans-serif";
+      ctx.letterSpacing = "1px";
+      const lblW = ctx.measureText(subLabels[i]).width;
+      ctx.fillText(subLabels[i], cx - lblW / 2, subY + 28);
+      ctx.letterSpacing = "0px";
     }
 
-    // Praise line — directly after scores (no sub-scores)
+    // Praise line — after sub-scores
     if (result.praise_line) {
-      ctx.fillStyle = "rgba(255,255,255,0.8)";
+      ctx.fillStyle = "#FFFFFF";
       ctx.font = "italic 400 12px 'Inter', 'Helvetica', sans-serif";
-      const praiseY = scoreBaseY + 32;
+      const praiseY = subY + 44;
       const maxW = W - 56;
       const words = result.praise_line.split(" ");
       let line = "";
@@ -403,7 +412,7 @@ const OutfitRatingCard = ({ image, imageBase64, result, isSavage = false, wardro
     ctx.fillStyle = "#C9A96E";
     ctx.font = "600 11px 'Inter', 'Helvetica', sans-serif";
     ctx.letterSpacing = "3px";
-    const cta = "BEAT MY DRIP";
+    const cta = "BEAT ME IF YOU CAN ⚔️";
     const ctaW = ctx.measureText(cta).width;
     ctx.fillText(cta, (W - ctaW) / 2, H - 40);
     ctx.letterSpacing = "0px";
@@ -542,10 +551,10 @@ const OutfitRatingCard = ({ image, imageBase64, result, isSavage = false, wardro
   };
 
   const subScores = [
-    { key: "color", score: result.color_score, label: "Color", strokeColor: "#8B9A7B", reason: result.color_reason },
-    { key: "posture", score: result.posture_score ?? result.style_score ?? 0, label: "Posture", strokeColor: "#C9A96E", reason: result.posture_reason ?? result.style_reason },
-    { key: "layering", score: result.layering_score ?? result.fit_score ?? 0, label: "Layering", strokeColor: "#B08B8B", reason: result.layering_reason ?? result.fit_reason },
-    { key: "face", score: result.face_score ?? 0, label: "Face", strokeColor: "#7B8FA8", reason: result.face_reason },
+    { key: "attractiveness", score: result.attractiveness_score ?? result.color_score ?? 0, label: "Allure", strokeColor: "#C9A96E", reason: result.attractiveness_reason ?? result.color_reason },
+    { key: "status", score: result.status_score ?? result.posture_score ?? 0, label: "Prestige", strokeColor: "#8B9A7B", reason: result.status_reason ?? result.posture_reason },
+    { key: "dominance", score: result.dominance_score ?? result.layering_score ?? 0, label: "Authority", strokeColor: "#B08B8B", reason: result.dominance_reason ?? result.layering_reason },
+    { key: "approachability", score: result.approachability_score ?? result.face_score ?? 0, label: "Charisma", strokeColor: "#7B8FA8", reason: result.approachability_reason ?? result.face_reason },
   ];
 
   const mainScores = [
@@ -583,11 +592,6 @@ const OutfitRatingCard = ({ image, imageBase64, result, isSavage = false, wardro
                 transition={{ delay: 0.5, type: "spring", stiffness: 200 }}
                 className="flex flex-col items-center gap-1"
               >
-                {isSavage && (
-                  <span className="text-[9px] font-bold uppercase tracking-[0.15em] px-2 py-0.5 rounded-full bg-black/60 text-amber-400 backdrop-blur-sm">
-                    🔥 Savage
-                  </span>
-                )}
                 <span className="text-[12px] font-semibold uppercase tracking-[0.15em] text-white" style={{ textShadow: "0 1px 6px rgba(0,0,0,0.9), 0 0 2px rgba(0,0,0,0.7)" }}>
                   {result.killer_tag}
                 </span>
@@ -711,7 +715,7 @@ const OutfitRatingCard = ({ image, imageBase64, result, isSavage = false, wardro
           open={showSendPicker}
           onOpenChange={setShowSendPicker}
           contentType="drip_card"
-          content="Beat my drip 🔥"
+          content="Beat me if you can ⚔️"
           metadata={{ image_url: image, score: result.drip_score, confidence_rating: result.confidence_rating, killer_tag: result.killer_tag }}
         />
       </motion.div>
