@@ -748,12 +748,12 @@ const OutfitRatingCard = ({ image, imageBase64, result, wardrobeItems = [],
 
         <SendToFriendPicker
           open={showSendPicker}
-          onOpenChange={(v) => { setShowSendPicker(v); if (!v) updateGlobal({ challengeCardUrl: undefined, challengeGenderText: undefined }); }}
+          onOpenChange={(v) => { setShowSendPicker(v); if (!v) { setChallengeCardUrl(null); } }}
           contentType="drip_card"
-          content={`Let's Drop ${(globalDripState as any).challengeGenderText || "His"} Drip 🔥`}
+          content={`Let's Drop ${challengeGenderText} Drip 🔥`}
           metadata={{ 
             image_url: image, 
-            card_image_url: (globalDripState as any).challengeCardUrl || undefined,
+            card_image_url: challengeCardUrl || undefined,
             score: result.drip_score, 
             confidence_rating: result.confidence_rating, 
             killer_tag: result.killer_tag 
