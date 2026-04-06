@@ -715,7 +715,7 @@ const OutfitRatingCard = ({ image, imageBase64, result, wardrobeItems = [],
           open={showSendPicker}
           onOpenChange={setShowSendPicker}
           contentType="drip_card"
-          content="Beat my drip 🔥"
+          content="Beat me if you can ⚔️"
           metadata={{ image_url: image, score: result.drip_score, confidence_rating: result.confidence_rating, killer_tag: result.killer_tag }}
         />
       </motion.div>
