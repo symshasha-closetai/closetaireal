@@ -203,7 +203,7 @@ const MessagesScreen = () => {
 
       if (error || !convoId) {
         console.error("Group creation error:", error);
-        toast.error("Failed to create group");
+        toast.error(error?.message || "Failed to create group");
         setCreatingGroup(false);
         return;
       }
