@@ -43,14 +43,17 @@ serve(async (req) => {
       ? `Body type: ${styleProfile.body_type || "unknown"}, Skin tone: ${styleProfile.skin_tone || "unknown"}, Gender: ${styleProfile.gender || "unknown"}, Style: ${styleProfile.style_type || "any"}`
       : "No style profile available";
 
+    const validIds = wardrobeItems.map((item: any) => item.id);
+
     const prompt = `You are a personal fashion stylist. Plan 7 casual daily outfits for the next 7 days starting from ${startDate || new Date().toISOString().split("T")[0]}.
 
 RULES:
-- Use ONLY items from the wardrobe below. Reference items by their exact ID.
+- CRITICAL: Use ONLY the exact IDs listed below. Do NOT invent or modify any IDs. Every ID in "items" MUST appear exactly as written in the WARDROBE ITEMS list.
 - Each outfit must have at least a top and bottom (or a dress). Shoes are optional but preferred.
 - Vary outfits across the 7 days — avoid repeating the same top+bottom combo.
 - Consider the current season (${season}, ${month}) and the user's profile.
 - Keep it casual and practical for daily wear.
+- Include ALL items that make up each outfit (top, bottom, shoes, accessories).
 
 USER PROFILE: ${profileContext}
 
