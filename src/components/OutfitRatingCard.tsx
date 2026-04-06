@@ -384,7 +384,7 @@ const OutfitRatingCard = ({ image, imageBase64, result, wardrobeItems = [],
 
     // Praise line — directly after scores (no sub-scores)
     if (result.praise_line) {
-      ctx.fillStyle = "rgba(255,255,255,0.8)";
+      ctx.fillStyle = "#FFFFFF";
       ctx.font = "italic 400 12px 'Inter', 'Helvetica', sans-serif";
       const praiseY = scoreBaseY + 32;
       const maxW = W - 56;
