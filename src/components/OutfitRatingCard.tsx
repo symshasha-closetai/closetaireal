@@ -31,7 +31,6 @@ type Props = {
   image: string;
   imageBase64?: string;
   result: RatingResult;
-  isSavage?: boolean;
   wardrobeItems?: WardrobeItem[];
   wardrobeSuggestions: Suggestion[] | null;
   shoppingSuggestions: Suggestion[] | null;
