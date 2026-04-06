@@ -481,6 +481,9 @@ const HomeScreen = () => {
     const cached = getCache<CalendarOutfit[]>(CACHE_KEYS.CALENDAR, user.id);
     if (cached && cached.length > 0) setCalendarOutfits(cached);
 
+    // Cache-first: if cache has ≥3 items, skip DB fetch
+    if (cached && cached.length >= 3) return;
+
     const fetchCalendar = async () => {
       const today = new Date().toISOString().split("T")[0];
       const end = new Date(); end.setDate(end.getDate() + 7);
