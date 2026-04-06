@@ -412,7 +412,7 @@ const OutfitRatingCard = ({ image, imageBase64, result, wardrobeItems = [],
     ctx.fillStyle = "#C9A96E";
     ctx.font = "600 11px 'Inter', 'Helvetica', sans-serif";
     ctx.letterSpacing = "3px";
-    const cta = "BEAT MY DRIP";
+    const cta = "BEAT ME IF YOU CAN ⚔️";
     const ctaW = ctx.measureText(cta).width;
     ctx.fillText(cta, (W - ctaW) / 2, H - 40);
     ctx.letterSpacing = "0px";
