@@ -733,7 +733,8 @@ const OutfitRatingCard = ({ image, imageBase64, result, wardrobeItems = [],
                 const { publicUrl, error: uploadErr } = await r2.upload(path, blob, { contentType: "image/png" });
                 if (uploadErr || !publicUrl) { toast.error("Failed to upload card"); setChallengeUploading(false); return; }
                 const genderText = styleProfile?.gender === "female" ? "Her" : "His";
-                updateGlobal({ challengeCardUrl: publicUrl, challengeGenderText: genderText });
+                setChallengeCardUrl(publicUrl);
+                setChallengeGenderText(genderText);
                 setShowSendPicker(true);
               } catch { toast.error("Challenge failed"); } finally { setChallengeUploading(false); }
             }}
