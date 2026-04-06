@@ -680,12 +680,25 @@ const OutfitRatingCard = ({ image, imageBase64, result, wardrobeItems = [],
         )}
 
 
-        {/* Advice */}
-        {result.advice && (
+        {/* Expert Styling Tips */}
+        {(result.styling_tips && result.styling_tips.length > 0) ? (
+          <div className="border-t border-border/20 pt-4 space-y-2">
+            <div className="flex items-center gap-1.5 mb-1">
+              <Sparkles size={12} className="text-gold" />
+              <span className="text-[10px] uppercase tracking-[0.15em] text-foreground/50 font-medium">Expert Advice</span>
+            </div>
+            {result.styling_tips.map((tip, i) => (
+              <div key={i} className="flex items-start gap-2 pl-1">
+                <span className="text-gold mt-0.5 text-xs">→</span>
+                <p className="text-sm text-foreground/60 leading-relaxed">{tip}</p>
+              </div>
+            ))}
+          </div>
+        ) : result.advice ? (
           <div className="border-t border-border/20 pt-4">
             <p className="text-sm text-foreground/60 leading-relaxed">{result.advice}</p>
           </div>
-        )}
+        ) : null}
 
         {/* Action Buttons */}
         <div className="flex items-center justify-center gap-3 pt-2">

@@ -413,7 +413,7 @@ const MessagesScreen = () => {
 
             <button
               onClick={handleCreateGroup}
-              disabled={creatingGroup || selectedMembers.length < 2 || !groupName.trim()}
+              disabled={creatingGroup || selectedMembers.length < 1 || !groupName.trim()}
               className="w-full py-2.5 rounded-xl gradient-accent text-accent-foreground text-sm font-medium disabled:opacity-50"
             >
               {creatingGroup ? <Loader2 size={16} className="animate-spin mx-auto" /> : `Create Group (${selectedMembers.length} members)`}
