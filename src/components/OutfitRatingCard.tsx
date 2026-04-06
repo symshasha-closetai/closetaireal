@@ -71,8 +71,9 @@ const OutfitRatingCard = ({ image, imageBase64, result, wardrobeItems = [],
   wardrobeSuggestions, shoppingSuggestions, detectedItems, suggestionImages, savedSuggestions,
   onWardrobeSuggestionsChange, onShoppingSuggestionsChange, onDetectedItemsChange, onSuggestionImagesChange, onSavedSuggestionsChange
 }: Props) => {
-  const { user } = useAuth();
+  const { user, styleProfile } = useAuth();
   const [activeTooltip, setActiveTooltip] = useState<string | null>(null);
+  const [challengeUploading, setChallengeUploading] = useState(false);
   const [loadingImages, setLoadingImages] = useState<Record<number, boolean>>({});
   const [sharing, setSharing] = useState(false);
   const [downloading, setDownloading] = useState(false);
