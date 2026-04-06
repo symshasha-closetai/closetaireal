@@ -109,7 +109,6 @@ day_offset 0 = today, 1 = tomorrow, etc. Return ONLY the JSON array, no markdown
     try {
       outfits = JSON.parse(content);
     } catch {
-      // Try to extract array from response
       const match = content.match(/\[[\s\S]*\]/);
       if (match) {
         outfits = JSON.parse(match[0]);
@@ -117,6 +116,12 @@ day_offset 0 = today, 1 = tomorrow, etc. Return ONLY the JSON array, no markdown
         outfits = [];
       }
     }
+
+    // Validate: filter each outfit's items to only include valid wardrobe IDs
+    outfits = (outfits || []).map((outfit: any) => ({
+      ...outfit,
+      items: (outfit.items || []).filter((id: string) => validIds.includes(id)),
+    })).filter((outfit: any) => outfit.items.length >= 2);
 
     return new Response(JSON.stringify({ outfits }), {
       headers: { ...corsHeaders, "Content-Type": "application/json" },

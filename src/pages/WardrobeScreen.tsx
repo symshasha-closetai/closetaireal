@@ -619,21 +619,22 @@ const WardrobeScreen = () => {
           const idx = job.selected[i];
           const item = job.items[idx];
           let imageUrl: string | null = null;
+
+          // Use original photo with punchy background instead of AI generation
           try {
-            const { data: genData, error: genError } = await supabase.functions.invoke("generate-clothing-image", {
-              body: { imageBase64: base64, itemName: item.name, itemType: item.type, itemColor: item.color, itemMaterial: item.material, userId: user.id, bodyType: styleProfile?.body_type || null, gender: styleProfile?.gender || null },
-            });
-            if (!genError && genData?.imageUrl) imageUrl = genData.imageUrl;
-            else console.error("generate-clothing-image failed:", genError, genData);
-          } catch (genErr) {
-            console.error("generate-clothing-image exception:", genErr);
+            const punchyBlob = await addPunchyBackground(compressedBlob);
+            const punchyPath = `${user.id}/punchy-${Date.now()}-${i}.jpg`;
+            const { publicUrl, error: punchyErr } = await r2.upload(punchyPath, punchyBlob, { contentType: "image/jpeg" });
+            if (!punchyErr) imageUrl = publicUrl;
+          } catch (punchyErr) {
+            console.error("Punchy background failed:", punchyErr);
           }
-          // If AI image generation failed, immediately upload compressed original as fallback
+
+          // Fallback to original image
           if (!imageUrl && originalImageUrl) {
             imageUrl = originalImageUrl;
           }
           if (!imageUrl) {
-            // Retry upload up to 2 times
             let uploadSuccess = false;
             for (let attempt = 0; attempt < 3; attempt++) {
               try {
