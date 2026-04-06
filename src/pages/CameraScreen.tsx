@@ -52,6 +52,7 @@ export type RatingResult = {
   approachability_score: number;
   approachability_reason?: string;
   advice: string;
+  styling_tips?: string[];
   praise_line?: string;
   // Roast mode fields (no human detected)
   error?: string;

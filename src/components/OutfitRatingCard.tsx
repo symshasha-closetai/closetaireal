@@ -1,10 +1,11 @@
 import { useState, useRef, useCallback } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { Share2, ShoppingBag, Shirt, Footprints, Watch, Gem, Loader2, X, Info, Download, Heart, ScanLine, Check, Swords } from "lucide-react";
+import { Share2, ShoppingBag, Shirt, Footprints, Watch, Gem, Loader2, X, Info, Download, Heart, ScanLine, Check, Swords, Sparkles } from "lucide-react";
 import SendToFriendPicker from "./SendToFriendPicker";
 import ScoreRing from "./ScoreRing";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
+import { r2 } from "@/lib/r2Storage";
 import { useAuth } from "@/hooks/useAuth";
 import type { RatingResult } from "@/pages/CameraScreen";
 
@@ -70,11 +71,14 @@ const OutfitRatingCard = ({ image, imageBase64, result, wardrobeItems = [],
   wardrobeSuggestions, shoppingSuggestions, detectedItems, suggestionImages, savedSuggestions,
   onWardrobeSuggestionsChange, onShoppingSuggestionsChange, onDetectedItemsChange, onSuggestionImagesChange, onSavedSuggestionsChange
 }: Props) => {
-  const { user } = useAuth();
+  const { user, styleProfile } = useAuth();
   const [activeTooltip, setActiveTooltip] = useState<string | null>(null);
+  const [challengeCardUrl, setChallengeCardUrl] = useState<string | null>(null);
+  const [challengeGenderText, setChallengeGenderText] = useState<string>("His");
   const [loadingImages, setLoadingImages] = useState<Record<number, boolean>>({});
   const [sharing, setSharing] = useState(false);
   const [downloading, setDownloading] = useState(false);
+  const [challengeUploading, setChallengeUploading] = useState(false);
 
   // On-demand suggestion state
   const [loadingWardrobe, setLoadingWardrobe] = useState(false);
@@ -455,11 +459,14 @@ const OutfitRatingCard = ({ image, imageBase64, result, wardrobeItems = [],
       const file = new File([blob], "dripd-result.png", { type: "image/png" });
       
       // Check Web Share API support with file sharing
+      const genderText = styleProfile?.gender === "female" ? "Her" : "His";
+      const shareText = `Let's Drop ${genderText} Drip 🔥`;
+
       if (typeof navigator.share === "function") {
         try {
           const canShare = navigator.canShare?.({ files: [file] });
           if (canShare) {
-            await navigator.share({ title: "My Style Analysis — Dripd", files: [file] });
+            await navigator.share({ title: shareText, text: shareText, files: [file] });
             return;
           }
         } catch {
@@ -675,12 +682,25 @@ const OutfitRatingCard = ({ image, imageBase64, result, wardrobeItems = [],
         )}
 
 
-        {/* Advice */}
-        {result.advice && (
+        {/* Expert Styling Tips */}
+        {(result.styling_tips && result.styling_tips.length > 0) ? (
+          <div className="border-t border-border/20 pt-4 space-y-2">
+            <div className="flex items-center gap-1.5 mb-1">
+              <Sparkles size={12} className="text-gold" />
+              <span className="text-[10px] uppercase tracking-[0.15em] text-foreground/50 font-medium">Expert Advice</span>
+            </div>
+            {result.styling_tips.map((tip, i) => (
+              <div key={i} className="flex items-start gap-2 pl-1">
+                <span className="text-gold mt-0.5 text-xs">→</span>
+                <p className="text-sm text-foreground/60 leading-relaxed">{tip}</p>
+              </div>
+            ))}
+          </div>
+        ) : result.advice ? (
           <div className="border-t border-border/20 pt-4">
             <p className="text-sm text-foreground/60 leading-relaxed">{result.advice}</p>
           </div>
-        )}
+        ) : null}
 
         {/* Action Buttons */}
         <div className="flex items-center justify-center gap-3 pt-2">
@@ -703,20 +723,41 @@ const OutfitRatingCard = ({ image, imageBase64, result, wardrobeItems = [],
           </button>
           <button
             type="button"
-            onClick={() => setShowSendPicker(true)}
-            className="border border-border/40 rounded-full px-5 py-2 text-xs tracking-wider text-foreground/70 flex items-center gap-2 active:scale-95 transition-transform"
+            onClick={async () => {
+              if (challengeUploading) return;
+              setChallengeUploading(true);
+              try {
+                const blob = await captureCard();
+                if (!blob) { toast.error("Could not generate card"); setChallengeUploading(false); return; }
+                const path = `challenges/card-${Date.now()}-${Math.random().toString(36).slice(2, 6)}.png`;
+                const { publicUrl, error: uploadErr } = await r2.upload(path, blob, { contentType: "image/png" });
+                if (uploadErr || !publicUrl) { toast.error("Failed to upload card"); setChallengeUploading(false); return; }
+                const genderText = styleProfile?.gender === "female" ? "Her" : "His";
+                setChallengeCardUrl(publicUrl);
+                setChallengeGenderText(genderText);
+                setShowSendPicker(true);
+              } catch { toast.error("Challenge failed"); } finally { setChallengeUploading(false); }
+            }}
+            disabled={challengeUploading}
+            className="border border-border/40 rounded-full px-5 py-2 text-xs tracking-wider text-foreground/70 flex items-center gap-2 active:scale-95 transition-transform disabled:opacity-50"
           >
-            <Swords size={14} />
+            {challengeUploading ? <Loader2 size={14} className="animate-spin" /> : <Swords size={14} />}
             Challenge
           </button>
         </div>
 
         <SendToFriendPicker
           open={showSendPicker}
-          onOpenChange={setShowSendPicker}
+          onOpenChange={(v) => { setShowSendPicker(v); if (!v) { setChallengeCardUrl(null); } }}
           contentType="drip_card"
-          content="Beat me if you can ⚔️"
-          metadata={{ image_url: image, score: result.drip_score, confidence_rating: result.confidence_rating, killer_tag: result.killer_tag }}
+          content={`Let's Drop ${challengeGenderText} Drip 🔥`}
+          metadata={{ 
+            image_url: image, 
+            card_image_url: challengeCardUrl || undefined,
+            score: result.drip_score, 
+            confidence_rating: result.confidence_rating, 
+            killer_tag: result.killer_tag 
+          }}
         />
       </motion.div>
 

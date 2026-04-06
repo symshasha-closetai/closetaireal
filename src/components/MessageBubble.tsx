@@ -41,7 +41,7 @@ const MessageBubble = ({ id, content, contentType, metadata, isMine, kept, expir
           className="p-2 rounded-lg bg-secondary/50 space-y-1 min-w-[180px] cursor-pointer"
           onClick={() => setShowFullscreen(true)}
         >
-          {metadata.image_url && <img src={metadata.image_url} alt="" className="w-full rounded-lg object-contain" />}
+          {(metadata.card_image_url || metadata.image_url) && <img src={metadata.card_image_url || metadata.image_url} alt="" className="w-full rounded-lg object-contain" />}
           <div className="flex items-center justify-between px-1">
             <p className="text-lg font-bold">{metadata.score?.toFixed(1)}/10</p>
             {metadata.confidence_rating != null && (

@@ -192,7 +192,7 @@ const MessagesScreen = () => {
   };
 
   const handleCreateGroup = async () => {
-    if (!user || selectedMembers.length < 2 || !groupName.trim()) return;
+    if (!user || selectedMembers.length < 1 || !groupName.trim()) return;
     setCreatingGroup(true);
 
     try {
@@ -203,7 +203,7 @@ const MessagesScreen = () => {
 
       if (error || !convoId) {
         console.error("Group creation error:", error);
-        toast.error("Failed to create group");
+        toast.error(error?.message || "Failed to create group");
         setCreatingGroup(false);
         return;
       }
@@ -413,7 +413,7 @@ const MessagesScreen = () => {
 
             <button
               onClick={handleCreateGroup}
-              disabled={creatingGroup || selectedMembers.length < 2 || !groupName.trim()}
+              disabled={creatingGroup || selectedMembers.length < 1 || !groupName.trim()}
               className="w-full py-2.5 rounded-xl gradient-accent text-accent-foreground text-sm font-medium disabled:opacity-50"
             >
               {creatingGroup ? <Loader2 size={16} className="animate-spin mx-auto" /> : `Create Group (${selectedMembers.length} members)`}

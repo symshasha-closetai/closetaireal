@@ -87,9 +87,14 @@ Also provide:
 - drip_reason: 1 line overall assessment
 - advice: 1-line styling tip
 - outfit_description: 10-15 word description of what they're wearing (colors, items, style)
+- styling_tips: array of 2-3 specific, expert-level styling tips based on what you SEE in the image. Each tip must:
+  * Reference a specific visible garment, pattern, color, or silhouette
+  * Give actionable advice like a fashion expert ("This top has flowy patterns → works better with structured bottoms")
+  * NOT be generic ("try accessories" is bad, "the oversized flannel is drowning the waistline → belt it or swap for a fitted layer" is good)
+  * Feel like a real stylist is advising based on THIS specific outfit
 
 Return ONLY valid JSON:
-{"drip_score":0,"drip_reason":"string","confidence_rating":number,"confidence_reason":"string","attractiveness_score":number,"attractiveness_reason":"string","status_score":number,"status_reason":"string","dominance_score":number,"dominance_reason":"string","approachability_score":number,"approachability_reason":"string","advice":"string","face_hidden":boolean,"scene_type":"solo|couple|group|family","outfit_description":"string"}
+{"drip_score":0,"drip_reason":"string","confidence_rating":number,"confidence_reason":"string","attractiveness_score":number,"attractiveness_reason":"string","status_score":number,"status_reason":"string","dominance_score":number,"dominance_reason":"string","approachability_score":number,"approachability_reason":"string","advice":"string","styling_tips":["string","string"],"face_hidden":boolean,"scene_type":"solo|couple|group|family","outfit_description":"string"}
 
 CRITICAL: Return ONLY valid JSON. No markdown. No extra keys.`;
 
@@ -536,6 +541,7 @@ serve(async (req) => {
       dominance_score: call1Result.dominance_score, dominance_reason: call1Result.dominance_reason,
       approachability_score: call1Result.approachability_score, approachability_reason: call1Result.approachability_reason,
       advice: call1Result.advice,
+      styling_tips: Array.isArray(call1Result.styling_tips) ? call1Result.styling_tips : [],
       praise_line: copy.praise_line,
     };
 
