@@ -382,11 +382,11 @@ const OutfitRatingCard = ({ image, imageBase64, result, wardrobeItems = [],
       ctx.letterSpacing = "0px";
     }
 
-    // Praise line — directly after scores (no sub-scores)
+    // Praise line — after sub-scores
     if (result.praise_line) {
       ctx.fillStyle = "#FFFFFF";
       ctx.font = "italic 400 12px 'Inter', 'Helvetica', sans-serif";
-      const praiseY = scoreBaseY + 32;
+      const praiseY = subY + 44;
       const maxW = W - 56;
       const words = result.praise_line.split(" ");
       let line = "";
