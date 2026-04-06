@@ -192,7 +192,7 @@ const MessagesScreen = () => {
   };
 
   const handleCreateGroup = async () => {
-    if (!user || selectedMembers.length < 2 || !groupName.trim()) return;
+    if (!user || selectedMembers.length < 1 || !groupName.trim()) return;
     setCreatingGroup(true);
 
     try {
