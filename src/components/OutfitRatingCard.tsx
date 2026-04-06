@@ -708,20 +708,40 @@ const OutfitRatingCard = ({ image, imageBase64, result, wardrobeItems = [],
           </button>
           <button
             type="button"
-            onClick={() => setShowSendPicker(true)}
-            className="border border-border/40 rounded-full px-5 py-2 text-xs tracking-wider text-foreground/70 flex items-center gap-2 active:scale-95 transition-transform"
+            onClick={async () => {
+              if (challengeUploading) return;
+              setChallengeUploading(true);
+              try {
+                const blob = await captureCard();
+                if (!blob) { toast.error("Could not generate card"); setChallengeUploading(false); return; }
+                const path = `challenges/card-${Date.now()}-${Math.random().toString(36).slice(2, 6)}.png`;
+                const { publicUrl, error: uploadErr } = await r2.upload(path, blob, { contentType: "image/png" });
+                if (uploadErr || !publicUrl) { toast.error("Failed to upload card"); setChallengeUploading(false); return; }
+                const genderText = styleProfile?.gender === "female" ? "Her" : "His";
+                updateGlobal({ challengeCardUrl: publicUrl, challengeGenderText: genderText });
+                setShowSendPicker(true);
+              } catch { toast.error("Challenge failed"); } finally { setChallengeUploading(false); }
+            }}
+            disabled={challengeUploading}
+            className="border border-border/40 rounded-full px-5 py-2 text-xs tracking-wider text-foreground/70 flex items-center gap-2 active:scale-95 transition-transform disabled:opacity-50"
           >
-            <Swords size={14} />
+            {challengeUploading ? <Loader2 size={14} className="animate-spin" /> : <Swords size={14} />}
             Challenge
           </button>
         </div>
 
         <SendToFriendPicker
           open={showSendPicker}
-          onOpenChange={setShowSendPicker}
+          onOpenChange={(v) => { setShowSendPicker(v); if (!v) updateGlobal({ challengeCardUrl: undefined, challengeGenderText: undefined }); }}
           contentType="drip_card"
-          content="Beat me if you can ⚔️"
-          metadata={{ image_url: image, score: result.drip_score, confidence_rating: result.confidence_rating, killer_tag: result.killer_tag }}
+          content={`Let's Drop ${(globalDripState as any).challengeGenderText || "His"} Drip 🔥`}
+          metadata={{ 
+            image_url: image, 
+            card_image_url: (globalDripState as any).challengeCardUrl || undefined,
+            score: result.drip_score, 
+            confidence_rating: result.confidence_rating, 
+            killer_tag: result.killer_tag 
+          }}
         />
       </motion.div>
 
