@@ -595,6 +595,49 @@ const WardrobeScreen = () => {
     finally { setAnalyzing(false); }
   };
 
+  const PUNCHY_COLORS = [
+    ['#FF6B6B', '#FF8E53'], ['#4ECDC4', '#44B89D'], ['#45B7D1', '#2196F3'],
+    ['#F7DC6F', '#F0B429'], ['#BB8FCE', '#8E44AD'], ['#FF8A5C', '#FF6348'],
+    ['#00D2FF', '#3A7BD5'], ['#F953C6', '#B91D73'], ['#11998E', '#38EF7D'],
+    ['#FC5C7D', '#6A82FB'], ['#A8E063', '#56AB2F'], ['#FFD200', '#F7971E'],
+  ];
+
+  const addPunchyBackground = useCallback(async (imageBlob: Blob): Promise<Blob> => {
+    return new Promise((resolve, reject) => {
+      const img = new Image();
+      img.onload = () => {
+        const canvas = document.createElement("canvas");
+        const size = Math.max(img.width, img.height);
+        canvas.width = size;
+        canvas.height = size;
+        const ctx = canvas.getContext("2d")!;
+
+        // Pick random punchy gradient
+        const colors = PUNCHY_COLORS[Math.floor(Math.random() * PUNCHY_COLORS.length)];
+        const gradient = ctx.createLinearGradient(0, 0, size, size);
+        gradient.addColorStop(0, colors[0]);
+        gradient.addColorStop(1, colors[1]);
+        ctx.fillStyle = gradient;
+        ctx.fillRect(0, 0, size, size);
+
+        // Center the image on the gradient
+        const scale = Math.min(size / img.width, size / img.height) * 0.85;
+        const w = img.width * scale;
+        const h = img.height * scale;
+        const x = (size - w) / 2;
+        const y = (size - h) / 2;
+        ctx.drawImage(img, x, y, w, h);
+
+        canvas.toBlob((blob) => {
+          if (blob) resolve(blob);
+          else reject(new Error("Canvas toBlob failed"));
+        }, "image/jpeg", 0.85);
+      };
+      img.onerror = reject;
+      img.src = URL.createObjectURL(imageBlob);
+    });
+  }, []);
+
   const processQueue = useCallback(async () => {
     if (bgProcessingRef.current || bgQueueRef.current.length === 0 || !user) return;
     bgProcessingRef.current = true;
@@ -619,21 +662,22 @@ const WardrobeScreen = () => {
           const idx = job.selected[i];
           const item = job.items[idx];
           let imageUrl: string | null = null;
+
+          // Use original photo with punchy background instead of AI generation
           try {
-            const { data: genData, error: genError } = await supabase.functions.invoke("generate-clothing-image", {
-              body: { imageBase64: base64, itemName: item.name, itemType: item.type, itemColor: item.color, itemMaterial: item.material, userId: user.id, bodyType: styleProfile?.body_type || null, gender: styleProfile?.gender || null },
-            });
-            if (!genError && genData?.imageUrl) imageUrl = genData.imageUrl;
-            else console.error("generate-clothing-image failed:", genError, genData);
-          } catch (genErr) {
-            console.error("generate-clothing-image exception:", genErr);
+            const punchyBlob = await addPunchyBackground(compressedBlob);
+            const punchyPath = `${user.id}/punchy-${Date.now()}-${i}.jpg`;
+            const { publicUrl, error: punchyErr } = await r2.upload(punchyPath, punchyBlob, { contentType: "image/jpeg" });
+            if (!punchyErr) imageUrl = publicUrl;
+          } catch (punchyErr) {
+            console.error("Punchy background failed:", punchyErr);
           }
-          // If AI image generation failed, immediately upload compressed original as fallback
+
+          // Fallback to original image
           if (!imageUrl && originalImageUrl) {
             imageUrl = originalImageUrl;
           }
           if (!imageUrl) {
-            // Retry upload up to 2 times
             let uploadSuccess = false;
             for (let attempt = 0; attempt < 3; attempt++) {
               try {

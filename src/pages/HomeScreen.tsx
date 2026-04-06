@@ -481,6 +481,9 @@ const HomeScreen = () => {
     const cached = getCache<CalendarOutfit[]>(CACHE_KEYS.CALENDAR, user.id);
     if (cached && cached.length > 0) setCalendarOutfits(cached);
 
+    // Cache-first: if cache has ≥3 items, skip DB fetch
+    if (cached && cached.length >= 3) return;
+
     const fetchCalendar = async () => {
       const today = new Date().toISOString().split("T")[0];
       const end = new Date(); end.setDate(end.getDate() + 7);
@@ -798,14 +801,11 @@ const HomeScreen = () => {
                       className="flex-shrink-0 w-52 rounded-2xl bg-secondary overflow-hidden cursor-pointer active:scale-[0.97] transition-transform"
                       onClick={() => setSelectedCalendarOutfit(co)}
                     >
-                      <div className="grid grid-cols-3 gap-1 p-2">
-                        {itemImages.slice(0, 3).map((wi: any) => (
+                      <div className={`grid gap-1 p-2 ${itemImages.length <= 2 ? 'grid-cols-2' : itemImages.length === 4 ? 'grid-cols-2' : 'grid-cols-3'}`}>
+                        {itemImages.map((wi: any) => (
                           <div key={wi.id} className="aspect-square rounded-lg overflow-hidden bg-muted">
                             <img src={wi.image_url} alt={wi.name || wi.type} className="w-full h-full object-cover" loading="lazy" />
                           </div>
-                        ))}
-                        {itemImages.length < 3 && Array.from({ length: 3 - itemImages.length }).map((_, i) => (
-                          <div key={`empty-${i}`} className="aspect-square rounded-lg bg-muted" />
                         ))}
                       </div>
                       <div className="px-3 py-2">

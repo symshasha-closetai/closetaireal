@@ -196,7 +196,7 @@ const MessagesScreen = () => {
     setCreatingGroup(true);
 
     try {
-      const { data: convoId, error } = await supabase.rpc("create_group_conversation", {
+      const { data: convoId, error } = await (supabase.rpc as any)("create_group_conversation", {
         group_name: groupName.trim(),
         member_ids: selectedMembers,
       });
