@@ -139,6 +139,12 @@ const HomeScreen = () => {
   // Streak tracking
   const [streak, setStreak] = useState(0);
 
+  // Dripd Observation
+  type DripdObservation = { works: string; off: string; fix: string[]; observation: string };
+  const [dripdObservation, setDripdObservation] = useState<DripdObservation | null>(null);
+  const [loadingObservation, setLoadingObservation] = useState(false);
+  const observationFetchedRef = useRef(false);
+
   // Load today's look and streak from DB (localStorage as fast cache)
   useEffect(() => {
     if (!user) return;
