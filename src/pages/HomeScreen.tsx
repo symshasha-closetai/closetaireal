@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback, useRef } from "react";
-import { getCache, setCache, CACHE_KEYS } from "@/lib/deviceCache";
+import { getCache, setCache, invalidateCache, CACHE_KEYS } from "@/lib/deviceCache";
 import ImageCropper from "../components/ImageCropper";
 import { motion, AnimatePresence } from "framer-motion";
 import { Sparkles, Camera, ChevronRight, ChevronLeft, X, Heart, GraduationCap, PartyPopper, Shirt, Palette, Briefcase, Sun, Moon, Sunset, CloudRain, Thermometer, CloudSun, Snowflake, Shuffle, Leaf, Smile, Droplet, User, Loader2, Bookmark, BookmarkCheck, ImagePlus, Share2, Flame, Pin, Download, Crop, Music, Flag, CalendarDays, RefreshCw } from "lucide-react";
