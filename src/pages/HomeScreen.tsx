@@ -496,7 +496,11 @@ const HomeScreen = () => {
                     </div>
                   )}
                 </div>
-              ) : null}
+              ) : (
+                <div className="py-3">
+                  <p className="text-xs text-muted-foreground">Need at least 2 drip checks to unlock your style observation</p>
+                </div>
+              )}
             </motion.div>
           )}
 
