@@ -765,6 +765,58 @@ const HomeScreen = () => {
             )}
           </div>
 
+          {/* Dripd Observation Card */}
+          {(dripdObservation || loadingObservation) && (
+            <motion.div
+              initial={{ opacity: 0, y: 10 }}
+              animate={{ opacity: 1, y: 0 }}
+              className="glass-card-elevated p-4 space-y-3"
+            >
+              <div className="flex items-center gap-2">
+                <Sparkles size={16} className="text-primary" />
+                <h2 className="text-sm font-semibold text-foreground">Dripd Observation</h2>
+              </div>
+              {loadingObservation && !dripdObservation ? (
+                <div className="flex items-center gap-2 py-3">
+                  <Loader2 size={14} className="text-primary animate-spin" />
+                  <p className="text-xs text-muted-foreground">Analyzing your style journey...</p>
+                </div>
+              ) : dripdObservation ? (
+                <div className="space-y-2">
+                  {dripdObservation.works && (
+                    <div>
+                      <p className="text-[10px] font-semibold text-primary uppercase tracking-wider">What Works</p>
+                      <p className="text-xs text-foreground leading-relaxed">{dripdObservation.works}</p>
+                    </div>
+                  )}
+                  {dripdObservation.off && (
+                    <div>
+                      <p className="text-[10px] font-semibold text-destructive uppercase tracking-wider">What's Off</p>
+                      <p className="text-xs text-foreground leading-relaxed">{dripdObservation.off}</p>
+                    </div>
+                  )}
+                  {dripdObservation.fix?.length > 0 && (
+                    <div>
+                      <p className="text-[10px] font-semibold text-primary uppercase tracking-wider">Upgrade Moves</p>
+                      <ul className="space-y-0.5">
+                        {dripdObservation.fix.map((f, i) => (
+                          <li key={i} className="text-xs text-foreground leading-relaxed flex items-start gap-1.5">
+                            <span className="text-primary mt-0.5">→</span> {f}
+                          </li>
+                        ))}
+                      </ul>
+                    </div>
+                  )}
+                  {dripdObservation.observation && (
+                    <div className="pt-1 border-t border-border">
+                      <p className="text-xs text-muted-foreground italic leading-relaxed">"{dripdObservation.observation}"</p>
+                    </div>
+                  )}
+                </div>
+              ) : null}
+            </motion.div>
+          )}
+
           {/* My Wardrobe Card */}
           <div className="glass-card-elevated p-4">
             <div className="flex items-center justify-between mb-3">
