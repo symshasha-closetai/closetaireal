@@ -110,16 +110,7 @@ const HomeScreen = () => {
   const [selectedCalendarOutfit, setSelectedCalendarOutfit] = useState<CalendarOutfit | null>(null);
   const [monthOutfits, setMonthOutfits] = useState<CalendarOutfit[]>([]);
 
-  // Today's Look photo
-  const [todayPhoto, setTodayPhoto] = useState<string | null>(null);
-  const [uploadingPhoto, setUploadingPhoto] = useState(false);
-  const photoFileRef = useRef<HTMLInputElement>(null);
-  
-  const [sharingLook, setSharingLook] = useState(false);
-  const [pendingCropImage, setPendingCropImage] = useState<string | null>(null);
 
-  // Streak tracking
-  const [streak, setStreak] = useState(0);
 
   // Dripd Observation
   type DripdObservation = { works: string; off: string; fix: string[]; observation: string };
