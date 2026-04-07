@@ -175,10 +175,10 @@ CRITICAL: Return ONLY valid JSON. No markdown. No extra keys. No explanation out
 // ═══════════════════════════════════════════
 
 const FALLBACK_CAPTIONS: Record<string, { killer_tag: string; praise_line: string }> = {
-  low: { killer_tag: "Still Cooking", praise_line: "not there yet but the attempt is noted and we respect it" },
-  mid: { killer_tag: "Quiet Heat", praise_line: "this fit is quietly doing its thing and you already know it" },
-  high: { killer_tag: "Heat Rising", praise_line: "casually looking this good is honestly kind of disrespectful" },
-  elite: { killer_tag: "Certified Heat", praise_line: "this drip is dangerous and I cannot be held responsible" },
+  low: { killer_tag: "Drip Drought", praise_line: "this fit called and even it wants a refund" },
+  mid: { killer_tag: "Mid Energy", praise_line: "aggressively average and we both know it" },
+  high: { killer_tag: "Quiet Heat", praise_line: "not bad but don't start acting like you invented fashion" },
+  elite: { killer_tag: "Certified Heat", praise_line: "okay this goes stupid hard I can't even lie" },
 };
 
 function getScoreTier(score: number): string {

@@ -128,7 +128,10 @@ const updateGlobal = (patch: Partial<DripState>) => {
   notifyListeners();
 };
 
-// Improved image hash for cache lookups
+// Cache version — bump this when prompt changes to invalidate old results
+const DRIP_CACHE_VERSION = 2;
+
+// Improved image hash for cache lookups (versioned)
 const computeImageHash = (base64: string): string => {
   const len = base64.length;
   const sampleSize = 1000;
@@ -142,7 +145,7 @@ const computeImageHash = (base64: string): string => {
     hash = ((hash << 5) - hash) + sample.charCodeAt(i);
     hash |= 0;
   }
-  return `img_${len}_${hash}`;
+  return `img_v${DRIP_CACHE_VERSION}_${len}_${hash}`;
 };
 
 // Save drip card to DB + localStorage cache
