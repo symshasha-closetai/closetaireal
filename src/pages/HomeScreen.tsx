@@ -39,25 +39,7 @@ const weatherOptions = [
   { label: "Rainy", icon: CloudRain, emoji: "🌧️" },
 ];
 
-// Daily killer tags that rotate by date seed
-const dailyTags = [
-  "Main Character Energy ✨", "Serving Looks 🔥", "Style Icon Mode 👑",
-  "Drip Certified 💧", "Fashion Forward 🚀", "Effortlessly Cool 😎",
-  "Vibe Check Passed ✅", "Outfit on Point 🎯", "Slay All Day 💅",
-  "Looking Fire Today 🔥", "Street Style King 👑", "Aesthetic Queen 🌸",
-  "Clean Fit Era 🧊", "Bold & Beautiful 💫", "Trendsetter Alert 🚨",
-  "Fit Goes Hard 💪", "Mood: Unstoppable 🌟", "Style Game Strong 💯",
-  "Dressed to Impress 🎩", "Outfit of the Day 📸", "Giving Everything 🌈",
-  "Chic & Sleek ✨", "Fashion Moment 🎬", "Stunner Status 💎",
-  "Walk With Confidence 🦋", "Drip Don't Stop 🌊", "Today's Lewk 👀",
-  "Fit Check: 10/10 💯", "Pure Elegance 🪷", "Style Supreme 🏆",
-];
 
-const getDailyTag = () => {
-  const now = new Date();
-  const seed = now.getFullYear() * 10000 + (now.getMonth() + 1) * 100 + now.getDate();
-  return dailyTags[seed % dailyTags.length];
-};
 
 type WardrobeItem = {
   id: string;
