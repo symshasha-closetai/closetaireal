@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback, useRef } from "react";
-import { getCache, setCache, CACHE_KEYS } from "@/lib/deviceCache";
+import { getCache, setCache, invalidateCache, CACHE_KEYS } from "@/lib/deviceCache";
 import ImageCropper from "../components/ImageCropper";
 import { motion, AnimatePresence } from "framer-motion";
 import { Sparkles, Camera, ChevronRight, ChevronLeft, X, Heart, GraduationCap, PartyPopper, Shirt, Palette, Briefcase, Sun, Moon, Sunset, CloudRain, Thermometer, CloudSun, Snowflake, Shuffle, Leaf, Smile, Droplet, User, Loader2, Bookmark, BookmarkCheck, ImagePlus, Share2, Flame, Pin, Download, Crop, Music, Flag, CalendarDays, RefreshCw } from "lucide-react";
@@ -139,6 +139,12 @@ const HomeScreen = () => {
   // Streak tracking
   const [streak, setStreak] = useState(0);
 
+  // Dripd Observation
+  type DripdObservation = { works: string; off: string; fix: string[]; observation: string };
+  const [dripdObservation, setDripdObservation] = useState<DripdObservation | null>(null);
+  const [loadingObservation, setLoadingObservation] = useState(false);
+  const observationFetchedRef = useRef(false);
+
   // Load today's look and streak from DB (localStorage as fast cache)
   useEffect(() => {
     if (!user) return;
@@ -196,6 +202,43 @@ const HomeScreen = () => {
       }
     };
     fetchDailyLook();
+  }, [user]);
+
+  // Fetch Dripd Observation
+  useEffect(() => {
+    if (!user || observationFetchedRef.current) return;
+    observationFetchedRef.current = true;
+
+    const OBSERVATION_CACHE_KEY = "dripd-observation";
+    const cached = getCache<DripdObservation>(OBSERVATION_CACHE_KEY, user.id, 7 * 24 * 60 * 60 * 1000);
+    if (cached) { setDripdObservation(cached); return; }
+
+    const fetchObservation = async () => {
+      setLoadingObservation(true);
+      try {
+        const { data: history } = await supabase
+          .from("drip_history")
+          .select("score, killer_tag, praise_line, created_at, mode")
+          .eq("user_id", user.id)
+          .order("created_at", { ascending: false })
+          .limit(10);
+
+        if (!history || history.length < 2) { setLoadingObservation(false); return; }
+
+        const sp = await supabase.from("style_profiles").select("gender").eq("user_id", user.id).maybeSingle();
+
+        const { data, error } = await supabase.functions.invoke("generate-dripd-observation", {
+          body: { dripHistory: history, gender: sp?.data?.gender || "unknown" },
+        });
+
+        if (!error && data?.observation) {
+          setDripdObservation(data.observation);
+          setCache(OBSERVATION_CACHE_KEY, user.id, data.observation);
+        }
+      } catch (e) { console.error("Observation fetch failed:", e); }
+      setLoadingObservation(false);
+    };
+    fetchObservation();
   }, [user]);
 
   const handleTodayPhotoUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -721,6 +764,58 @@ const HomeScreen = () => {
               </button>
             )}
           </div>
+
+          {/* Dripd Observation Card */}
+          {(dripdObservation || loadingObservation) && (
+            <motion.div
+              initial={{ opacity: 0, y: 10 }}
+              animate={{ opacity: 1, y: 0 }}
+              className="glass-card-elevated p-4 space-y-3"
+            >
+              <div className="flex items-center gap-2">
+                <Sparkles size={16} className="text-primary" />
+                <h2 className="text-sm font-semibold text-foreground">Dripd Observation</h2>
+              </div>
+              {loadingObservation && !dripdObservation ? (
+                <div className="flex items-center gap-2 py-3">
+                  <Loader2 size={14} className="text-primary animate-spin" />
+                  <p className="text-xs text-muted-foreground">Analyzing your style journey...</p>
+                </div>
+              ) : dripdObservation ? (
+                <div className="space-y-2">
+                  {dripdObservation.works && (
+                    <div>
+                      <p className="text-[10px] font-semibold text-primary uppercase tracking-wider">What Works</p>
+                      <p className="text-xs text-foreground leading-relaxed">{dripdObservation.works}</p>
+                    </div>
+                  )}
+                  {dripdObservation.off && (
+                    <div>
+                      <p className="text-[10px] font-semibold text-destructive uppercase tracking-wider">What's Off</p>
+                      <p className="text-xs text-foreground leading-relaxed">{dripdObservation.off}</p>
+                    </div>
+                  )}
+                  {dripdObservation.fix?.length > 0 && (
+                    <div>
+                      <p className="text-[10px] font-semibold text-primary uppercase tracking-wider">Upgrade Moves</p>
+                      <ul className="space-y-0.5">
+                        {dripdObservation.fix.map((f, i) => (
+                          <li key={i} className="text-xs text-foreground leading-relaxed flex items-start gap-1.5">
+                            <span className="text-primary mt-0.5">→</span> {f}
+                          </li>
+                        ))}
+                      </ul>
+                    </div>
+                  )}
+                  {dripdObservation.observation && (
+                    <div className="pt-1 border-t border-border">
+                      <p className="text-xs text-muted-foreground italic leading-relaxed">"{dripdObservation.observation}"</p>
+                    </div>
+                  )}
+                </div>
+              ) : null}
+            </motion.div>
+          )}
 
           {/* My Wardrobe Card */}
           <div className="glass-card-elevated p-4">
