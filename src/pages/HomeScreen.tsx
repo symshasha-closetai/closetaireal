@@ -118,64 +118,7 @@ const HomeScreen = () => {
   const [loadingObservation, setLoadingObservation] = useState(false);
   const observationFetchedRef = useRef(false);
 
-  // Load today's look and streak from DB (localStorage as fast cache)
-  useEffect(() => {
-    if (!user) return;
 
-    // Instant cache hit
-    try {
-      const cached = localStorage.getItem(`today-look-${user.id}`);
-      if (cached) {
-        const { url, date } = JSON.parse(cached);
-        if (date === new Date().toDateString()) setTodayPhoto(url);
-        else localStorage.removeItem(`today-look-${user.id}`);
-      }
-      const rawStreak = localStorage.getItem(`streak-${user.id}`);
-      if (rawStreak) {
-        const { count, lastDate } = JSON.parse(rawStreak);
-        const today = new Date().toDateString();
-        const yesterday = new Date(Date.now() - 86400000).toDateString();
-        if (lastDate === today || lastDate === yesterday) setStreak(count);
-      }
-    } catch {}
-
-    // Fetch from DB (source of truth)
-    const fetchDailyLook = async () => {
-      const today = new Date().toLocaleDateString('en-CA'); // YYYY-MM-DD local
-      const { data } = await supabase
-        .from("daily_looks")
-        .select("image_url, streak")
-        .eq("user_id", user.id)
-        .eq("look_date", today)
-        .maybeSingle();
-
-      if (data) {
-        setTodayPhoto(data.image_url);
-        setStreak(data.streak);
-        localStorage.setItem(`today-look-${user.id}`, JSON.stringify({ url: data.image_url, date: new Date().toDateString() }));
-        localStorage.setItem(`streak-${user.id}`, JSON.stringify({ count: data.streak, lastDate: new Date().toDateString() }));
-      } else {
-        // No DB entry for today — compute streak from yesterday
-        const yesterday = new Date(Date.now() - 86400000).toLocaleDateString('en-CA');
-        const { data: yesterdayData } = await supabase
-          .from("daily_looks")
-          .select("streak")
-          .eq("user_id", user.id)
-          .eq("look_date", yesterday)
-          .maybeSingle();
-        // If yesterday exists, streak is still valid but hasn't been continued yet
-        if (yesterdayData) {
-          setStreak(yesterdayData.streak);
-          localStorage.setItem(`streak-${user.id}`, JSON.stringify({ count: yesterdayData.streak, lastDate: new Date(Date.now() - 86400000).toDateString() }));
-        } else {
-          setStreak(0);
-        }
-        setTodayPhoto(null);
-        localStorage.removeItem(`today-look-${user.id}`);
-      }
-    };
-    fetchDailyLook();
-  }, [user]);
 
   // Fetch Dripd Observation
   useEffect(() => {
