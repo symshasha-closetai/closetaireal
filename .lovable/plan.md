@@ -1,92 +1,60 @@
+## Plan: Apply All Custom Prompts to Edge Functions
 
+Now that all four prompts are provided, here's how they'll be applied.
 
-## Plan: Switch Drip Check to OpenAI GPT-4.1 + Add Dripd Observation
+### Step 1: Update `supabase/functions/rate-outfit/index.ts`
 
-### Summary
+**Replace `callGemini()` with `callOpenAI()**` — same JSON parsing logic, but hits `https://api.openai.com/v1/chat/completions` with model `gpt-4.1` and `Bearer ${OPENAI_API_KEY}`. Remove `getApiKey()` (Gemini key rotation).
 
-Move the entire drip check pipeline (scoring, killer tag, praise line, styling tips) from Gemini to **OpenAI GPT-4.1** via direct API. Replace the "Today's Look" card on the home page with a **"Dripd Observation"** card that shows an AI-generated style observation based on past drip check history. Shopping suggestions, Dripd Calendar, and Style Architect remain on Gemini 2.5 Flash.
+**Replace `CALL1_SYSTEM` (lines 59-99)** with the user's drip check prompt:
 
-Shopping suggestion prompt will be rewritten to give image-specific advice about what's missing/can be improved (e.g., "A structured blazer over that white tee would elevate the whole look").
+- "Savage Gen Z fashion critic" persona
+- Detect solo male/female/couple/group/no human
+- No human means 0 scores
+- Scores: Drip, Confidence, Allure, Domination (0-10)
+- Brutal/sarcastic/witty tone
+- Output format: Tag (2-3 words) + Line (1 savage sentence)
+- Keep the JSON structure compatible with existing client code by mapping: Allure→attractiveness_score, Domination→dominance_score, etc.
 
-User will provide exact prompts for killer tag, praise line, styling tips, and Dripd observation — these will be copy-pasted in once provided.
+**Replace `CALL1_SYSTEM` styling_tips section** with the styling advice prompt:
 
----
+- "DRIPD AI Stylist — world-class fashion intelligence engine"
+- WHAT WORKS (1-2 insights), WHAT FEELS OFF, UPGRADE MOVES (1-2 improvements)
+- Clean, confident, slightly edgy tone
 
-### Step 1: Add OpenAI API Key
+**Merge into a single Call 1** — the drip check prompt handles scoring + tag + line, and the styling advice prompt handles tips. Both get sent together as one GPT-4.1 call to reduce latency.
 
-Use the `add_secret` tool to request the user's OpenAI API key as `OPENAI_API_KEY`.
+**Remove `CAPTION_SYSTEM` and Call 2 entirely** — the new drip check prompt generates killer_tag and praise_line in Call 1 itself, eliminating the need for a separate caption call. Remove `generateCaption()` and `generateRoastCaption()` functions.
 
-### Step 2: Rewrite `supabase/functions/rate-outfit/index.ts`
+**Update roast handling** — the new prompt handles "no human" detection natively. Keep server-side drip_score calculation.
 
-**Replace `callGemini()` with `callOpenAI()`:**
-- Endpoint: `https://api.openai.com/v1/chat/completions`
-- Model: `gpt-4.1` (for all calls: scoring, caption, roast)
-- Auth: `Bearer ${OPENAI_API_KEY}`
-- Remove `getApiKey()` (Gemini key rotation) — use single `OPENAI_API_KEY`
+### Step 2: Create `supabase/functions/generate-dripd-observation/index.ts`
 
-**Keep everything else identical:** prompts (CALL1_SYSTEM, CAPTION_SYSTEM), server-side score calculation, roast detection, fallback logic. Just swap the transport layer.
+New edge function using GPT-4.1 with the user's observation prompt:
 
-User will provide updated prompts later — placeholder with current prompts for now.
+- "DRIPD AI Stylist — elite fashion intelligence"
+- Accepts `{ dripHistory, gender }` — last 5-10 entries with scores, tags, outfit descriptions
+- Uses `user_memory` from drip history to reference past patterns
+- Output: WORKS, OFF, FIX, OBSERVATION sections
+- Returns `{ observation: "string" }` for display on home page card
 
-### Step 3: Replace "Today's Look" with "Dripd Observation" on Home Page
+### Step 3: Update `src/pages/HomeScreen.tsx`
 
-**File: `src/pages/HomeScreen.tsx`**
+Replace "Today's Look" card with "Dripd Observation" card that:
 
-Replace the "Today's Look Card" (lines 667-723) with a "Dripd Observation" card:
-- On load, fetch the user's last 5-10 drip check entries from `drip_history`
-- Summarize them (scores, killer tags, outfit descriptions) into a short context string
-- Call a new edge function `generate-dripd-observation` with this context
-- Display the AI observation as a styled card (e.g., "You've been rocking dark tones lately — try a pop of color to break the pattern 🎨")
-- Cache the observation for 24 hours via `deviceCache`
-- Remove: today photo upload, crop, share, daily tag — all of it
+- Fetches last 7 days drip_history entries on load
+- Calls `generate-dripd-observation` edge function
+- Caches result for 7 days via deviceCache
+- Displays the observation text in a styled card
 
-**Remove related state/handlers:** `todayPhoto`, `handleTodayPhotoUpload`, `handleCroppedPhoto`, `handleRecropPhoto`, `handleShareTodayLook`, `photoFileRef`, `pendingCropImage`, `uploadingPhoto`, `sharingLook`, `getDailyTag`, `dailyTags`, `streak` display from this card.
+### Step 4: No changes to Shopping Suggestions
 
-### Step 4: Create `supabase/functions/generate-dripd-observation/index.ts`
-
-New edge function:
-- Input: `{ dripHistory: [{score, killer_tag, outfit_description, timestamp}], gender }`
-- Uses **OpenAI GPT-4.1** (`OPENAI_API_KEY`)
-- Prompt: Analyze the user's recent drip check patterns and generate a short, personalized style observation (2-3 sentences). Note trends in colors, scores, style evolution. Gen-Z tone.
-- Output: `{ observation: "string" }`
-- Add to `supabase/config.toml` with `verify_jwt = false`
-
-### Step 5: Update Shopping Suggestions — `supabase/functions/generate-suggestions/index.ts`
-
-**Stays on Gemini 2.5 Flash** but rewrite the `type === "shopping"` prompt:
-- Analyze what's visible in the image (top, bottom, accessories, colors, patterns)
-- Advise what's MISSING or can be IMPROVED based on what's seen
-- Sophisticated fashion expert tone (not generic "try accessories")
-- Example: "That white crew-neck is clean but adding a tailored navy blazer would instantly elevate the silhouette"
-- Upgrade model from `gemini-2.5-flash-lite` to `gemini-2.5-flash`
-
-### Step 6: Confirm Gemini stays for Calendar + Style Architect
-
-- `generate-outfit-calendar/index.ts` — no changes, stays on Gemini
-- `style-me/index.ts` — no changes, stays on Gemini
-- `analyze-style-personality/index.ts` — no changes, stays on Gemini
+Already updated in previous implementation to use `gemini-2.5-flash` with sophisticated prompts.
 
 ---
 
-### Technical Summary
+### Files changed
 
-| Feature | Model | API |
-|---------|-------|-----|
-| Drip Check (scoring + sub-scores) | GPT-4.1 | OpenAI direct |
-| Killer Tag + Praise Line | GPT-4.1 | OpenAI direct |
-| Styling Tips | GPT-4.1 | OpenAI direct |
-| Dripd Observation (new) | GPT-4.1 | OpenAI direct |
-| Shopping Suggestions | Gemini 2.5 Flash | Google direct |
-| Dripd Calendar | Gemini 2.5 Flash | Google direct |
-| Style Architect (style-me) | Gemini 2.5 Flash | Google direct |
-| Style Personality | Gemini 2.5 Flash | Google direct |
-
-**Files changed:**
-1. `supabase/functions/rate-outfit/index.ts` — swap Gemini → OpenAI GPT-4.1
-2. `src/pages/HomeScreen.tsx` — replace Today's Look with Dripd Observation
-3. `supabase/functions/generate-dripd-observation/index.ts` — new edge function
-4. `supabase/functions/generate-suggestions/index.ts` — rewrite shopping prompt, upgrade to gemini-2.5-flash
-5. `supabase/config.toml` — add generate-dripd-observation entry
-
-**New secret needed:** `OPENAI_API_KEY`
-
+1. `supabase/functions/rate-outfit/index.ts` — full rewrite: OpenAI GPT-4.1, new prompts, single-call architecture
+2. `supabase/functions/generate-dripd-observation/index.ts` — new edge function with observation prompt
+3. `src/pages/HomeScreen.tsx` — Dripd Observation card (replacing Today's Look)
