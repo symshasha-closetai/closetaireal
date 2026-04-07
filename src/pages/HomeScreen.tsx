@@ -114,18 +114,30 @@ const HomeScreen = () => {
 
   // Dripd Observation
   type DripdObservation = { works: string; off: string; fix: string[]; observation: string };
-  const [dripdObservation, setDripdObservation] = useState<DripdObservation | null>(null);
+  const OBSERVATION_CACHE_KEY = "dripd-observation";
+  const [dripdObservation, setDripdObservation] = useState<DripdObservation | null>(() => {
+    if (!user) return null;
+    return getCache<DripdObservation>(OBSERVATION_CACHE_KEY, user.id, 7 * 24 * 60 * 60 * 1000);
+  });
   const [loadingObservation, setLoadingObservation] = useState(false);
   const observationFetchedRef = useRef(false);
-
-
+  const lastObservationUserId = useRef<string | null>(null);
 
   // Fetch Dripd Observation
   useEffect(() => {
-    if (!user || observationFetchedRef.current) return;
+    if (!user) return;
+
+    // Reset if user changed
+    if (lastObservationUserId.current && lastObservationUserId.current !== user.id) {
+      observationFetchedRef.current = false;
+      setDripdObservation(null);
+    }
+    lastObservationUserId.current = user.id;
+
+    if (observationFetchedRef.current) return;
     observationFetchedRef.current = true;
 
-    const OBSERVATION_CACHE_KEY = "dripd-observation";
+    // Check cache first (in case useState initializer missed it due to user being null at mount)
     const cached = getCache<DripdObservation>(OBSERVATION_CACHE_KEY, user.id, 7 * 24 * 60 * 60 * 1000);
     if (cached) { setDripdObservation(cached); return; }
 
