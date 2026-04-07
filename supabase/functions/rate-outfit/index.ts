@@ -45,140 +45,165 @@ async function callOpenAI(messages: any[], temperature: number, maxTokens: numbe
 }
 
 // ═══════════════════════════════════════════
-// SINGLE CALL SYSTEM PROMPT — Scoring + Tag + Line + Styling
+// STAGE 1: Deterministic human gate classifier
 // ═══════════════════════════════════════════
 
-const SYSTEM_PROMPT = `You are DRIPD AI — the most BRUTAL, UNHINGED Gen Z fashion critic on the internet. You have ZERO filter. You roast EVERYONE. You are NOT here to be nice. You are here to DESTROY weak fits and only respect genuine drip.
+const GATE_PROMPT = `You are an image classifier. Analyze the image and return ONLY valid JSON with these exact keys:
 
-Combined with being a world-class fashion intelligence engine for styling advice.
+{
+  "human_visible": boolean,
+  "frame_coverage": number (0.0-1.0, what percentage of frame the largest human occupies),
+  "clothing_visible": boolean (can you clearly see what they're wearing?),
+  "image_clarity": number (0.0-1.0, how clear/sharp is the image),
+  "dominant_subject": string (what is the main thing in the image: "person", "food", "animal", "building", "furniture", "vehicle", "meme", "text", "object", "selfie", "group"),
+  "subject_count": number (how many humans visible),
+  "gate_reason": string (brief reason for your classification)
+}
 
-You have TWO jobs in ONE response:
-1. DRIP CHECK — absolutely BRUTAL, savage, no mercy scoring
-2. STYLING ADVICE — sharp, specific, expert-level fashion intelligence
+Rules:
+- A human counts ONLY if they are clearly visible, wearing identifiable clothes
+- Blurry/dark/obstructed people where you can't identify clothing = human_visible: false
+- Tiny figures in background = low frame_coverage
+- Screenshots, memes, AI art = not real humans
+- Be STRICT. When in doubt, mark human_visible: false.
 
-═══════════════════════════════════════════
-PART 1: DRIP CHECK — BE RUTHLESS
-═══════════════════════════════════════════
+Return ONLY the JSON object. No markdown. No explanation.`;
+
+// ═══════════════════════════════════════════
+// STAGE 2: Scoring + Roast (only for valid humans)
+// ═══════════════════════════════════════════
+
+const SCORING_PROMPT = `You are DRIPD AI — the most BRUTAL, UNHINGED Gen Z fashion critic alive. You have ZERO filter. You roast EVERYONE. You are NOT here to be nice. You are here to DESTROY weak fits and only respect genuine drip.
 
 TONE RULES (NON-NEGOTIABLE):
 - You are MEAN. You are FUNNY. You are SAVAGE.
-- NEVER be encouraging, supportive, or wholesome. That's NOT your job.
-- NEVER use words like "great", "nice", "good effort", "not bad", "solid"
+- NEVER be encouraging, supportive, or wholesome
+- NEVER use words like "great", "nice", "good effort", "not bad", "solid", "clean"
 - Every praise_line should make someone GASP then LAUGH
 - Think: mean girls meets fashion week meets twitter roasts
-- If someone looks mid, SAY IT. Don't sugarcoat. Don't "find the positive."
-- Even HIGH scorers get roasted — they just get roasted with RESPECT
+- If someone looks mid, SAY IT. Don't sugarcoat.
+- Even HIGH scorers get ROASTED — they just get roasted with grudging respect
 - You're the friend who tells the truth when everyone else lies
 
-Detect: solo male / solo female / couple / group / no human.
+Detect: solo male / solo female / couple / group.
 
-HUMAN CHECK (HARD GATE):
-A human counts ONLY if they occupy MORE THAN 40% of the frame, clearly wearing clothes.
-DO NOT count: tiny avatars, background figures, memes, screenshots, icons, <40% frame people.
-
-IF NO HUMAN (less than 40% of frame):
-Identify the dominant non-human item (food, building, furniture, animal, vehicle, etc.).
-Return:
-{"error":"roast","roast_category":"FOOD|FURNITURE|BUILDING|NATURE|ANIMAL|MEME|VEHICLE|OBJECT","drip_score":0,"confidence_rating":0,"attractiveness_score":0,"attractiveness_reason":"N/A","status_score":0,"status_reason":"N/A","dominance_score":0,"dominance_reason":"N/A","approachability_score":0,"approachability_reason":"N/A","drip_reason":"No human detected","confidence_reason":"No human detected","advice":"Upload a photo with you wearing an outfit","scene_type":"none","face_hidden":false,"outfit_description":"N/A","killer_tag":"Wrong Photo 💀","praise_line":"[savage roast about what you actually see]","styling_tips":[]}
-
-ROAST TONE (no human): Be CREATIVE and DEVASTATING. Examples:
-- Food: "you really sent me your lunch expecting a drip score. the audacity is a 10 tho"
-- Building: "that's a nice wall. shame it has more personality than whoever took this photo"
-- Animal: "your pet has more drip than you'll ever have and we both know it"
-- Meme: "sending memes to an AI fashion critic is peak delusion"
-
-IF HUMAN IS DOMINANT (>40% of frame):
-
-Detect:
-- scene_type: "solo" | "couple" | "group" | "family"
-- face_hidden: true/false
-- gender from user message
-
-Score these (0-10 each, decimals allowed, BE HARSH — most people are 4-6, 7+ is RARE):
-- Drip (attractiveness_score): Physical appeal, grooming, overall visual impression. Be HONEST. Average = 5, not 7.
-- Confidence (confidence_rating): Overall confidence vibe. 1 line reason.
-- Allure (status_score): How expensive/premium the outfit looks. Fast fashion = low score. Period.
-- Domination (dominance_score): Power presence, stance authority. Standing like a lost puppy = 3 max.
+Score these (0-10 each, decimals allowed, BE EXTREMELY HARSH — most people are 4-6, 7+ is RARE):
+- attractiveness_score: Physical appeal, grooming. Average = 5, NOT 7.
+- confidence_rating: Overall confidence vibe.
+- status_score: How expensive/premium the outfit looks. Fast fashion = low.
+- dominance_score: Power presence, stance authority.
 - approachability_score: Warmth, friendliness vibe.
 
 SCORING CALIBRATION (CRITICAL):
-- 0-2: Genuinely terrible, fashion crime
+- 0-2: Fashion crime, genuinely terrible
 - 3-4: Below average, needs serious work
-- 5-6: Average/decent, nothing special — THIS IS WHERE MOST PEOPLE LAND
+- 5-6: Average/decent, nothing special — MOST PEOPLE LAND HERE
 - 7-8: Actually good, stands out
-- 9-10: Exceptional, almost never given. Reserved for genuinely incredible fits.
-- DO NOT inflate scores. A basic t-shirt and jeans is a 4-5, NOT a 7.
-- Stop giving everyone 7+. That's LYING.
+- 9-10: Almost never given. Reserved for genuinely incredible fits.
+- A basic t-shirt and jeans is a 4-5, NOT a 7. Stop lying.
 
-Also provide:
-- drip_score: set to 0 (calculated server-side)
-- drip_reason: 1 line brutal assessment
-- advice: 1 line styling tip (be blunt, not encouraging)
-- outfit_description: 10-15 word description of what they're wearing
-
-KILLER TAG (2-3 words, EARNED not given):
-- 0-3: "Fashion Crime", "Delete This", "Drip Drought", "Style 404"
-- 3.1-5: "Still Loading", "Work In Progress", "Mid Energy", "Potential Maybe"
-- 5.1-7: "Quiet Heat", "Getting There", "Almost Cooking"
+KILLER TAG (2-3 words max):
+- 0-3: "Fashion Crime", "Delete This", "Drip Drought", "Style 404", "Walking L"
+- 3.1-5: "Still Loading", "Mid Central", "Try Harder", "Almost Something"
+- 5.1-7: "Warming Up", "Not Terrible", "Jury's Out"
 - 7.1-8.5: "Real Drip", "Silent Threat", "Locked In"
 - 8.6+: "Illegal Drip", "God Tier", "Built Different"
 - Face hidden: "Mystery Drip", "Faceless Flex", "Shadow Drip"
 
 PRAISE LINE (1 SAVAGE sentence, no period):
-This is the MOST IMPORTANT part. It MUST be:
-- Brutal, cutting, unfiltered
-- Actually funny — not try-hard funny
-- Specific to what you SEE in the image
-- Would get 10k likes on Twitter
-- Makes the person screenshot it even if it's a roast
+Must be brutal, cutting, specific to the image. Would get 10k likes on Twitter.
+- 0-3: Pure destruction. "you got dressed in a house fire and it shows"
+- 3.1-5: Brutal honesty. "this fit screams 'I gave up' and honestly same"
+- 5.1-7: Backhanded. "you look like a default character someone forgot to customize"
+- 7.1-8.5: Grudging respect wrapped in sarcasm. "okay you ate but I'll never admit it twice"
+- 8.6+: Unhinged praise. "this is so illegal I'm calling the fashion police on myself for doubting you"
 
-ALL genders, ALL scores get the SAME savage energy:
-- 0-3: Destruction. Make them question their mirror. "you got dressed in the dark and it shows"
-- 3.1-5: Roast with a sliver of hope. "this fit is giving 'I tried' and honestly that's the nicest thing I can say"
-- 5.1-7: Backhanded compliments. "you're like a 3am kebab — not amazing but gets the job done"
-- 7.1-8.5: Respect wrapped in roast. "okay this actually goes hard but don't let it get to your head"
-- 8.6+: Unhinged praise. "this is so fire I need to report it to the authorities"
+BANNED phrases: "looking good", "nice outfit", "great choice", "not bad", "solid look", "got potential", "keep it up"
 
-NEVER write generic lines like "looking good" or "nice outfit" — those are BANNED.
+Also provide:
+- drip_score: set to 0 (calculated server-side)
+- drip_reason: 1 line BRUTAL assessment (not a compliment)
+- confidence_reason, attractiveness_reason, status_reason, dominance_reason, approachability_reason: 1 line each
+- advice: 1 blunt styling tip (no encouragement)
+- outfit_description: 10-15 words
+- face_hidden: boolean
+- scene_type: "solo"|"couple"|"group"|"family"
 
-Couples/Groups: roast the dynamic, compare who dressed better, create drama
+STYLING TIPS (array of 2-3 strings):
+1. WHAT WORKS — 1 sharp insight on a specific visible item (still delivered with attitude)
+2. WHAT FEELS OFF — 1 honest problem (skip ONLY if genuinely flawless, which almost never happens)
+3. UPGRADE MOVE — 1 specific swap/addition referencing what you SEE
 
-═══════════════════════════════════════════
-PART 2: STYLING ADVICE
-═══════════════════════════════════════════
+Each tip must reference a SPECIFIC visible garment. Generic tips = BANNED.
 
-Think like a luxury stylist + streetwear expert + visual psychologist.
-Focus on contrast, structure, silhouette, color balance, and vibe alignment.
-
-Provide styling_tips as an array of 2-3 strings:
-1. WHAT WORKS — 1 sharp insight referencing specific visible items
-2. WHAT FEELS OFF — 1 honest issue (skip ONLY if outfit is genuinely flawless, which is rare)
-3. UPGRADE MOVE — 1 specific improvement referencing what you SEE
-
-Each tip must:
-- Reference a specific visible garment, pattern, color, or silhouette
-- Give actionable advice like a brutally honest fashion expert
-- NOT be generic ("try accessories" = BANNED)
-- Feel like a real stylist who doesn't care about your feelings
-
-═══════════════════════════════════════════
-OUTPUT FORMAT (STRICT JSON ONLY)
-═══════════════════════════════════════════
-
-For humans:
-{"drip_score":0,"drip_reason":"string","confidence_rating":number,"confidence_reason":"string","attractiveness_score":number,"attractiveness_reason":"string","status_score":number,"status_reason":"string","dominance_score":number,"dominance_reason":"string","approachability_score":number,"approachability_reason":"string","advice":"string","styling_tips":["string","string"],"face_hidden":boolean,"scene_type":"solo|couple|group|family","outfit_description":"string","killer_tag":"string","praise_line":"string"}
-
-CRITICAL: Return ONLY valid JSON. No markdown. No extra keys. No explanation outside JSON.`;
+OUTPUT (STRICT JSON ONLY, no markdown):
+{"drip_score":0,"drip_reason":"string","confidence_rating":number,"confidence_reason":"string","attractiveness_score":number,"attractiveness_reason":"string","status_score":number,"status_reason":"string","dominance_score":number,"dominance_reason":"string","approachability_score":number,"approachability_reason":"string","advice":"string","styling_tips":["string","string"],"face_hidden":boolean,"scene_type":"string","outfit_description":"string","killer_tag":"string","praise_line":"string"}`;
 
 // ═══════════════════════════════════════════
-// Helpers
+// No-human roast lines (savage, sarcastic)
+// ═══════════════════════════════════════════
+
+const NO_HUMAN_ROASTS: Record<string, string[]> = {
+  food: [
+    "you sent me your lunch expecting a drip score — the audacity is a solid 10 tho",
+    "that meal has more seasoning than your entire wardrobe probably does",
+    "rate my outfit? bro that's a sandwich",
+  ],
+  animal: [
+    "your pet already has more drip than you'll ever achieve and we both know it",
+    "that animal is serving harder than you ever could",
+    "even this creature accessorizes better than most humans I review",
+  ],
+  building: [
+    "that's a nice wall — shame it has more personality than whoever took this photo",
+    "architecture review wasn't in my job description but it'd still outscore most people",
+    "bricks having more character than your fits is genuinely concerning",
+  ],
+  vehicle: [
+    "the car's drip doesn't transfer to the driver no matter how many photos you take",
+    "flexing the whip because the fit couldn't carry — we see through it",
+    "that vehicle is the hardest thing in this photo and it's not even wearing clothes",
+  ],
+  meme: [
+    "sending memes to an AI fashion critic is peak delusion and honestly iconic",
+    "a meme? in THIS economy? I expected more from someone who found this app",
+    "this screenshot has zero drip but maximum audacity",
+  ],
+  default: [
+    "whatever this is, it's not an outfit and I'm not impressed",
+    "I was hired to judge drip, not whatever fever dream this photo is",
+    "this photo is giving 'I don't own a mirror' energy",
+  ],
+};
+
+function getNoHumanRoast(subject: string): { killer_tag: string; praise_line: string } {
+  const category = NO_HUMAN_ROASTS[subject] ? subject : "default";
+  const lines = NO_HUMAN_ROASTS[category];
+  const praise_line = lines[Math.floor(Math.random() * lines.length)];
+
+  const tags: Record<string, string[]> = {
+    food: ["Wrong Plate 💀", "Menu Check", "Calorie Flex"],
+    animal: ["Pet Drip 🐾", "Wrong Species", "Fur Coat Only"],
+    building: ["Brick Energy 🧱", "Wall Check", "Architecture L"],
+    vehicle: ["Car Cope 🚗", "Wrong Flex", "Vroom Vroom L"],
+    meme: ["Meme Lord 💀", "Screenshot Andy", "Touch Grass"],
+    default: ["Wrong Photo 💀", "404 Outfit", "Try Again"],
+  };
+  const tagList = tags[category] || tags.default;
+  const killer_tag = tagList[Math.floor(Math.random() * tagList.length)];
+
+  return { killer_tag, praise_line };
+}
+
+// ═══════════════════════════════════════════
+// Fallback captions for valid humans (still savage)
 // ═══════════════════════════════════════════
 
 const FALLBACK_CAPTIONS: Record<string, { killer_tag: string; praise_line: string }> = {
   low: { killer_tag: "Drip Drought", praise_line: "this fit called and even it wants a refund" },
-  mid: { killer_tag: "Mid Energy", praise_line: "aggressively average and we both know it" },
-  high: { killer_tag: "Quiet Heat", praise_line: "not bad but don't start acting like you invented fashion" },
-  elite: { killer_tag: "Certified Heat", praise_line: "okay this goes stupid hard I can't even lie" },
+  mid: { killer_tag: "Mid Central", praise_line: "aggressively average and honestly that's generous" },
+  high: { killer_tag: "Warming Up", praise_line: "don't let this go to your head because it barely went to mine" },
+  elite: { killer_tag: "Locked In", praise_line: "okay this goes hard but I'll deny saying that if asked" },
 };
 
 function getScoreTier(score: number): string {
@@ -186,6 +211,20 @@ function getScoreTier(score: number): string {
   if (score <= 6) return "mid";
   if (score <= 8) return "high";
   return "elite";
+}
+
+// ═══════════════════════════════════════════
+// Validation helpers
+// ═══════════════════════════════════════════
+
+function clampScore(val: unknown, min = 0, max = 10): number {
+  const n = typeof val === "number" ? val : parseFloat(String(val));
+  if (isNaN(n)) return 0;
+  return Math.round(Math.min(max, Math.max(min, n)) * 10) / 10;
+}
+
+function ensureString(val: unknown, fallback: string): string {
+  return typeof val === "string" && val.trim() ? val.trim() : fallback;
 }
 
 // ═══════════════════════════════════════════
@@ -223,91 +262,114 @@ serve(async (req) => {
     const imgSizeKb = Math.round(imageBase64.length * 3 / 4 / 1024);
     console.log(`Request: gender=${gender}, imgSize=${imgSizeKb}KB`);
 
-    // === Single Call: Scoring + Tag + Line + Styling ===
-    const messages = [
-      { role: "system", content: SYSTEM_PROMPT },
-      {
-        role: "user",
-        content: [
-          { type: "text", text: `Analyze this image. Is there a human wearing clothes occupying more than 40% of the frame? Score the outfit. User gender: ${gender}.` },
-          { type: "image_url", image_url: { url: `data:image/jpeg;base64,${imageBase64}` } },
-        ],
-      },
-    ];
+    const imageContent = { type: "image_url", image_url: { url: `data:image/jpeg;base64,${imageBase64}` } };
 
-    let result;
+    // ═══ STAGE 1: Human gate classification ═══
+    console.log("Stage 1: Running human gate classifier...");
+    let gate;
     try {
-      result = await callOpenAI(messages, 0.7, 800);
+      gate = await callOpenAI([
+        { role: "system", content: GATE_PROMPT },
+        { role: "user", content: [
+          { type: "text", text: "Classify this image. Is there a clearly visible human wearing identifiable clothing?" },
+          imageContent,
+        ]},
+      ], 0.1, 200);
     } catch (e: any) {
-      console.error("OpenAI call failed:", e);
-      return new Response(JSON.stringify({ error: e.message || "AI call failed", stage: e.stage || "call1", provider_status: e.status }), {
+      console.error("Gate classifier failed:", e);
+      return new Response(JSON.stringify({ error: e.message || "Classification failed", stage: "gate", provider_status: e.status }), {
         status: e.status === 429 || e.status === 402 ? e.status : 500,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
 
-    console.log("AI result:", JSON.stringify(result).substring(0, 400));
+    console.log("Gate result:", JSON.stringify(gate));
 
-    // === Calculate drip score server-side ===
-    const calculatedDrip = Math.round(
-      ((result.attractiveness_score || 0) * 0.30 +
-        (result.status_score || 0) * 0.25 +
-        (result.dominance_score || 0) * 0.25 +
-        (result.approachability_score || 0) * 0.20) * 10,
-    ) / 10;
-    console.log(`Server-side drip: ${calculatedDrip}`);
-    result.drip_score = calculatedDrip;
+    const humanVisible = gate.human_visible === true;
+    const frameCoverage = typeof gate.frame_coverage === "number" ? gate.frame_coverage : 0;
+    const clothingVisible = gate.clothing_visible === true;
+    const imageClarity = typeof gate.image_clarity === "number" ? gate.image_clarity : 0;
+    const dominantSubject = (gate.dominant_subject || "object").toLowerCase();
 
-    // Check if roast
-    const subScoreTotal = (result.attractiveness_score || 0) + (result.status_score || 0) + (result.dominance_score || 0) + (result.approachability_score || 0);
-    const dripReason = (result.drip_reason || "").toLowerCase();
-    const adviceText = (result.advice || "").toLowerCase();
-    const hasNoHumanSignal = dripReason.includes("no human") || adviceText.includes("upload a photo");
+    // Deterministic human gate: MUST pass ALL conditions
+    const passesGate = humanVisible && frameCoverage >= 0.35 && clothingVisible && imageClarity >= 0.3;
 
-    const isRoast = result.error === "roast"
-      || (result.drip_score === 0 && subScoreTotal === 0)
-      || (result.attractiveness_score === 0 && result.dominance_score === 0)
-      || (result.drip_score < 2 && subScoreTotal < 3)
-      || hasNoHumanSignal;
-
-    if (isRoast) {
-      console.log("Roast detected");
+    if (!passesGate) {
+      console.log(`Human gate FAILED: visible=${humanVisible}, coverage=${frameCoverage}, clothing=${clothingVisible}, clarity=${imageClarity}`);
+      const roast = getNoHumanRoast(dominantSubject);
       const roastResult = {
-        drip_score: 0, drip_reason: "No human detected",
+        drip_score: 0,
+        drip_reason: gate.gate_reason || "No human detected",
         confidence_rating: 0, confidence_reason: "No human detected",
-        killer_tag: result.killer_tag || "Wrong Photo 💀",
         attractiveness_score: 0, attractiveness_reason: "N/A",
         status_score: 0, status_reason: "N/A",
         dominance_score: 0, dominance_reason: "N/A",
         approachability_score: 0, approachability_reason: "N/A",
-        advice: "Upload a photo with you wearing an outfit",
-        praise_line: result.praise_line || "that's a cool photo but where's the outfit",
+        advice: "Upload a clear photo of yourself wearing an outfit",
+        killer_tag: roast.killer_tag,
+        praise_line: roast.praise_line,
         styling_tips: [],
+        face_hidden: false,
+        scene_type: "none",
+        outfit_description: "N/A",
       };
       return new Response(JSON.stringify({ result: roastResult }), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
     }
 
-    // Ensure killer_tag and praise_line exist with fallbacks
+    // ═══ STAGE 2: Scoring + Roast (human confirmed) ═══
+    console.log("Stage 2: Human confirmed, running scoring...");
+    let result;
+    try {
+      result = await callOpenAI([
+        { role: "system", content: SCORING_PROMPT },
+        { role: "user", content: [
+          { type: "text", text: `Rate this outfit. Be BRUTAL. User gender: ${gender}. Scene: ${dominantSubject}. People visible: ${gate.subject_count || 1}.` },
+          imageContent,
+        ]},
+      ], 0.7, 800);
+    } catch (e: any) {
+      console.error("Scoring call failed:", e);
+      return new Response(JSON.stringify({ error: e.message || "AI scoring failed", stage: "scoring", provider_status: e.status }), {
+        status: e.status === 429 || e.status === 402 ? e.status : 500,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
+    console.log("Scoring result:", JSON.stringify(result).substring(0, 400));
+
+    // ═══ Validate & clamp all scores ═══
+    const attr = clampScore(result.attractiveness_score);
+    const status = clampScore(result.status_score);
+    const dom = clampScore(result.dominance_score);
+    const appr = clampScore(result.approachability_score);
+    const conf = clampScore(result.confidence_rating);
+
+    const calculatedDrip = Math.round((attr * 0.30 + status * 0.25 + dom * 0.25 + appr * 0.20) * 10) / 10;
+    console.log(`Server-side drip: ${calculatedDrip} (attr=${attr}, status=${status}, dom=${dom}, appr=${appr})`);
+
     const tier = getScoreTier(calculatedDrip);
     const fallback = FALLBACK_CAPTIONS[tier];
 
     const finalResult = {
-      drip_score: result.drip_score,
-      drip_reason: result.drip_reason,
-      confidence_rating: result.confidence_rating,
-      confidence_reason: result.confidence_reason,
-      killer_tag: result.killer_tag || fallback.killer_tag,
-      attractiveness_score: result.attractiveness_score,
-      attractiveness_reason: result.attractiveness_reason,
-      status_score: result.status_score,
-      status_reason: result.status_reason,
-      dominance_score: result.dominance_score,
-      dominance_reason: result.dominance_reason,
-      approachability_score: result.approachability_score,
-      approachability_reason: result.approachability_reason,
-      advice: result.advice,
-      styling_tips: Array.isArray(result.styling_tips) ? result.styling_tips : [],
-      praise_line: result.praise_line || fallback.praise_line,
+      drip_score: calculatedDrip,
+      drip_reason: ensureString(result.drip_reason, "the AI was speechless and that's never a good sign"),
+      confidence_rating: conf,
+      confidence_reason: ensureString(result.confidence_reason, "confidence status: unclear"),
+      killer_tag: ensureString(result.killer_tag, fallback.killer_tag),
+      attractiveness_score: attr,
+      attractiveness_reason: ensureString(result.attractiveness_reason, "no comment"),
+      status_score: status,
+      status_reason: ensureString(result.status_reason, "no comment"),
+      dominance_score: dom,
+      dominance_reason: ensureString(result.dominance_reason, "no comment"),
+      approachability_score: appr,
+      approachability_reason: ensureString(result.approachability_reason, "no comment"),
+      advice: ensureString(result.advice, "try wearing something next time"),
+      styling_tips: Array.isArray(result.styling_tips) ? result.styling_tips.filter((t: any) => typeof t === "string" && t.trim()) : [],
+      praise_line: ensureString(result.praise_line, fallback.praise_line),
+      face_hidden: result.face_hidden === true,
+      scene_type: ensureString(result.scene_type, "solo"),
+      outfit_description: ensureString(result.outfit_description, "outfit detected"),
     };
 
     return new Response(JSON.stringify({ result: finalResult }), { headers: { ...corsHeaders, "Content-Type": "application/json" } });

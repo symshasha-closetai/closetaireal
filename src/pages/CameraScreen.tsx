@@ -11,28 +11,28 @@ import { useAuth } from "@/hooks/useAuth";
 import { toast } from "sonner";
 import { compressImage } from "@/lib/imageCompression";
 
-const FALLBACK_TAGS = ["Clean Fit", "Solid Look", "Got Potential", "Quiet Flex", "Vibe Check"];
+const FALLBACK_TAGS = ["Mid Central", "Still Loading", "Try Harder", "Drip Drought", "Style 404"];
 const FALLBACK_PRAISE = [
-  "you showed up and that's already half the battle",
-  "this fit has more going for it than you think",
-  "not bad at all — keep building on this energy",
+  "the AI broke trying to process this and honestly fair enough",
+  "this fit has the personality of a loading screen",
+  "we both know this wasn't your best work",
 ];
 
 function clientFallbackResult(_gender?: string | null): RatingResult {
   const r = (min: number, max: number) => Math.round((Math.random() * (max - min) + min) * 10) / 10;
   const pick = <T,>(a: T[]) => a[Math.floor(Math.random() * a.length)];
-  const attr = r(7, 9.5), status = r(7, 9.5), dom = r(7, 9.5), appr = r(7, 9.5);
+  const attr = r(3, 6), status = r(3, 6), dom = r(3, 6), appr = r(3, 6);
   return {
     drip_score: Math.round((attr * 0.30 + status * 0.25 + dom * 0.25 + appr * 0.20) * 10) / 10,
-    drip_reason: "Great overall style that creates visual harmony",
-    confidence_rating: r(7.5, 9.5),
-    confidence_reason: "This look shows intentional styling choices",
+    drip_reason: "the AI couldn't connect but your fit probably needed the break",
+    confidence_rating: r(3, 6),
+    confidence_reason: "hard to judge when the servers are crying",
     killer_tag: pick(FALLBACK_TAGS),
-    attractiveness_score: attr, attractiveness_reason: "Strong visual appeal and grooming",
-    status_score: status, status_reason: "Outfit carries a premium, put-together look",
-    dominance_score: dom, dominance_reason: "Commanding presence in the frame",
-    approachability_score: appr, approachability_reason: "Warm and inviting energy",
-    advice: "Keep experimenting with your personal style — you're on the right track!",
+    attractiveness_score: attr, attractiveness_reason: "pending judgment",
+    status_score: status, status_reason: "status unclear, try again",
+    dominance_score: dom, dominance_reason: "dominance loading...",
+    approachability_score: appr, approachability_reason: "vibes inconclusive",
+    advice: "try again when the connection isn't having a worse day than your outfit",
     praise_line: pick(FALLBACK_PRAISE),
   };
 }
@@ -129,7 +129,7 @@ const updateGlobal = (patch: Partial<DripState>) => {
 };
 
 // Cache version — bump this when prompt changes to invalidate old results
-const DRIP_CACHE_VERSION = 2;
+const DRIP_CACHE_VERSION = 3;
 
 // Improved image hash for cache lookups (versioned)
 const computeImageHash = (base64: string): string => {

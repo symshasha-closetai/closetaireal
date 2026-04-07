@@ -449,7 +449,7 @@ const HomeScreen = () => {
         {/* Controls */}
         <div className="space-y-4">
           {/* Dripd Observation Card */}
-          {(dripdObservation || loadingObservation) && (
+          {(
             <motion.div
               initial={{ opacity: 0, y: 10 }}
               animate={{ opacity: 1, y: 0 }}
@@ -496,7 +496,11 @@ const HomeScreen = () => {
                     </div>
                   )}
                 </div>
-              ) : null}
+              ) : (
+                <div className="py-3">
+                  <p className="text-xs text-muted-foreground">Need at least 2 drip checks to unlock your style observation</p>
+                </div>
+              )}
             </motion.div>
           )}
 
