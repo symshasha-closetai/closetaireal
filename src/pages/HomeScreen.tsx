@@ -12,7 +12,7 @@ import { toast } from "sonner";
 import ScoreRing from "../components/ScoreRing";
 import { Progress } from "@/components/ui/progress";
 import { precacheImages } from "@/lib/imageCache";
-import { compressImage } from "@/lib/imageCompression";
+
 
 const occasions = [
   { label: "Casual", icon: Shirt, color: "bg-blue-100 text-blue-600" },
