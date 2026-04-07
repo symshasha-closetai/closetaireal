@@ -204,6 +204,43 @@ const HomeScreen = () => {
     fetchDailyLook();
   }, [user]);
 
+  // Fetch Dripd Observation
+  useEffect(() => {
+    if (!user || observationFetchedRef.current) return;
+    observationFetchedRef.current = true;
+
+    const OBSERVATION_CACHE_KEY = "dripd-observation";
+    const cached = getCache<DripdObservation>(OBSERVATION_CACHE_KEY, user.id, 7 * 24 * 60 * 60 * 1000);
+    if (cached) { setDripdObservation(cached); return; }
+
+    const fetchObservation = async () => {
+      setLoadingObservation(true);
+      try {
+        const { data: history } = await supabase
+          .from("drip_history")
+          .select("score, killer_tag, praise_line, created_at, mode")
+          .eq("user_id", user.id)
+          .order("created_at", { ascending: false })
+          .limit(10);
+
+        if (!history || history.length < 2) { setLoadingObservation(false); return; }
+
+        const sp = await supabase.from("style_profiles").select("gender").eq("user_id", user.id).maybeSingle();
+
+        const { data, error } = await supabase.functions.invoke("generate-dripd-observation", {
+          body: { dripHistory: history, gender: sp?.data?.gender || "unknown" },
+        });
+
+        if (!error && data?.observation) {
+          setDripdObservation(data.observation);
+          setCache(OBSERVATION_CACHE_KEY, user.id, data.observation);
+        }
+      } catch (e) { console.error("Observation fetch failed:", e); }
+      setLoadingObservation(false);
+    };
+    fetchObservation();
+  }, [user]);
+
   const handleTodayPhotoUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file || !user) return;
