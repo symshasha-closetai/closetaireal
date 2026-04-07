@@ -129,7 +129,7 @@ const updateGlobal = (patch: Partial<DripState>) => {
 };
 
 // Cache version — bump this when prompt changes to invalidate old results
-const DRIP_CACHE_VERSION = 2;
+const DRIP_CACHE_VERSION = 3;
 
 // Improved image hash for cache lookups (versioned)
 const computeImageHash = (base64: string): string => {
