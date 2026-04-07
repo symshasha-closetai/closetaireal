@@ -1,18 +1,18 @@
 import { useState, useEffect, useCallback, useRef } from "react";
 import { getCache, setCache, invalidateCache, CACHE_KEYS } from "@/lib/deviceCache";
-import ImageCropper from "../components/ImageCropper";
+
 import { motion, AnimatePresence } from "framer-motion";
-import { Sparkles, Camera, ChevronRight, ChevronLeft, X, Heart, GraduationCap, PartyPopper, Shirt, Palette, Briefcase, Sun, Moon, Sunset, CloudRain, Thermometer, CloudSun, Snowflake, Shuffle, Leaf, Smile, Droplet, User, Loader2, Bookmark, BookmarkCheck, ImagePlus, Share2, Flame, Pin, Download, Crop, Music, Flag, CalendarDays, RefreshCw } from "lucide-react";
+import { Sparkles, Camera, ChevronRight, ChevronLeft, X, Heart, GraduationCap, PartyPopper, Shirt, Palette, Briefcase, Sun, Moon, Sunset, CloudRain, Thermometer, CloudSun, Snowflake, Shuffle, Leaf, Smile, Droplet, User, Loader2, Bookmark, BookmarkCheck, Pin, Download, Music, Flag, CalendarDays, RefreshCw } from "lucide-react";
 import AppHeader from "../components/AppHeader";
 import { useAuth } from "../hooks/useAuth";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
-import { r2 } from "@/lib/r2Storage";
+
 import { toast } from "sonner";
 import ScoreRing from "../components/ScoreRing";
 import { Progress } from "@/components/ui/progress";
 import { precacheImages } from "@/lib/imageCache";
-import { compressImage } from "@/lib/imageCompression";
+
 
 const occasions = [
   { label: "Casual", icon: Shirt, color: "bg-blue-100 text-blue-600" },
@@ -39,25 +39,7 @@ const weatherOptions = [
   { label: "Rainy", icon: CloudRain, emoji: "🌧️" },
 ];
 
-// Daily killer tags that rotate by date seed
-const dailyTags = [
-  "Main Character Energy ✨", "Serving Looks 🔥", "Style Icon Mode 👑",
-  "Drip Certified 💧", "Fashion Forward 🚀", "Effortlessly Cool 😎",
-  "Vibe Check Passed ✅", "Outfit on Point 🎯", "Slay All Day 💅",
-  "Looking Fire Today 🔥", "Street Style King 👑", "Aesthetic Queen 🌸",
-  "Clean Fit Era 🧊", "Bold & Beautiful 💫", "Trendsetter Alert 🚨",
-  "Fit Goes Hard 💪", "Mood: Unstoppable 🌟", "Style Game Strong 💯",
-  "Dressed to Impress 🎩", "Outfit of the Day 📸", "Giving Everything 🌈",
-  "Chic & Sleek ✨", "Fashion Moment 🎬", "Stunner Status 💎",
-  "Walk With Confidence 🦋", "Drip Don't Stop 🌊", "Today's Lewk 👀",
-  "Fit Check: 10/10 💯", "Pure Elegance 🪷", "Style Supreme 🏆",
-];
 
-const getDailyTag = () => {
-  const now = new Date();
-  const seed = now.getFullYear() * 10000 + (now.getMonth() + 1) * 100 + now.getDate();
-  return dailyTags[seed % dailyTags.length];
-};
 
 type WardrobeItem = {
   id: string;
@@ -128,16 +110,7 @@ const HomeScreen = () => {
   const [selectedCalendarOutfit, setSelectedCalendarOutfit] = useState<CalendarOutfit | null>(null);
   const [monthOutfits, setMonthOutfits] = useState<CalendarOutfit[]>([]);
 
-  // Today's Look photo
-  const [todayPhoto, setTodayPhoto] = useState<string | null>(null);
-  const [uploadingPhoto, setUploadingPhoto] = useState(false);
-  const photoFileRef = useRef<HTMLInputElement>(null);
-  
-  const [sharingLook, setSharingLook] = useState(false);
-  const [pendingCropImage, setPendingCropImage] = useState<string | null>(null);
 
-  // Streak tracking
-  const [streak, setStreak] = useState(0);
 
   // Dripd Observation
   type DripdObservation = { works: string; off: string; fix: string[]; observation: string };
@@ -145,64 +118,7 @@ const HomeScreen = () => {
   const [loadingObservation, setLoadingObservation] = useState(false);
   const observationFetchedRef = useRef(false);
 
-  // Load today's look and streak from DB (localStorage as fast cache)
-  useEffect(() => {
-    if (!user) return;
 
-    // Instant cache hit
-    try {
-      const cached = localStorage.getItem(`today-look-${user.id}`);
-      if (cached) {
-        const { url, date } = JSON.parse(cached);
-        if (date === new Date().toDateString()) setTodayPhoto(url);
-        else localStorage.removeItem(`today-look-${user.id}`);
-      }
-      const rawStreak = localStorage.getItem(`streak-${user.id}`);
-      if (rawStreak) {
-        const { count, lastDate } = JSON.parse(rawStreak);
-        const today = new Date().toDateString();
-        const yesterday = new Date(Date.now() - 86400000).toDateString();
-        if (lastDate === today || lastDate === yesterday) setStreak(count);
-      }
-    } catch {}
-
-    // Fetch from DB (source of truth)
-    const fetchDailyLook = async () => {
-      const today = new Date().toLocaleDateString('en-CA'); // YYYY-MM-DD local
-      const { data } = await supabase
-        .from("daily_looks")
-        .select("image_url, streak")
-        .eq("user_id", user.id)
-        .eq("look_date", today)
-        .maybeSingle();
-
-      if (data) {
-        setTodayPhoto(data.image_url);
-        setStreak(data.streak);
-        localStorage.setItem(`today-look-${user.id}`, JSON.stringify({ url: data.image_url, date: new Date().toDateString() }));
-        localStorage.setItem(`streak-${user.id}`, JSON.stringify({ count: data.streak, lastDate: new Date().toDateString() }));
-      } else {
-        // No DB entry for today — compute streak from yesterday
-        const yesterday = new Date(Date.now() - 86400000).toLocaleDateString('en-CA');
-        const { data: yesterdayData } = await supabase
-          .from("daily_looks")
-          .select("streak")
-          .eq("user_id", user.id)
-          .eq("look_date", yesterday)
-          .maybeSingle();
-        // If yesterday exists, streak is still valid but hasn't been continued yet
-        if (yesterdayData) {
-          setStreak(yesterdayData.streak);
-          localStorage.setItem(`streak-${user.id}`, JSON.stringify({ count: yesterdayData.streak, lastDate: new Date(Date.now() - 86400000).toDateString() }));
-        } else {
-          setStreak(0);
-        }
-        setTodayPhoto(null);
-        localStorage.removeItem(`today-look-${user.id}`);
-      }
-    };
-    fetchDailyLook();
-  }, [user]);
 
   // Fetch Dripd Observation
   useEffect(() => {
@@ -241,185 +157,7 @@ const HomeScreen = () => {
     fetchObservation();
   }, [user]);
 
-  const handleTodayPhotoUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file || !user) return;
-    // Read as data URL and open cropper
-    const reader = new FileReader();
-    reader.onload = () => setPendingCropImage(reader.result as string);
-    reader.readAsDataURL(file);
-    // Reset input so the same file can be re-selected
-    e.target.value = "";
-  };
 
-  const handleCroppedPhoto = async (blob: Blob) => {
-    setPendingCropImage(null);
-    if (!user) return;
-    setUploadingPhoto(true);
-    try {
-      // Compress the cropped blob
-      const croppedFile = new File([blob], "cropped.jpg", { type: "image/jpeg" });
-      const { blob: compressedBlob } = await compressImage(croppedFile);
-      const path = `${user.id}/today-look-${Date.now()}.jpg`;
-      const { publicUrl, error: uploadError } = await r2.upload(path, compressedBlob, { contentType: "image/jpeg" });
-      if (uploadError) throw uploadError;
-
-      // Calculate streak from DB
-      const yesterdayDate = new Date(Date.now() - 86400000);
-      const yesterday = yesterdayDate.toLocaleDateString('en-CA');
-      const { data: yesterdayData } = await supabase
-        .from("daily_looks")
-        .select("streak")
-        .eq("user_id", user.id)
-        .eq("look_date", yesterday)
-        .maybeSingle();
-
-      const today = new Date().toLocaleDateString('en-CA');
-      // Check if we already have today's entry
-      const { data: todayData } = await supabase
-        .from("daily_looks")
-        .select("streak")
-        .eq("user_id", user.id)
-        .eq("look_date", today)
-        .maybeSingle();
-
-      let newStreak: number;
-      if (todayData) {
-        // Re-uploading today — keep same streak
-        newStreak = todayData.streak;
-      } else if (yesterdayData) {
-        newStreak = yesterdayData.streak + 1;
-      } else {
-        newStreak = 1;
-      }
-
-      // Upsert into daily_looks
-      const { error: upsertError } = await supabase
-        .from("daily_looks")
-        .upsert(
-          { user_id: user.id, image_url: publicUrl, look_date: today, streak: newStreak },
-          { onConflict: "user_id,look_date" }
-        );
-      if (upsertError) {
-        console.error("Failed to save daily look:", upsertError, "publicUrl:", publicUrl);
-        throw new Error(`DB save failed: ${upsertError.message}`);
-      }
-
-      setTodayPhoto(publicUrl);
-      setStreak(newStreak);
-      localStorage.setItem(`today-look-${user.id}`, JSON.stringify({ url: publicUrl, date: new Date().toDateString() }));
-      localStorage.setItem(`streak-${user.id}`, JSON.stringify({ count: newStreak, lastDate: new Date().toDateString() }));
-      toast.success("Looking great! 🔥");
-    } catch (err: any) {
-      console.error("Today's look upload failed:", err);
-      toast.error(err?.message || "Failed to upload photo");
-    }
-    setUploadingPhoto(false);
-  };
-
-  const handleShareTodayLook = async () => {
-    if (!todayPhoto) return;
-    setSharingLook(true);
-    try {
-      // Load image — try fetch blob first, fallback to Image element for CORS
-      let img: ImageBitmap | HTMLImageElement;
-      try {
-        const response = await fetch(todayPhoto);
-        const imgBlob = await response.blob();
-        img = await createImageBitmap(imgBlob);
-      } catch {
-        img = await new Promise<HTMLImageElement>((resolve, reject) => {
-          const el = new Image();
-          el.crossOrigin = "anonymous";
-          el.onload = () => resolve(el);
-          el.onerror = () => reject(new Error("Image load failed"));
-          el.src = todayPhoto;
-        });
-      }
-
-      const W = 540;
-      const H = 960; // 9:16 story format
-      const canvas = document.createElement("canvas");
-      canvas.width = W;
-      canvas.height = H;
-      const ctx = canvas.getContext("2d")!;
-
-      // Draw photo covering canvas
-      const scale = Math.max(W / img.width, H / img.height);
-      const sw = img.width * scale;
-      const sh = img.height * scale;
-      ctx.drawImage(img, (W - sw) / 2, (H - sh) / 2, sw, sh);
-
-      // Gradient overlay
-      const grad = ctx.createLinearGradient(0, H * 0.5, 0, H);
-      grad.addColorStop(0, "rgba(0,0,0,0)");
-      grad.addColorStop(1, "rgba(0,0,0,0.85)");
-      ctx.fillStyle = grad;
-      ctx.fillRect(0, 0, W, H);
-
-      // Top overlay
-      const topGrad = ctx.createLinearGradient(0, 0, 0, H * 0.15);
-      topGrad.addColorStop(0, "rgba(0,0,0,0.4)");
-      topGrad.addColorStop(1, "rgba(0,0,0,0)");
-      ctx.fillStyle = topGrad;
-      ctx.fillRect(0, 0, W, H * 0.15);
-
-      // "Today's Look" badge
-      ctx.font = "bold 20px system-ui, sans-serif";
-      ctx.fillStyle = "rgba(255,255,255,0.95)";
-      ctx.fillText("Today's Look", 24, 40);
-
-      // Streak badge
-      if (streak > 0) {
-        ctx.font = "bold 18px system-ui, sans-serif";
-        ctx.fillText(`🔥 ${streak} day${streak > 1 ? "s" : ""}`, 24, 66);
-      }
-
-      // Daily tag
-      const dailyTag = getDailyTag();
-      ctx.shadowColor = "rgba(0,0,0,0.8)";
-      ctx.shadowBlur = 10;
-      ctx.font = "bold 28px system-ui, sans-serif";
-      ctx.fillStyle = "white";
-      ctx.fillText(dailyTag, 24, H - 52);
-
-      // Date
-      ctx.shadowBlur = 6;
-      ctx.font = "14px system-ui, sans-serif";
-      ctx.fillStyle = "rgba(255,255,255,0.75)";
-      ctx.fillText(new Date().toLocaleDateString("en-US", { weekday: "long", month: "long", day: "numeric" }), 24, H - 28);
-
-      // Dripd watermark
-      ctx.shadowBlur = 0;
-      ctx.font = "bold 14px system-ui, sans-serif";
-      ctx.fillStyle = "rgba(255,255,255,0.4)";
-      ctx.textAlign = "right";
-      ctx.fillText("Dripd", W - 20, H - 16);
-      ctx.textAlign = "left";
-
-      canvas.toBlob(async (blob) => {
-        if (!blob) { setSharingLook(false); return; }
-        const file = new File([blob], "dripd-today-look.png", { type: "image/png" });
-        if (navigator.share && navigator.canShare?.({ files: [file] })) {
-          await navigator.share({ title: "My Today's Look — Dripd", files: [file] });
-        } else {
-          const url = URL.createObjectURL(blob);
-          const a = document.createElement("a"); a.href = url; a.download = "dripd-today-look.png";
-          document.body.appendChild(a); a.click(); document.body.removeChild(a);
-          URL.revokeObjectURL(url);
-          toast.success("Image saved!");
-        }
-        setSharingLook(false);
-      }, "image/png");
-    } catch (e: any) {
-      if (e?.name !== "AbortError") toast.info("Couldn't share — try again");
-      setSharingLook(false);
-    }
-  };
-
-  const handleRecropPhoto = () => {
-    if (todayPhoto) setPendingCropImage(todayPhoto);
-  };
 
   const handleSaveOutfit = async (outfit: OutfitSuggestion, idx: number) => {
     if (!user || savedOutfitIds.has(idx)) return;
@@ -657,16 +395,7 @@ const HomeScreen = () => {
 
   return (
     <div className="min-h-screen pb-24 px-5 pt-4">
-      <input type="file" accept="image/*" capture="user" ref={photoFileRef} className="hidden" onChange={handleTodayPhotoUpload} />
-      {pendingCropImage && (
-        <ImageCropper
-          imageSrc={pendingCropImage}
-          open={!!pendingCropImage}
-          onConfirm={handleCroppedPhoto}
-          onCancel={() => setPendingCropImage(null)}
-          aspectRatio={4 / 5}
-        />
-      )}
+
 
       <div className="max-w-5xl mx-auto space-y-5">
         <div><AppHeader /></div>
@@ -707,64 +436,6 @@ const HomeScreen = () => {
 
         {/* Controls */}
         <div className="space-y-4">
-          {/* Today's Look Card */}
-          <div className="glass-card-elevated overflow-hidden">
-            {todayPhoto ? (
-              <div className="relative">
-                <img src={todayPhoto} alt="Today's look" className="w-full aspect-[4/5] object-cover" />
-                <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/40 to-black/20" />
-                <div className="absolute top-3 left-3 flex gap-2">
-                  <span className="px-2.5 py-1 rounded-full bg-gold/90 text-white text-[10px] font-semibold" style={{ textShadow: "0 1px 4px rgba(0,0,0,0.6)" }}>Today's Look</span>
-                  {streak > 0 && (
-                    <span className="px-2.5 py-1 rounded-full bg-orange-500/90 text-white text-[10px] font-semibold flex items-center gap-1" style={{ textShadow: "0 1px 4px rgba(0,0,0,0.6)" }}>
-                      <Flame size={10} /> {streak} day{streak > 1 ? "s" : ""}
-                    </span>
-                  )}
-                </div>
-                <div className="absolute top-3 right-3 flex gap-2">
-                  <button
-                    onClick={handleShareTodayLook}
-                    disabled={sharingLook}
-                    className="w-8 h-8 rounded-full bg-black/50 backdrop-blur-md flex items-center justify-center"
-                  >
-                    {sharingLook ? <Loader2 size={14} className="text-white animate-spin" /> : <Share2 size={14} className="text-white" />}
-                  </button>
-                  <button
-                    onClick={handleRecropPhoto}
-                    className="w-8 h-8 rounded-full bg-black/50 backdrop-blur-md flex items-center justify-center"
-                  >
-                    <Crop size={14} className="text-white" />
-                  </button>
-                  <button
-                    onClick={() => photoFileRef.current?.click()}
-                    disabled={uploadingPhoto}
-                    className="w-8 h-8 rounded-full bg-black/50 backdrop-blur-md flex items-center justify-center"
-                  >
-                    <Camera size={14} className="text-white" />
-                  </button>
-                </div>
-                <div className="absolute bottom-4 left-4 right-4">
-                  <p className="text-white font-bold text-lg" style={{ textShadow: "0 2px 8px rgba(0,0,0,0.9)" }}>{getDailyTag()}</p>
-                  <p className="text-white/80 text-[10px] mt-0.5" style={{ textShadow: "0 1px 4px rgba(0,0,0,0.8)" }}>{new Date().toLocaleDateString("en-US", { weekday: "long", month: "long", day: "numeric" })}</p>
-                </div>
-              </div>
-            ) : (
-              <button
-                onClick={() => photoFileRef.current?.click()}
-                disabled={uploadingPhoto}
-                className="w-full py-10 flex flex-col items-center gap-3 text-center"
-              >
-                <div className="w-16 h-16 rounded-full bg-secondary flex items-center justify-center">
-                  {uploadingPhoto ? <Loader2 size={24} className="text-primary animate-spin" /> : <ImagePlus size={24} className="text-muted-foreground" />}
-                </div>
-                <div>
-                  <p className="text-sm font-semibold text-foreground">Add Today's Look</p>
-                  <p className="text-[11px] text-muted-foreground mt-0.5">Snap your outfit & get a daily killer tag</p>
-                </div>
-              </button>
-            )}
-          </div>
-
           {/* Dripd Observation Card */}
           {(dripdObservation || loadingObservation) && (
             <motion.div
