@@ -1,60 +1,88 @@
-## Plan: Apply All Custom Prompts to Edge Functions
+Goal:
 
-Now that all four prompts are provided, here's how they'll be applied.
+- Remove only the "Today's Look" section from Home.
+- Keep the rest of Home unchanged.
+- Make Drip Check much harsher without touching the database.
 
-### Step 1: Update `supabase/functions/rate-outfit/index.ts`
+What I’ll change
 
-**Replace `callGemini()` with `callOpenAI()**` — same JSON parsing logic, but hits `https://api.openai.com/v1/chat/completions` with model `gpt-4.1` and `Bearer ${OPENAI_API_KEY}`. Remove `getApiKey()` (Gemini key rotation).
+1. Remove “Today’s Look” from `src/pages/HomeScreen.tsx`
 
-**Replace `CALL1_SYSTEM` (lines 59-99)** with the user's drip check prompt:
+- Delete the Today’s Look card UI only.
+- Remove its related upload/crop/share/streak code:
+  - imports: `ImageCropper`, `r2`, `compressImage`, and unused icons tied only to this section
+  - state: `todayPhoto`, `uploadingPhoto`, `sharingLook`, `pendingCropImage`, `streak`
+  - refs: `photoFileRef`
+  - effects that load `daily_looks`
+  - handlers like `handleTodayPhotoUpload`, `handleCroppedPhoto`, `handleShareTodayLook`, `handleRecropPhoto`
+  - hidden file input + cropper modal
+- Leave Dripd Observation, Wardrobe, Calendar, Style Me, and the rest of the screen exactly where they already are.
 
-- "Savage Gen Z fashion critic" persona
-- Detect solo male/female/couple/group/no human
-- No human means 0 scores
-- Scores: Drip, Confidence, Allure, Domination (0-10)
-- Brutal/sarcastic/witty tone
-- Output format: Tag (2-3 words) + Line (1 savage sentence)
-- Keep the JSON structure compatible with existing client code by mapping: Allure→attractiveness_score, Domination→dominance_score, etc.
+2. Fix why Drip Check still feels weak
 
-**Replace `CALL1_SYSTEM` styling_tips section** with the styling advice prompt:
+You do not need SQL for this.
+The problem is in the AI logic and caching, not the database.
 
-- "DRIPD AI Stylist — world-class fashion intelligence engine"
-- WHAT WORKS (1-2 insights), WHAT FEELS OFF, UPGRADE MOVES (1-2 improvements)
-- Clean, confident, slightly edgy tone
+I’ll update the brutality in `supabase/functions/rate-outfit/index.ts` by:
 
-**Merge into a single Call 1** — the drip check prompt handles scoring + tag + line, and the styling advice prompt handles tips. Both get sent together as one GPT-4.1 call to reduce latency.
+- strengthening the system prompt so the model is explicitly harsher, more cutting, and no “nice”
+- removing/rewriting softer rules that currently make some outputs flattering, especially:
+  - female score 7+ “empowering/screenshot-worthy”
+  - softer fallback caption tiers
+- making fallback `praise_line` text savage too, so even partial/fallback responses stay on-brand
 
-**Remove `CAPTION_SYSTEM` and Call 2 entirely** — the new drip check prompt generates killer_tag and praise_line in Call 1 itself, eliminating the need for a separate caption call. Remove `generateCaption()` and `generateRoastCaption()` functions.
+3. Prevent old cached results from masking prompt changes
 
-**Update roast handling** — the new prompt handles "no human" detection natively. Keep server-side drip_score calculation.
+Right now `src/pages/CameraScreen.tsx` can reuse an old result for the same image from local storage.
+That means even after prompt updates, the app may still show older, softer outputs.
 
-### Step 2: Create `supabase/functions/generate-dripd-observation/index.ts`
+I’ll fix that by:
 
-New edge function using GPT-4.1 with the user's observation prompt:
+- versioning the local drip-check cache key/hash logic
+- forcing fresh analysis after the prompt update instead of reusing old saved results for the same photo
 
-- "DRIPD AI Stylist — elite fashion intelligence"
-- Accepts `{ dripHistory, gender }` — last 5-10 entries with scores, tags, outfit descriptions
-- Uses `user_memory` from drip history to reference past patterns
-- Output: WORKS, OFF, FIX, OBSERVATION sections
-- Returns `{ observation: "string" }` for display on home page card
+What I will not change
 
-### Step 3: Update `src/pages/HomeScreen.tsx`
+- No SQL migrations
+- No table changes
+- No auth changes
+- No Style Architect move
+- No observation card move
 
-Replace "Today's Look" card with "Dripd Observation" card that:
+Technical details
 
-- Fetches last 7 days drip_history entries on load
-- Calls `generate-dripd-observation` edge function
-- Caches result for 7 days via deviceCache
-- Displays the observation text in a styled card
+Files to update:
 
-### Step 4: No changes to Shopping Suggestions
+1. `src/pages/HomeScreen.tsx`
 
-Already updated in previous implementation to use `gemini-2.5-flash` with sophisticated prompts.
+- Remove Today’s Look feature code and dead imports/state/effects/handlers
+- Keep layout otherwise unchanged
 
----
+2. `supabase/functions/rate-outfit/index.ts`
 
-### Files changed
+- Tighten the roast prompt
+- Replace soft fallback captions with brutal ones
+- Keep existing scoring/response shape so the UI still works
 
-1. `supabase/functions/rate-outfit/index.ts` — full rewrite: OpenAI GPT-4.1, new prompts, single-call architecture
-2. `supabase/functions/generate-dripd-observation/index.ts` — new edge function with observation prompt
-3. `src/pages/HomeScreen.tsx` — Dripd Observation card (replacing Today's Look)
+3. `src/pages/CameraScreen.tsx`
+
+- Bust or version cached drip results so prompt changes actually show up
+
+Why no SQL is needed
+
+```text
+Tone issue = AI prompt/caching issue
+Not = database schema or query issue
+```
+
+Expected result
+
+- Home screen no longer shows Today’s Look
+- Drip Check responses become much more aggressive
+- New prompt behavior appears immediately instead of being hidden by old cached results
+
+Validation
+
+- Upload a brand-new image and confirm the roast is harsher
+- Re-upload a previously tested image and confirm it no longer shows stale cached text
+- Check Home on mobile to confirm removing Today’s Look doesn’t break spacing or card order
